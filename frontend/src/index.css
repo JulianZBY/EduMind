@@ -1,0 +1,22 @@
+:root {
+  --accent: #4f7cff;
+  --border: #e3e5e8;
+  --card: #f2f3f5;
+  --muted: #888;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-size: 14px;
+}
+
+button {
+  font-family: inherit;
+}
