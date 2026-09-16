@@ -45,7 +45,7 @@ flowchart TB
 
 ## 快速开始
 
-**前置依赖**：Python 3.11–3.12、Node.js ≥ 18，推荐安装 [uv](https://docs.astral.sh/uv/)（Python 包管理）。
+**前置依赖**：Python ≥ 3.11、Node.js ≥ 18，推荐安装 [uv](https://docs.astral.sh/uv/)（Python 包管理）。
 
 ```bash
 git clone https://github.com/JulianZBY/EduMind.git
