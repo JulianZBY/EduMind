@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     debug: bool = True
     database_url: str = "sqlite:///./edumind.db"
     upload_dir: str = "data/uploads"
+    vectors_db_path: str = "data/vectors.db"
 
     # ---- 云端服务（M2 阶段留空走 stub）----
     llm_provider: str = "stub"  # stub / dashscope / deepseek

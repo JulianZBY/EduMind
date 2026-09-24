@@ -109,34 +109,43 @@ _STUB_INTENT = {
 }
 
 
-# 知识图谱提取提示词命中时返回的固定节点/边：与 stub 课件主题（TCP）一致，
-# 保证 stub 模式下上传解析后知识图谱有节点可展示。
-_STUB_KNOWLEDGE = {
-    "nodes": [
+# 图谱提取提示词（教学知识图谱构建助手）命中时：回显正文前几行作为演示知识点
+# （内容打上 stub 标记），避免与上传资料无关的固定假数据误导用户；正文为空返回空图。
+_STUB_MARK = "[stub 演示提取]"
+
+
+def _stub_knowledge(prompt: str) -> dict:
+    """从提取提示词中拆出正文，取前 3 个非空行回显为节点/边（确定性、内容相关）。"""
+    _, _, body = prompt.partition("教学内容：\n")
+    seen_titles: set[str] = set()
+    picked: list[str] = []
+    for raw in body.splitlines():
+        line = raw.strip().lstrip("#*-•— \t")
+        if not line:
+            continue
+        title = line[:12]
+        if title in seen_titles:  # 同前缀行去重，避免边自环
+            continue
+        seen_titles.add(title)
+        picked.append(line)
+        if len(picked) == 3:
+            break
+    difficulties = ("基础", "进阶", "难点")
+    importances = ("必修", "选修", "了解")
+    nodes = [
         {
-            "title": "TCP 三次握手",
-            "content": "通过 SYN/SYN+ACK/ACK 三步报文交互建立可靠连接",
-            "difficulty": "基础",
-            "importance": "必修",
-        },
-        {
-            "title": "滑动窗口机制",
-            "content": "接收方通告窗口控制速率，允许连续发送多个报文段",
-            "difficulty": "进阶",
-            "importance": "必修",
-        },
-        {
-            "title": "四次挥手",
-            "content": "通过 FIN/ACK 四步报文交互释放连接",
-            "difficulty": "基础",
-            "importance": "选修",
-        },
-    ],
-    "edges": [
-        {"from": "TCP 三次握手", "to": "滑动窗口机制", "relation_type": "相关关联"},
-        {"from": "TCP 三次握手", "to": "四次挥手", "relation_type": "相关关联"},
-    ],
-}
+            "title": line[:12],
+            "content": f"{_STUB_MARK} {line[:60]}",
+            "difficulty": difficulties[i % len(difficulties)],
+            "importance": importances[i % len(importances)],
+        }
+        for i, line in enumerate(picked)
+    ]
+    edges = [
+        {"from": nodes[i]["title"], "to": nodes[i + 1]["title"], "relation_type": "相关关联"}
+        for i in range(len(nodes) - 1)
+    ]
+    return {"nodes": nodes, "edges": edges}
 
 
 class StubProvider(LLMProvider):
@@ -147,7 +156,7 @@ class StubProvider(LLMProvider):
         if "意图分析模块" in last:
             return ChatResult(content=json.dumps(_STUB_INTENT, ensure_ascii=False))
         if "教学知识图谱构建助手" in last:
-            return ChatResult(content=json.dumps(_STUB_KNOWLEDGE, ensure_ascii=False))
+            return ChatResult(content=json.dumps(_stub_knowledge(last), ensure_ascii=False))
         if "判断两段知识描述是否相互矛盾" in last:
             return ChatResult(
                 content=json.dumps(
