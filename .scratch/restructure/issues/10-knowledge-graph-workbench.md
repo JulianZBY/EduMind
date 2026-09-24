@@ -14,7 +14,7 @@
 ## 交付记录
 
 **分支**：`JulianZBY/issue-10-knowledge-graph-workbench`（本工作树当前分支；未 push、未开 PR、未 merge）
-**主提交**：`feat(10): 知识图谱工作台`（票据与记录在同一提交里）
+**主提交**：`f8cd224` · `feat(10): 知识图谱工作台`（验收项勾选与本节记录都在这个提交里；收尾的哈希补充见 `git log` 顶部）
 
 ### 一、跑过的命令与结果
 
@@ -116,3 +116,4 @@ const { source, nodeIdByMermaidId } = buildFlowchartSource(
 - **未做浏览器真点验证**：本票的渲染证据是 jsdom 真渲染 + 断言（无浏览器可用）；真机五条主路径的冒烟留给票 14/08。
 - 节点详情抽屉暂无「跳到题库 / 冲突审核」的联动（跨区跳转不在本票范围）。
 - 覆盖率提示：`pi-lens` 的 opengrep/typos 运行器在本环境静默，故静态检查结果不是「全清」证明，只能说没有报告问题。
+- 本机 `frontend/node_modules` 里残留了验证用的 `jsdom`（用 `npm install --no-save` 装过）：`package.json` / `package-lock.json` 已从备份还原、**未入库**（`rg jsdom frontend/package-lock.json` 零命中），下次 `npm ci` 会自然清掉。
