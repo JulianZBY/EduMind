@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 async def parse_document(doc_id: str) -> str:
     """解析文档并向量化入库，返回解析文本/Markdown。"""
-    from app.knowledge.chunking import chunk_text
+    from app.knowledge.chunking.factory import get_chunker
     from app.knowledge.parsers import get_parser  # 延迟 import 避免循环
 
     db = SessionLocal()
@@ -22,7 +22,7 @@ async def parse_document(doc_id: str) -> str:
         try:
             parser = get_parser(doc.file_type)
             result = await parser.parse(doc.file_path)
-            chunks = chunk_text(result)
+            chunks = get_chunker().chunk(result)
             if chunks:
                 await index_chunks(doc_id, chunks)
             conflict_count = await extract_and_save_knowledge(doc_id, result)
