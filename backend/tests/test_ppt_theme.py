@@ -13,12 +13,13 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.util import Pt
 
 import app.api.v1.chat as chat_module
-import app.core.llm.factory as factory_module
+import app.core.embedding.factory as embedding_factory_module
 import app.core.orchestrator as orchestrator_module
 import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
 import app.knowledge.vector_store as vector_store_module
+from app.core.embedding.stub import StubEmbedder
 from app.core.intent import TeachingIntent
 from app.core.llm.providers.stub import StubProvider
 from app.generate.ppt import render_ppt
@@ -95,7 +96,7 @@ async def test_prompt_declares_role_and_stub_structure_satisfies(monkeypatch):
 def test_chat_artifacts_slides_carry_roles_and_keep_typography(monkeypatch, tmp_path):
     """stub 网关走完整备课：产物 slides 每页带合法角色；要点数与字数上限不变。
 
-    get_llm 逐模块替换（早绑定引用）+ 检索 embed 走工厂引用：.env 即便配置真实
+    get_llm 逐模块替换（早绑定引用）+ 检索向量化走 Embedder 工厂引用：.env 即便配置真实
     provider 也确定性走 stub（spec：LLM 网关一律 stub 保证确定性）。
     """
 
@@ -107,7 +108,7 @@ def test_chat_artifacts_slides_carry_roles_and_keep_typography(monkeypatch, tmp_
     stub = StubProvider()
     monkeypatch.setattr(chat_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(orchestrator_module, "analyze_intent", fake_analyze)
-    monkeypatch.setattr(factory_module, "get_llm", lambda: stub)  # retrieve_knowledge 延迟导入
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(ppt_module, "get_llm", lambda: stub)
     monkeypatch.setattr(word_module, "get_llm", lambda: stub)
     monkeypatch.setattr(outline_module, "get_llm", lambda: stub)

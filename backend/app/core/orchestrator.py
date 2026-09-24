@@ -35,10 +35,10 @@ async def retrieve_knowledge(
     if not query:
         return RetrievalResult(context="", sources=[])
     try:
-        from app.core.llm.factory import get_llm
+        from app.core.embedding.factory import get_embedder
         from app.knowledge.vector_store import VectorStore
 
-        emb = await get_llm().embed([query])
+        emb = await get_embedder().embed([query])
         hits = VectorStore().search(emb[0], k=top_k, boost_doc_ids=reference_doc_ids or None)
         chunks = [h["content"] for h in hits if h.get("content")]
         sources = _source_names([h["doc_id"] for h in hits])

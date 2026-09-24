@@ -172,7 +172,3 @@ class StubProvider(LLMProvider):
                 content=json.dumps({"questions": _STUB_EXAM_QUESTIONS}, ensure_ascii=False)
             )
         return ChatResult(content=f"[stub] 收到你的消息：{last[:50]}")
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        # 确定性假向量：以文本长度为特征（len * 1.0 转浮点，不引入可抛出转换）
-        return [[len(t) * 1.0] * 8 for t in texts]

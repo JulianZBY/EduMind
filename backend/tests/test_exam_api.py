@@ -13,9 +13,10 @@ from docx import Document as DocxDocument
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-import app.core.llm.factory as factory_module
+import app.core.embedding.factory as embedding_factory_module
 import app.generate.exam as exam_module
 import app.knowledge.vector_store as vector_store_module
+from app.core.embedding.stub import StubEmbedder
 from app.core.llm.base import ChatResult, LLMProvider
 from app.core.llm.providers.stub import StubProvider
 from app.db import SessionLocal, init_db
@@ -36,8 +37,8 @@ def _install_stub(monkeypatch, tmp_path) -> None:
     """stub 网关 + 空向量库：端点全链路不触外部服务，检索降级为空上下文。"""
     # exam.py 顶层绑定 get_llm（早绑定），factory 引用需逐模块替换
     monkeypatch.setattr(exam_module, "get_llm", lambda: StubProvider())
-    # retrieve_knowledge 延迟 import factory.get_llm（晚绑定），替换工厂模块即可
-    monkeypatch.setattr(factory_module, "get_llm", lambda: StubProvider())
+    # 检索向量化只依赖 Embedder 接口（orchestrator 晚绑定，替换工厂即可）
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(
         vector_store_module, "VectorStore", lambda: VectorStore(str(tmp_path / "v.db"))
     )
@@ -151,7 +152,7 @@ def test_generate_returns_502_when_llm_output_unparseable(monkeypatch, tmp_path)
     # exam.py 顶层早绑定 get_llm，需逐模块替换（与 _install_stub 同理），
     # 否则试卷生成仍走真实工厂返回的 StubProvider，拿不到不可解析输出。
     monkeypatch.setattr(exam_module, "get_llm", lambda: BadProvider())
-    monkeypatch.setattr(factory_module, "get_llm", lambda: BadProvider())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: BadProvider())
     monkeypatch.setattr(
         vector_store_module, "VectorStore", lambda: VectorStore(str(tmp_path / "v.db"))
     )

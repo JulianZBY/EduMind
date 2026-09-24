@@ -3,7 +3,6 @@
 import logging
 from datetime import datetime
 
-from app.core.llm.factory import get_llm
 from app.db import SessionLocal
 from app.db.models import Document
 
@@ -45,11 +44,10 @@ async def parse_document(doc_id: str) -> str:
 
 async def index_chunks(doc_id: str, chunks: list[str]) -> None:
     """向量化 chunk 并入库。"""
-    from app.core.llm.factory import get_llm
+    from app.core.embedding.factory import get_embedder
     from app.knowledge.vector_store import VectorStore
 
-    llm = get_llm()
-    embeddings = await llm.embed(chunks)
+    embeddings = await get_embedder().embed(chunks)
     VectorStore().add(doc_id, chunks, embeddings)
 
 
@@ -59,6 +57,7 @@ async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
     冲突节点与同名重复节点不入图谱（ADR-0001：审核前新节点不入知识图谱）；
     其余节点连同标题向量索引直接入库（既有行为）。
     """
+    from app.core.embedding.factory import get_embedder
     from app.knowledge.conflict import detect_conflicts
     from app.knowledge.graph import extract_knowledge, save_knowledge
 
@@ -71,7 +70,7 @@ async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
         to_save = [n for n in nodes if id(n) not in held]
         if to_save:
             titles = sorted({(n.get("title") or "").strip() for n in to_save} - {""})
-            embeddings = await get_llm().embed(titles)
+            embeddings = await get_embedder().embed(titles)
             save_knowledge(
                 "default",
                 to_save,

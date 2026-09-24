@@ -12,13 +12,14 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+import app.core.embedding.factory as embedding_factory_module
 import app.core.intent as intent_module
-import app.core.llm.factory as factory_module
 import app.generate.creative as creative_module
 import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
 import app.knowledge.vector_store as vector_store_module
+from app.core.embedding.stub import StubEmbedder
 from app.core.llm.base import ChatResult, LLMProvider
 from app.core.llm.providers.stub import StubProvider
 from app.db import init_db
@@ -81,13 +82,14 @@ class ScriptedProvider(LLMProvider):
 
 
 def _install(monkeypatch, provider: LLMProvider, tmp_path) -> None:
-    """替换全部 get_llm 早绑定引用（意图/PPT/Word/提纲/创意）+ 空向量库。"""
-    monkeypatch.setattr(factory_module, "get_llm", lambda: provider)
+    """替换全部 get_llm 早绑定引用（意图/PPT/Word/提纲/创意）+ stub 向量化 + 空向量库。"""
     monkeypatch.setattr(intent_module, "get_llm", lambda: provider)
     monkeypatch.setattr(ppt_module, "get_llm", lambda: provider)
     monkeypatch.setattr(word_module, "get_llm", lambda: provider)
     monkeypatch.setattr(outline_module, "get_llm", lambda: provider)
     monkeypatch.setattr(creative_module, "get_llm", lambda: provider)
+    # 检索向量化只依赖 Embedder 接口（orchestrator 晚绑定，替换工厂即可）
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(
         vector_store_module, "VectorStore", lambda: VectorStore(str(tmp_path / "v.db"))
     )

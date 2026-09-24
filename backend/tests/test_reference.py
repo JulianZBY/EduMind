@@ -15,12 +15,13 @@ from fastapi.testclient import TestClient
 
 import app.api.v1.chat as chat_module
 import app.api.v1.documents as documents_module
-import app.core.llm.factory as factory_module
+import app.core.embedding.factory as embedding_factory_module
 import app.core.orchestrator as orchestrator_module
 import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
 import app.knowledge.vector_store as vector_store_module
+from app.core.embedding.stub import StubEmbedder
 from app.core.intent import TeachingIntent
 from app.core.llm.base import ChatResult, LLMProvider
 from app.db import SessionLocal, init_db
@@ -64,7 +65,7 @@ def _install(monkeypatch, provider: RecordingProvider, store: VectorStore | None
     # orchestrate 内部引用自己模块的 analyze_intent（早绑定），必须一并替换
     monkeypatch.setattr(chat_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(orchestrator_module, "analyze_intent", fake_analyze)
-    monkeypatch.setattr(factory_module, "get_llm", lambda: provider)
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(ppt_module, "get_llm", lambda: provider)
     monkeypatch.setattr(word_module, "get_llm", lambda: provider)
     monkeypatch.setattr(outline_module, "get_llm", lambda: provider)
