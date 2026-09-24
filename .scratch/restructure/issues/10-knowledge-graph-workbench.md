@@ -14,7 +14,7 @@
 ## 交付记录
 
 **分支**：`JulianZBY/issue-10-knowledge-graph-workbench`（本工作树当前分支；未 push、未开 PR、未 merge）
-**主提交**：`f8cd224` · `feat(10): 知识图谱工作台`（验收项勾选与本节记录都在这个提交里；收尾的哈希补充见 `git log` 顶部）
+**主提交**：`bfae3f2` · `feat(10): 知识图谱工作台`（验收项勾选与本节记录都在这个提交里；收尾的哈希补充见 `git log` 顶部）
 
 ### 一、跑过的命令与结果
 
@@ -134,6 +134,6 @@ const { source, nodeIdByMermaidId } = buildFlowchartSource(
 
 **可复用性（为并行票服务）**：本票把渲染做成 `frontend/src/components/graph/` 下的可复用组件，并在交付记录第三节写明复用入口；协调者据此把它写进票 11 的派发约束——**票 11 的结构冲突图示实际复用了 `buildFlowchartSource` + `FlatMermaid` + `RelationLegend`**，复用链条闭合。
 
-- **合并点**：`0e47f98`（`merge(10)`）；合并时只与派生物冲突，按「重生成」处置；协调者代为落地其 pi-lens 格式化提交 `a187558`。
+- **合并点**：`8a7d881`（`merge(10)`）；合并时只与派生物冲突，按「重生成」处置；协调者代为落地其 pi-lens 格式化提交 `25a3e81`。
 - **状态迁移**：`ready-for-agent` → `done`。
 - **遗留去向**：画布无分页/虚拟化、来源引用只到资料粒度（模型无分块级溯源）→ 票 14 收口清单。

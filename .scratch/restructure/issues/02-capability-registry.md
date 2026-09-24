@@ -156,13 +156,13 @@ $ EMBEDDING_PROVIDER=openai + EMBEDDING_BASE_URL/MODEL/API_KEY/DIMENSIONS
 | 向量化独立、调用方不依赖对话 provider | 调用点改为 `get_embedder()`；`tests/test_capability_registry.py` 断言调用方不 import 具体实现 | 通过 |
 | PDF 三策略 + 失败兜底 | `tests/test_pdf_strategy.py` 8 例 | 通过 |
 | stub 全链路可跑 | 协调者亲跑 `uv run pytest -q` → **128 passed**（本分支基线 95）、`ruff check .` 干净 | 通过 |
-| 端点未被改动 | `git diff --stat eadc76c <分支> -- backend/app/api/` = `knowledge.py` 仅 4 增 5 删 | 通过 |
+| 端点未被改动 | `git diff --stat 0e512ea <分支> -- backend/app/api/` = `knowledge.py` 仅 4 增 5 删 | 通过 |
 
 **合并冲突（协调者手工解析）**：票 01 与票 02 都动了 `backend/app/api/v1/knowledge.py`——01 补端点注解、02 换能力调用点，冲突落在 import 块。
 解析口径 = 两边都要：保留 01 的 `openapi_examples` 导入，采用 02 的 `get_embedder` / `get_search`，去掉已删除的 `get_llm` / `BochaSearchClient`。
 合并后协调者亲跑 `uv run pytest -q` → **164 passed**（131 + 33）、`ruff check .` 干净。
 
-- **合并点**：`04fc0e3`（`merge(02)`）。
+- **合并点**：`83a067e`（`merge(02)`）。
 - **越界披露（接受）**：`backend/scripts/verify_services.py`（被删 provider 的调用点，不修即 ImportError）、`backend/.env.example`（新配置的唯一文档面）—— 均属必要修正。
 - **状态迁移**：`ready-for-agent` → `done`。
 - **未完成的验证（登记为 `ready-for-human`）**：真实云端联通性（dashscope / deepseek / siliconflow / mineru / bocha）未验证——本工作树无任何 Key，且 `.env` 不入库。需人工带真实 Key 跑一次 `backend/scripts/verify_services.py` 才能确认。

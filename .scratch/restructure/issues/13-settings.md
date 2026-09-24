@@ -32,7 +32,7 @@
 
 **分支 / commit**：`JulianZBY/issue-13-settings`。代码与测试所在的提交对象 = `be9b145`
 （用 `git show be9b145 --stat` 核对，24 个文件）；其后一个同信息提交只补本交付记录与验收勾选。
-基线 `bb61726`。未 push、未开 PR、未 merge/rebase。
+基线 `5ad9f63`。未 push、未开 PR、未 merge/rebase。
 
 ### 新增文件
 
@@ -286,8 +286,8 @@ $ uv run pytest -q                              → 244 passed
 
 **协调者放行的两处越界（已按用户裁决）**：① `main.py` 追加「设置」tag（与票 12 的「题库」同法）；② 7 处「任务档位」最小调用点替换——协调者判定「只留 seam 等于功能未实现」，故放行并要求只改那一行。
 
-**协调者发现的缺陷 → 同工作树续派修复**：合入主干后，`tests/test_settings_api.py::test_read_starts_from_bootstrap_defaults` 在**带真实 `.env` 的仓库**里失败。甄别结论：**产品行为正确，是用例假设了「`.env` 为空」**（引导默认里有 Key 本就该显示为已配置）。续派（新终端 + 既有工作树，因 Orca runtime 期间重启过）后交付 `f8aee68`：新增 autouse 夹具把引导默认钉成「本机无 `.env`」的代码默认，**产品代码一行未动**；带假 Key `.env` 与改名后**两个方向都全绿**。协调者在真实 `.env` 存在的 main 上复验：该文件 **24 passed / 3 秒**。
+**协调者发现的缺陷 → 同工作树续派修复**：合入主干后，`tests/test_settings_api.py::test_read_starts_from_bootstrap_defaults` 在**带真实 `.env` 的仓库**里失败。甄别结论：**产品行为正确，是用例假设了「`.env` 为空」**（引导默认里有 Key 本就该显示为已配置）。续派（新终端 + 既有工作树，因 Orca runtime 期间重启过）后交付 `3f43a8f`：新增 autouse 夹具把引导默认钉成「本机无 `.env`」的代码默认，**产品代码一行未动**；带假 Key `.env` 与改名后**两个方向都全绿**。协调者在真实 `.env` 存在的 main 上复验：该文件 **24 passed / 3 秒**。
 
-- **合并点**：`df4e8eb`（`merge(13)`）+ `1d4f67a`（密封性补丁）。
+- **合并点**：`9a9586c`（`merge(13)`）+ `95007c6`（密封性补丁）。
 - **状态迁移**：`ready-for-agent` → `done`。
 - **遗留去向（均登记进票 14）**：① 同类环境依赖仍在 `test_rag_strategies.py`（2 条）与 `test_graph_retrieval.py`（2 条）；② `app/api/v1/settings.py` 的 `_capabilities()` 重复定义两处；③ 写穿无并发加锁、Key 原文入库、无「测试连接」按钮。

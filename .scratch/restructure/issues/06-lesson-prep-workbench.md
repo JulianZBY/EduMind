@@ -15,7 +15,7 @@
 
 ## 交付记录
 
-**分支**：`JulianZBY/issue-06-lesson-prep-workbench`　**主提交**：`64580b0 feat(06): 备课会话工作台`（未 push、未开 PR、未 merge）
+**分支**：`JulianZBY/issue-06-lesson-prep-workbench`　**主提交**：`59f262a feat(06): 备课会话工作台`（未 push、未开 PR、未 merge）
 
 ### 做了什么
 
@@ -153,6 +153,6 @@ dev server 实测（uvicorn 8000 stub + vite 5173，前后端真跑）：
 
 **跨票协调**：票 07 交付时报告 `artifacts.outline` 由字符串变对象，协调者当即把这条变化通过 `orchestration send` 转达给**仍在跑**的本票；本票据此做了兼容读取与 `chat.py` 示例对齐（未扩大范围去实现票 07/08 的内容）。
 
-- **合并点**：`593876d`（`merge(06)`，与票 15 同批）；合并时只与派生物 `frontend/src/api/generated/*` 冲突，按「重生成」处置。
+- **合并点**：`b461285`（`merge(06)`，与票 15 同批）；合并时只与派生物 `frontend/src/api/generated/*` 冲突，按「重生成」处置。
 - **状态迁移**：`ready-for-agent` → `done`。
 - **遗留去向**：`/documents` 两个端点缺 `response_model`（本票用运行时收窄顶住）→ 已登记进票 14 收口清单；真浏览器点选 → 票 14。

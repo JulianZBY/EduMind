@@ -14,7 +14,7 @@
 ## 交付记录
 
 **分支**：`JulianZBY/issue-09-knowledge-workbench`（本工作树当前分支；未 push、未开 PR、未 merge）
-**主提交**：`f5440da` · `feat(09): 知识库工作台`
+**主提交**：`7b4f7d4` · `feat(09): 知识库工作台`
 **收尾提交**：本节的勾选与记录（`docs(09): 勾选验收项 + 交付记录`）。
 
 ### 一、跑过的命令与结果
@@ -259,11 +259,11 @@ PATCH false -> {..."is_reference":false}
 | 参考资料标记即时切换 | 前端乐观改写 + 失败回滚；HTTP 缝测试覆盖切换与 404 | 通过 |
 | 空状态/错误态密度与风格清单 | `npm run lint`（65 文件零违规）+ 交付记录自检清单 | 通过 |
 | 服务端状态缓存、重复进入不重拉 | 列表/详情走 TanStack Query，状态轮询到终态自动停 | 通过 |
-| 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **193 passed**（真基线 `142b59a` 185 + 8）、`ruff check .` 干净；工作树干净 | 通过 |
+| 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **193 passed**（真基线 `9468fc0` 185 + 8）、`ruff check .` 干净；工作树干净 | 通过 |
 
-**合并冲突处置（协调者）**：本票与并行票 12 都全量重生成过 `frontend/openapi/openapi.json` 与 `src/api/generated/*`，合并时 3 个文件冲突。按「**派生文件任取一侧 + 在合并后的后端上重新生成**」处置：合并 `3c9d5fc`，随后在 main 上 `npm install` + `npm run gen:api` 重生成（`d315e69`），快照同时含 documents 与 questions 两组端点，`npm run build` / `npm run lint` 通过。
+**合并冲突处置（协调者）**：本票与并行票 12 都全量重生成过 `frontend/openapi/openapi.json` 与 `src/api/generated/*`，合并时 3 个文件冲突。按「**派生文件任取一侧 + 在合并后的后端上重新生成**」处置：合并 `25a4de1`，随后在 main 上 `npm install` + `npm run gen:api` 重生成（`d925a0d`），快照同时含 documents 与 questions 两组端点，`npm run build` / `npm run lint` 通过。
 > 附带修掉一处环境问题：main 的 `frontend/node_modules` 是票 04 之前的旧依赖，导致 `gen:api` 与 `build` 报 `openapi-ts` 不存在、`@tailwindcss/vite` 找不到、`src/store/ui.ts` 两个 TS7006 —— 全部是旧依赖所致，`npm install` 后消失。
 
-- **合并点**：`3c9d5fc`（`merge(09)`）+ `d315e69`（派生物重生成）。
+- **合并点**：`25a4de1`（`merge(09)`）+ `d925a0d`（派生物重生成）。
 - **状态迁移**：`ready-for-agent` → `done`。
 - **遗留去向**：① **stub 模式图片/视频必然失败（缺 vision stub）→ 已建票 15 并派 worker**（违反 ADR-0003「必有 stub」，且卡票 14 的多模态冒烟）；② 列表无分页、详情只回前 200 个分块 → 记入票 14 收口清单。

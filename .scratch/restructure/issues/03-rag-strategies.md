@@ -28,7 +28,7 @@
 **分支 / commit**：`JulianZBY/issue-03-rag-strategies`。代码与测试所在的提交对象 = `98597c2`
 （用 `git show 98597c2 --stat` 核对，19 个文件）；其后还有两个同信息提交，
 只补本交付记录与 `backend/.env.example` 的新配置样例，不动代码。未 push、未开 PR、未 merge/rebase。
-基线 `ab39adf`。
+基线 `1f39891`。
 
 **新增文件**
 
@@ -74,7 +74,7 @@ uv run pytest tests/test_graph_retrieval.py tests/test_reference.py \
 
 **证据 1：默认档与收编前逐字段一致**
 
-收编前（`ab39adf` 代码）用一次性探针捕获 `retrieve_knowledge` 输出，抄成黄金值写进
+收编前（`1f39891` 代码）用一次性探针捕获 `retrieve_knowledge` 输出，抄成黄金值写进
 `test_default_retrieval_matches_pre_refactor_golden`（PASSED），比对项：
 
 ```text
@@ -160,8 +160,8 @@ ValueError: 未实现的分块策略: nowhere（可选：paragraph）
 | 调用方只依赖接口 | `test_callers_only_depend_on_interface_and_factory` 守卫用例 | 通过 |
 | 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **181 passed**（合并前基线 164）、`uv run ruff check .` 干净 | 通过 |
 
-**发现并处置的状态不一致**：worker 报 `worker_done` 之后，pi-lens 的 deferred formatter 又改了 3 个文件且**未提交**（`knowledge.py` / `retrieval/search.py` / `test_rag_strategies.py`，纯折行）。协调者逐处看过 diff 后**同终端续派**（`reused_terminal`）要求其落地为 `1590ffa`，并在最终态复跑 181 passed——**使「合并的状态 = 复核过的状态」**。
+**发现并处置的状态不一致**：worker 报 `worker_done` 之后，pi-lens 的 deferred formatter 又改了 3 个文件且**未提交**（`knowledge.py` / `retrieval/search.py` / `test_rag_strategies.py`，纯折行）。协调者逐处看过 diff 后**同终端续派**（`reused_terminal`）要求其落地为 `b03801b`，并在最终态复跑 181 passed——**使「合并的状态 = 复核过的状态」**。
 
-- **合并点**：`beedb64`（`merge(03)`）；合并后 main 复跑 → 181 passed。
+- **合并点**：`e56d0e3`（`merge(03)`）；合并后 main 复跑 → 181 passed。
 - **状态迁移**：`ready-for-agent` → `done`。
 - **遗留去向（已登记）**：工厂 `lru_cache` 导致「运行时改配置需清缓存才能换实例」→ 已写入票 13 派发约束（设置写穿即时生效）。

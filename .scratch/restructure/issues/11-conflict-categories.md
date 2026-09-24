@@ -16,7 +16,7 @@
 ## 交付记录
 
 **分支**：`JulianZBY/issue-11-conflict-categories`（本工作树当前分支；未 push、未开 PR、未 merge）
-**主提交**：`1b2fa23` · `feat(11): 冲突三类别`（基栈 `0e47f98`，票 10 合入后；未 push、未开 PR、未 merge）
+**主提交**：`0bc88a7` · `feat(11): 冲突三类别`（基栈 `8a7d881`，票 10 合入后；未 push、未开 PR、未 merge）
 **本行来源**：上面这个哈希在随后的 `docs(11)` 小提交里补上（主提交本身不便写自己的哈希）。
 
 ### 一、跑过的命令与结果
@@ -183,6 +183,6 @@ jsdom 是用 `npm install --no-save jsdom` 临时装的，`package.json` / `pack
 
 **合并冲突（协调者手工解析）**：本票与票 07 同时改了 `backend/app/db/models.py`（07 在 `Conflict` 之后插入 `ArtifactVersion`，11 给 `Conflict` 追加三列），撞在同一锚点。解析口径：11 的三列**必须排在版本表之前**（它们属于 `Conflict`），版本表保持 07 的写法不变。另与派生物冲突按「重生成」处置。合并后 main 复跑 292 passed。
 
-- **合并点**：`f021df1`（`merge(11)`）。
+- **合并点**：`cb6b3b7`（`merge(11)`）。
 - **状态迁移**：`ready-for-agent` → `done`。
 - **遗留去向**：结构冲突与常识存疑的检测逻辑（ADR-0006 已明写「只落模型与动作」）、`/conflicts/:conflictId` 详情路由占位、队列不分页 → 票 14 收口清单。

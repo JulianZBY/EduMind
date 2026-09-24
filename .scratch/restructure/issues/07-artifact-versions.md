@@ -28,9 +28,9 @@
 `POST /revise` 与 `POST /revise/word` 纯新增可选 `session_id` / `base_version_id`——以历史版本为基线再修改会产出版本号更高的
 **新版本**，基线版本的文件与内容原样保留，不带会话时两个老端点的字段语义与行为一字未变。
 
-**分支 / commit**：`JulianZBY/issue-07-artifact-versions`。代码 + 测试 + 文档所在的提交对象 = `fcba650`
-（`git show fcba650 --stat` 可核对，15 个文件）；其后若另有提交，只补本交付记录与勾选，不动代码。
-基线 `e68f872`（票 05 合入后的工作树尖端）。未 push、未开 PR、未 merge/rebase。
+**分支 / commit**：`JulianZBY/issue-07-artifact-versions`。代码 + 测试 + 文档所在的提交对象 = `c9afa58`
+（`git show c9afa58 --stat` 可核对，15 个文件）；其后若另有提交，只补本交付记录与勾选，不动代码。
+基线 `08b27e5`（票 05 合入后的工作树尖端）。未 push、未开 PR、未 merge/rebase。
 
 **新增文件**
 
@@ -173,6 +173,6 @@ uv run pytest tests/test_openapi_contract.py -q    # 54 passed（3 个新端点 
 
 **「假失败」甄别（本票最值得记的一件事）**：合并后全量测试出现 3 条红（`test_download_supports_inline_for_interactive_content`、`test_revise_from_a_historical_version_...`、`test_exam_generation_without_session_keeps_existing_behaviour`），且整轮耗时 13.5 分钟。排查结论：**不是集成缺陷，而是测试套件不密封** —— main 工作树存在 `backend/.env`（`LLM_PROVIDER=dashscope` + 真实 Key，新工作树都没有该文件），于是这三条断言 stub 固定产出的用例跑在真实 provider 上。钉住 `LLM_PROVIDER=stub` 后同样代码 **274 passed / 13 秒**。该缺陷已登记进票 14 的验收项（要求 `conftest.py` 用 `os.environ.setdefault` 钉住 stub 类配置，并以「`.env` 写真实 provider 仍全绿」为验收方式）。
 
-- **合并点**：`045f9ef`（`merge(07)`）；合并后 main（stub 钉住）复跑 → 274 passed + ruff 干净。
+- **合并点**：`3f873f8`（`merge(07)`）；合并后 main（stub 钉住）复跑 → 274 passed + ruff 干净。
 - **状态迁移**：`ready-for-agent` → `done`。
 - **遗留去向**：删会话不回收 `data/output` 文件、`artifacts.outline` 形态变化（已由协调者转达给在跑的票 06）、并发同版本号靠唯一约束拒绝无重试 → 记入票 14 收口清单。

@@ -21,8 +21,8 @@
 | 项 | 值 |
 | --- | --- |
 | 分支 | `JulianZBY/issue-01-spec-docs` |
-| 基线 commit | `eadc76c`（分支起点） |
-| 本票 commit | `f8d04b0` — `docs(01): 规范与决策文档基线 + 端点 OpenAPI 注解`（文档、注解与契约测试全部在此提交；本交付记录连同验收项勾选为其后的第二个提交） |
+| 基线 commit | `0e512ea`（分支起点） |
+| 本票 commit | `13a12d5` — `docs(01): 规范与决策文档基线 + 端点 OpenAPI 注解`（文档、注解与契约测试全部在此提交；本交付记录连同验收项勾选为其后的第二个提交） |
 | 未做 | 未 push、未开 PR、未 merge / rebase |
 
 ### 新建文档清单（14 份，全部入库）
@@ -147,7 +147,7 @@ git ls-files docs CONTEXT.md                          # 列出全部 14 份文�
 | 文档入库、过程稿仍排除 | `.git/info/exclude` 只剩 `DESIGN.md` / `PLAN.md` / `proposal.md` / `paseo.json` 四条 | 通过 |
 | 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **131 passed**；`uv run ruff check .` → 干净 | 通过 |
 
-- **合并点**：`19071fd`（`merge(01)`）。合并后与分支树逐步一致（`git diff main <分支> --stat` 为空）。
+- **合并点**：`8967a2b`（`merge(01)`）。合并后与分支树逐步一致（`git diff main <分支> --stat` 为空）。
 - **越界披露（接受）**：`frontend/AGENTS.md` 六区那一行（「产物」→「生成物」）—— 属验收项 3 的必需修正，范围合理。
 - **状态迁移**：`ready-for-agent` → `done`（由本轮复核产生）。
 - **遗留去向（协调者登记，不当口头约定）**：① ADR-0001 缺位 → 随票 11 处理；② README / `frontend/src/App.tsx` 的「产物」残留 → 票 04/06 与票 14；③ `backend/app/db/models.py` 指向不入库 DESIGN.md 的断链 → 已写入票 05 派发约束；④ 题库 OpenAPI 分组 → 已写入票 12 派发约束；⑤ `docs/api/artifacts.md` 版本语义回校 → 已写入票 07 派发约束。
