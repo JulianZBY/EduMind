@@ -63,10 +63,16 @@ def _seed_graph() -> dict:
 
         db.add_all(
             [
-                KnowledgeEdge(user_id="default", from_node=def_a, to_node=img_b, relation_type="前置依赖"),
-                KnowledgeEdge(user_id="default", from_node=img_b, to_node=slope_c, relation_type="推导关系"),
+                KnowledgeEdge(
+                    user_id="default", from_node=def_a, to_node=img_b, relation_type="前置依赖"
+                ),
+                KnowledgeEdge(
+                    user_id="default", from_node=img_b, to_node=slope_c, relation_type="推导关系"
+                ),
                 # 跨学科的相关关联：按学科过滤时必须随节点一同收缩
-                KnowledgeEdge(user_id="default", from_node=def_a, to_node=poem_d, relation_type="相关关联"),
+                KnowledgeEdge(
+                    user_id="default", from_node=def_a, to_node=poem_d, relation_type="相关关联"
+                ),
             ]
         )
         db.commit()
@@ -132,7 +138,9 @@ def test_graph_filter_by_chapter_is_narrower_than_by_subject():
     assert both.json() == {"nodes": [], "edges": []}
 
     # 过滤取值为空：不报错，收缩成空图
-    empty = client.get("/api/v1/knowledge/graph", params={"subject": f"不存在的学科_{ctx['suffix']}"})
+    empty = client.get(
+        "/api/v1/knowledge/graph", params={"subject": f"不存在的学科_{ctx['suffix']}"}
+    )
     assert empty.status_code == 200
     assert empty.json() == {"nodes": [], "edges": []}
 
