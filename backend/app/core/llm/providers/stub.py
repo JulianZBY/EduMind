@@ -113,6 +113,17 @@ _STUB_INTENT = {
 # （内容打上 stub 标记），避免与上传资料无关的固定假数据误导用户；正文为空返回空图。
 _STUB_MARK = "[stub 演示提取]"
 
+# 视觉提取（图片 / 视频帧）的 stub 返回：无云端多模态能力时不再抛 NotImplementedError
+# （ADR-0003 的「必有 stub」），而是给出**确定性**的占位解读，并照抄 stub 文本对话的标记风格
+# 打上「stub 视觉提取」标记——教师看到的解析分块必须能一眼看出这不是真实识别结果
+# （CONTEXT.md 措辞纪律：说「stub 视觉提取」）。
+_STUB_VISION_MARK = "[stub 视觉提取]"
+_STUB_VISION_TEXT = (
+    f"{_STUB_VISION_MARK}（占位解读，不是真实识别结果）本次运行没有可用的云端多模态能力，"
+    "图片与视频帧的解读由 stub 返回固定内容，不反映画面实际内容。"
+    "画面要点：教学示意图（占位）；可提取知识点：接入云端多模态能力后由真实识别给出。"
+)
+
 
 def _stub_knowledge(prompt: str) -> dict:
     """从提取提示词中拆出正文，取前 3 个非空行回显为节点/边（确定性、内容相关）。"""
@@ -176,3 +187,11 @@ class StubProvider(LLMProvider):
                 content=json.dumps({"questions": _STUB_EXAM_QUESTIONS}, ensure_ascii=False)
             )
         return ChatResult(content=f"[stub] 收到你的消息：{last[:50]}")
+
+    async def vision(self, image_path: str, prompt: str) -> str:
+        """stub 视觉提取：返回确定性占位解读，带「stub 视觉提取」标记。
+
+        入参按接口签名保留但不使用：stub 既没有云端多模态可读图，也不需要 prompt——
+        输出与入参无关、每次相同，教师侧看到的分块内容因此能稳定识别为「不是真实识别结果」。
+        """
+        return _STUB_VISION_TEXT
