@@ -5,6 +5,148 @@ export type ClientOptions = {
 };
 
 /**
+ * ArtifactListResponse
+ */
+export type ArtifactListResponse = {
+    /**
+     * Groups
+     */
+    groups: Array<ArtifactVersionGroup>;
+    /**
+     * Session Id
+     */
+    session_id: string;
+};
+
+/**
+ * ArtifactVersionDetail
+ */
+export type ArtifactVersionDetail = {
+    /**
+     * Artifact Type
+     */
+    artifact_type: '课件' | '教案' | '提纲' | '试卷' | '互动内容';
+    /**
+     * Content
+     */
+    content?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Download Url
+     */
+    download_url: string;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Origin
+     */
+    origin: string;
+    /**
+     * Parent Id
+     */
+    parent_id?: string | null;
+    /**
+     * Session Id
+     */
+    session_id: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Version
+     */
+    version: number;
+};
+
+/**
+ * ArtifactVersionGroup
+ */
+export type ArtifactVersionGroup = {
+    /**
+     * Artifact Type
+     */
+    artifact_type: '课件' | '教案' | '提纲' | '试卷' | '互动内容';
+    /**
+     * Current Version
+     */
+    current_version: number;
+    /**
+     * Current Version Id
+     */
+    current_version_id: string;
+    /**
+     * Versions
+     */
+    versions: Array<ArtifactVersionItem>;
+};
+
+/**
+ * ArtifactVersionItem
+ */
+export type ArtifactVersionItem = {
+    /**
+     * Artifact Type
+     */
+    artifact_type: '课件' | '教案' | '提纲' | '试卷' | '互动内容';
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Download Url
+     */
+    download_url: string;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Origin
+     */
+    origin: string;
+    /**
+     * Parent Id
+     */
+    parent_id?: string | null;
+    /**
+     * Session Id
+     */
+    session_id: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Version
+     */
+    version: number;
+};
+
+/**
  * Body_upload_document_api_v1_documents_upload_post
  */
 export type BodyUploadDocumentApiV1DocumentsUploadPost = {
@@ -186,6 +328,10 @@ export type ExamGenerateRequest = {
      * N
      */
     n?: number;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
 };
 
 /**
@@ -206,6 +352,18 @@ export type ExamGenerateResponse = {
     questions: Array<{
         [key: string]: unknown;
     }>;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+    /**
+     * Version
+     */
+    version?: number | null;
+    /**
+     * Version Id
+     */
+    version_id?: string | null;
 };
 
 /**
@@ -298,6 +456,10 @@ export type InteractiveGenerateRequest = {
     intent?: {
         [key: string]: unknown;
     };
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
 };
 
 /**
@@ -312,6 +474,18 @@ export type InteractiveGenerateResponse = {
      * Html
      */
     html: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+    /**
+     * Version
+     */
+    version?: number | null;
+    /**
+     * Version Id
+     */
+    version_id?: string | null;
 };
 
 /**
@@ -671,13 +845,21 @@ export type ReviewRequest = {
 /**
  * ReviseRequest
  *
- * 课件修改请求：待改的课件结构 + 修改意见 + 原风格偏好。
+ * 课件修改请求：待改的课件结构 + 修改意见 + 原风格偏好 +（可选）以哪一版为基线。
  */
 export type ReviseRequest = {
+    /**
+     * Base Version Id
+     */
+    base_version_id?: string | null;
     /**
      * Feedback
      */
     feedback: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
     /**
      * Slides
      */
@@ -699,19 +881,35 @@ export type ReviseResponse = {
      */
     filename: string;
     /**
+     * Session Id
+     */
+    session_id?: string | null;
+    /**
      * Slides
      */
     slides: Array<{
         [key: string]: unknown;
     }>;
+    /**
+     * Version
+     */
+    version?: number | null;
+    /**
+     * Version Id
+     */
+    version_id?: string | null;
 };
 
 /**
  * ReviseWordRequest
  *
- * 教案修改请求：待改的教案结构 + 修改意见 + 参考资料（再渲染时保留溯源一节）。
+ * 教案修改请求：待改的教案结构 + 修改意见 + 参考资料 +（可选）以哪一版为基线。
  */
 export type ReviseWordRequest = {
+    /**
+     * Base Version Id
+     */
+    base_version_id?: string | null;
     /**
      * Feedback
      */
@@ -720,6 +918,10 @@ export type ReviseWordRequest = {
      * References
      */
     references?: Array<string>;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
     /**
      * Word
      */
@@ -736,6 +938,18 @@ export type ReviseWordResponse = {
      * Filename
      */
     filename: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+    /**
+     * Version
+     */
+    version?: number | null;
+    /**
+     * Version Id
+     */
+    version_id?: string | null;
     /**
      * Word
      */
@@ -946,6 +1160,95 @@ export type RootGetErrors = {
 export type RootGetResponses = {
     /**
      * 服务信息
+     */
+    200: unknown;
+};
+
+export type GetArtifactVersionApiV1ArtifactsVersionIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Version Id
+         *
+         * 版本 id，取自版本列表的 `versions[].id`
+         */
+        version_id: string;
+    };
+    query?: never;
+    url: '/api/v1/artifacts/{version_id}';
+};
+
+export type GetArtifactVersionApiV1ArtifactsVersionIdGetErrors = {
+    /**
+     * 生成物版本不存在
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type GetArtifactVersionApiV1ArtifactsVersionIdGetError = GetArtifactVersionApiV1ArtifactsVersionIdGetErrors[keyof GetArtifactVersionApiV1ArtifactsVersionIdGetErrors];
+
+export type GetArtifactVersionApiV1ArtifactsVersionIdGetResponses = {
+    /**
+     * 某一版生成物的详情（含内容快照）
+     */
+    200: ArtifactVersionDetail;
+};
+
+export type GetArtifactVersionApiV1ArtifactsVersionIdGetResponse = GetArtifactVersionApiV1ArtifactsVersionIdGetResponses[keyof GetArtifactVersionApiV1ArtifactsVersionIdGetResponses];
+
+export type DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetData = {
+    body?: never;
+    path: {
+        /**
+         * Version Id
+         *
+         * 版本 id，取自版本列表的 `versions[].id`
+         */
+        version_id: string;
+    };
+    query?: {
+        /**
+         * Inline
+         *
+         * true 时不附下载头：互动内容 HTML 可在浏览器直接打开互动
+         */
+        inline?: boolean;
+    };
+    url: '/api/v1/artifacts/{version_id}/download';
+};
+
+export type DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetErrors = {
+    /**
+     * 文件名非法：含 `..` 或路径分隔符（防止目录穿越）
+     */
+    400: unknown;
+    /**
+     * 版本不存在，或该版本的文件已被清理
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetError = DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetErrors[keyof DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetErrors];
+
+export type DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetResponses = {
+    /**
+     * 文件字节流；实际媒体类型由生成物后缀决定（pptx / docx / html），`Content-Disposition` 决定下载或内联
      */
     200: unknown;
 };
@@ -1192,6 +1495,10 @@ export type GenerateExamPaperApiV1ExamGeneratePostData = {
 
 export type GenerateExamPaperApiV1ExamGeneratePostErrors = {
     /**
+     * 备课会话不存在
+     */
+    404: unknown;
+    /**
      * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
     422: unknown;
@@ -1271,6 +1578,10 @@ export type GenerateInteractiveApiV1InteractiveGeneratePostData = {
 };
 
 export type GenerateInteractiveApiV1InteractiveGeneratePostErrors = {
+    /**
+     * 备课会话不存在
+     */
+    404: unknown;
     /**
      * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
@@ -1608,6 +1919,10 @@ export type ReviseApiV1RevisePostData = {
 
 export type ReviseApiV1RevisePostErrors = {
     /**
+     * 基线版本或备课会话不存在
+     */
+    404: unknown;
+    /**
      * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
     422: unknown;
@@ -1619,7 +1934,7 @@ export type ReviseApiV1RevisePostErrors = {
 
 export type ReviseApiV1RevisePostResponses = {
     /**
-     * 修改后的课件与新文件名
+     * 修改后的课件、新文件名与（带会话时的）新版本标识
      */
     200: ReviseResponse;
 };
@@ -1635,6 +1950,10 @@ export type ReviseWordEndpointApiV1ReviseWordPostData = {
 
 export type ReviseWordEndpointApiV1ReviseWordPostErrors = {
     /**
+     * 基线版本或备课会话不存在
+     */
+    404: unknown;
+    /**
      * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
     422: unknown;
@@ -1646,7 +1965,7 @@ export type ReviseWordEndpointApiV1ReviseWordPostErrors = {
 
 export type ReviseWordEndpointApiV1ReviseWordPostResponses = {
     /**
-     * 修改后的教案与新文件名
+     * 修改后的教案、新文件名与（带会话时的）新版本标识
      */
     200: ReviseWordResponse;
 };
@@ -1833,6 +2152,51 @@ export type RenameSessionApiV1SessionsSessionIdPatchResponses = {
 };
 
 export type RenameSessionApiV1SessionsSessionIdPatchResponse = RenameSessionApiV1SessionsSessionIdPatchResponses[keyof RenameSessionApiV1SessionsSessionIdPatchResponses];
+
+export type ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Session Id
+         *
+         * 备课会话 id，取自会话列表
+         */
+        session_id: string;
+    };
+    query?: {
+        /**
+         * Artifact Type
+         *
+         * 只看某一类生成物；不传返回全部（课件 / 教案 / 提纲 / 试卷 / 互动内容）
+         */
+        artifact_type?: '课件' | '教案' | '提纲' | '试卷' | '互动内容' | null;
+    };
+    url: '/api/v1/sessions/{session_id}/artifacts';
+};
+
+export type ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetErrors = {
+    /**
+     * 备课会话不存在
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponses = {
+    /**
+     * 按生成物类别分组的版本列表（含当前版本与全部历史版本）
+     */
+    200: ArtifactListResponse;
+};
+
+export type ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponse = ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponses[keyof ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponses];
 
 export type HealthHealthGetData = {
     body?: never;

@@ -1,6 +1,231 @@
 {
   "components": {
     "schemas": {
+      "ArtifactListResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactVersionGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "groups"
+        ],
+        "title": "ArtifactListResponse",
+        "type": "object"
+      },
+      "ArtifactVersionDetail": {
+        "properties": {
+          "artifact_type": {
+            "enum": [
+              "课件",
+              "教案",
+              "提纲",
+              "试卷",
+              "互动内容"
+            ],
+            "title": "Artifact Type",
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "download_url": {
+            "title": "Download Url",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "artifact_type",
+          "version",
+          "label",
+          "origin",
+          "filename",
+          "title",
+          "created_at",
+          "download_url"
+        ],
+        "title": "ArtifactVersionDetail",
+        "type": "object"
+      },
+      "ArtifactVersionGroup": {
+        "properties": {
+          "artifact_type": {
+            "enum": [
+              "课件",
+              "教案",
+              "提纲",
+              "试卷",
+              "互动内容"
+            ],
+            "title": "Artifact Type",
+            "type": "string"
+          },
+          "current_version": {
+            "title": "Current Version",
+            "type": "integer"
+          },
+          "current_version_id": {
+            "title": "Current Version Id",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactVersionItem"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "artifact_type",
+          "current_version_id",
+          "current_version",
+          "versions"
+        ],
+        "title": "ArtifactVersionGroup",
+        "type": "object"
+      },
+      "ArtifactVersionItem": {
+        "properties": {
+          "artifact_type": {
+            "enum": [
+              "课件",
+              "教案",
+              "提纲",
+              "试卷",
+              "互动内容"
+            ],
+            "title": "Artifact Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "download_url": {
+            "title": "Download Url",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "artifact_type",
+          "version",
+          "label",
+          "origin",
+          "filename",
+          "title",
+          "created_at",
+          "download_url"
+        ],
+        "title": "ArtifactVersionItem",
+        "type": "object"
+      },
       "Body_upload_document_api_v1_documents_upload_post": {
         "properties": {
           "file": {
@@ -310,6 +535,17 @@
             "default": 5,
             "title": "N",
             "type": "integer"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           }
         },
         "title": "ExamGenerateRequest",
@@ -332,6 +568,39 @@
             },
             "title": "Questions",
             "type": "array"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
           }
         },
         "required": [
@@ -471,6 +740,17 @@
             "default": {},
             "title": "Intent",
             "type": "object"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           }
         },
         "title": "InteractiveGenerateRequest",
@@ -485,6 +765,39 @@
           "html": {
             "title": "Html",
             "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
           }
         },
         "required": [
@@ -1027,9 +1340,11 @@
         "type": "object"
       },
       "ReviseRequest": {
-        "description": "课件修改请求：待改的课件结构 + 修改意见 + 原风格偏好。",
+        "description": "课件修改请求：待改的课件结构 + 修改意见 + 原风格偏好 +（可选）以哪一版为基线。",
         "example": {
+          "base_version_id": "3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b",
           "feedback": "把第二页的例子换成生活情境，语言再简洁些",
+          "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
           "slides": [
             {
               "bullets": [
@@ -1042,9 +1357,31 @@
           "style": "情境导入"
         },
         "properties": {
+          "base_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "feedback": {
             "title": "Feedback",
             "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           },
           "slides": {
             "items": {
@@ -1073,6 +1410,17 @@
             "title": "Filename",
             "type": "string"
           },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
           "slides": {
             "items": {
               "additionalProperties": true,
@@ -1080,6 +1428,28 @@
             },
             "title": "Slides",
             "type": "array"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
           }
         },
         "required": [
@@ -1090,12 +1460,14 @@
         "type": "object"
       },
       "ReviseWordRequest": {
-        "description": "教案修改请求：待改的教案结构 + 修改意见 + 参考资料（再渲染时保留溯源一节）。",
+        "description": "教案修改请求：待改的教案结构 + 修改意见 + 参考资料 +（可选）以哪一版为基线。",
         "example": {
+          "base_version_id": "6d5c4b3a-2e1f-4a90-8b7c-6d5e4f3a2b1c",
           "feedback": "教学目标再具体一点，写出可观察的行为动词",
           "references": [
             "一次函数讲义.pdf"
           ],
+          "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
           "word": {
             "objectives": {
               "knowledge": [
@@ -1112,6 +1484,17 @@
           }
         },
         "properties": {
+          "base_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "feedback": {
             "title": "Feedback",
             "type": "string"
@@ -1123,6 +1506,17 @@
             },
             "title": "References",
             "type": "array"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           },
           "word": {
             "additionalProperties": true,
@@ -1142,6 +1536,39 @@
           "filename": {
             "title": "Filename",
             "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
           },
           "word": {
             "additionalProperties": true,
@@ -1501,6 +1928,184 @@
         ]
       }
     },
+    "/api/v1/artifacts/{version_id}": {
+      "get": {
+        "description": "按版本 id 取这一版的详情：版本号、产出方式（生成 / 修改）、落盘文件名、标题、基线版本（`parent_id`，即「由哪一版衍生而来」）以及**这一版的内容快照**。\n\n内容快照让历史版本可以直接回看（课件结构与页面、教案结构、提纲正文、题目、互动内容 HTML）；下载文件请用 `download_url` 指向的下载端点。\n\n版本 id 不存在时返回 `404`。",
+        "operationId": "get_artifact_version_api_v1_artifacts__version_id__get",
+        "parameters": [
+          {
+            "description": "版本 id，取自版本列表的 `versions[].id`",
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "description": "版本 id，取自版本列表的 `versions[].id`",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "artifact_type": "课件",
+                  "content": {
+                    "slides": [
+                      {
+                        "points": [
+                          "情境导入：出租车计价"
+                        ],
+                        "role": "封面",
+                        "title": "一次函数"
+                      }
+                    ]
+                  },
+                  "created_at": "2026-09-24T10:00:30",
+                  "download_url": "/api/v1/artifacts/3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b/download",
+                  "filename": "courseware_ppt_1a2b3c4d.pptx",
+                  "id": "3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b",
+                  "label": "第 2 版",
+                  "origin": "修改",
+                  "parent_id": "3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b",
+                  "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                  "title": "一次函数",
+                  "version": 2
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactVersionDetail"
+                }
+              }
+            },
+            "description": "某一版生成物的详情（含内容快照）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "生成物版本不存在: 3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b"
+                }
+              }
+            },
+            "description": "生成物版本不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "取某个生成物版本的详情",
+        "tags": [
+          "生成物"
+        ]
+      }
+    },
+    "/api/v1/artifacts/{version_id}/download": {
+      "get": {
+        "description": "按版本 id 取回**这一版**的落盘文件（课件 pptx / 教案与提纲 docx / 试卷 docx / 互动内容 html），不是「最新那个文件」的别名——每个版本对应各自的一次产出。\n\n* `inline=false`（默认）：附下载头，浏览器保存文件；\n* `inline=true`：不附下载头，互动内容 HTML 可在浏览器新标签页直接打开试用。\n\n落盘文件名由服务端生成（不接受目录与路径分隔符）；版本不存在返回 `404`，文件已被清理时同样 `404`，含义是「这个版本的文件不在了」。",
+        "operationId": "download_artifact_version_api_v1_artifacts__version_id__download_get",
+        "parameters": [
+          {
+            "description": "版本 id，取自版本列表的 `versions[].id`",
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "description": "版本 id，取自版本列表的 `versions[].id`",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "true 时不附下载头：互动内容 HTML 可在浏览器直接打开互动",
+            "in": "query",
+            "name": "inline",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "true 时不附下载头：互动内容 HTML 可在浏览器直接打开互动",
+              "title": "Inline",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/octet-stream": {
+                "description": "文件二进制内容",
+                "example": "<file bytes>"
+              }
+            },
+            "description": "文件字节流；实际媒体类型由生成物后缀决定（pptx / docx / html），`Content-Disposition` 决定下载或内联"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "非法文件名"
+                }
+              }
+            },
+            "description": "文件名非法：含 `..` 或路径分隔符（防止目录穿越）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "生成物版本不存在: 3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b"
+                }
+              }
+            },
+            "description": "版本不存在，或该版本的文件已被清理"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "下载某个生成物版本的文件",
+        "tags": [
+          "生成物"
+        ]
+      }
+    },
     "/api/v1/chat": {
       "post": {
         "description": "备课对话主入口，后端按**累积需求**分析意图后二选一：\n\n1. **澄清回复**：`clarifying=true`、`artifacts=null`，内容是下一个追问；追问粒度分快速 / 标准 / 精细三档，粒度越高追问越细。\n2. **生成回复**：`clarifying=false`，`artifacts` 携带本次的课件、教案、提纲，以及命中的参考资料来源。\n\n教师表示「信息已经够用」时（按语义判断，不靠关键词匹配）不再追问，直接出生成物。\n\n**两种调用方式**：\n\n* 带 `session_id`（取自会话列表）：以服务端会话为事实源——本轮需求与回复入库，意图按会话增量累积（不重析全部历史）。此时 `messages` 里**最后一条教师消息**是本轮新增需求，其余内容以服务端历史为准；追问粒度与参考资料也以会话上的设置为准（改它们用 `PATCH /api/v1/sessions/{session_id}`），请求里的 `granularity` / `reference_doc_ids` 不生效。会话不存在时返回 `404`。\n* 不带 `session_id`：保持无状态既有行为——整段对话历史由调用方带上，后端每轮全量重析意图，不落库、不回显 `session_id`。",
@@ -1538,7 +2143,9 @@
                         },
                         "knowledge_hits": 3,
                         "outline": {
-                          "path": "data/output/outline-7g8h9i.docx"
+                          "filename": "outline-7g8h9i.docx",
+                          "path": "data/output/outline-7g8h9i.docx",
+                          "text": "# 一次函数\n## 定义与图像\n- 正比例函数"
                         },
                         "ppt": {
                           "filename": "ppt-1a2b3c.pptx",
@@ -2080,7 +2687,7 @@
     },
     "/api/v1/exam/generate": {
       "post": {
-        "description": "按备课意图出题并同侧入库：生成 `n` 道题（默认 5）→ 题目写入题库（来源=`自编`）→ 按考查知识点关联知识图谱节点 → 渲染 Word 试卷。\n\n返回的 `questions` 供生成物区直接预览，`bank_saved` 为实际入题库的题目数，`filename` 可用于 `GET /api/v1/files/{filename}` 下载。\n\n`intent` 可直接透传上次备课的意图对象；结构不完整时退化为仅凭 `topic` 出题，不会因为字段缺失卡住一键生成。",
+        "description": "按备课意图出题并同侧入库：生成 `n` 道题（默认 5）→ 题目写入题库（来源=`自编`）→ 按考查知识点关联知识图谱节点 → 渲染 Word 试卷。\n\n返回的 `questions` 供生成物区直接预览，`bank_saved` 为实际入题库的题目数，`filename` 可用于 `GET /api/v1/files/{filename}` 下载，也可以按版本下载（见 `download_url` 体系：`GET /api/v1/artifacts/{version_id}/download`）。\n\n`intent` 可直接透传上次备课的意图对象；结构不完整时退化为仅凭 `topic` 出题，不会因为字段缺失卡住一键生成。\n\n**带上 `session_id` 时本张试卷落一条新版本**（版本号在会话内单调递增，旧的试卷版本保持可回看、可下载）；会话不存在返回 `404`。",
         "operationId": "generate_exam_paper_api_v1_exam_generate_post",
         "requestBody": {
           "content": {
@@ -2098,7 +2705,7 @@
               "application/json": {
                 "example": {
                   "bank_saved": 5,
-                  "filename": "exam-8f7e6d5c.docx",
+                  "filename": "exam_8f7e6d5c.docx",
                   "questions": [
                     {
                       "analysis": "一次函数形如 y=kx+b（k≠0）。",
@@ -2113,7 +2720,10 @@
                       ],
                       "type": "选择"
                     }
-                  ]
+                  ],
+                  "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                  "version": 1,
+                  "version_id": "7e6d5c4b-3a2f-4190-8b7c-6d5e4f3a2b1c"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ExamGenerateResponse"
@@ -2121,6 +2731,16 @@
               }
             },
             "description": "试卷已生成，题目已入题库"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                }
+              }
+            },
+            "description": "备课会话不存在"
           },
           "422": {
             "content": {
@@ -2259,7 +2879,7 @@
     },
     "/api/v1/interactive/generate": {
       "post": {
-        "description": "按意图生成一份**单文件 HTML5** 互动内容（小游戏 / 知识点动画），落盘后返回 HTML 正文与文件名。\n\n前端可用 `GET /api/v1/files/{filename}?inline=true` 在新标签页直接打开试用。\n模型返回的不是完整单文件 HTML 时，本接口以 502 报错而不落盘半成品。",
+        "description": "按意图生成一份**单文件 HTML5** 互动内容（小游戏 / 知识点动画），落盘后返回 HTML 正文与文件名。\n\n前端可用 `GET /api/v1/files/{filename}?inline=true` 在新标签页直接打开试用。\n模型返回的不是完整单文件 HTML 时，本接口以 502 报错而不落盘半成品。\n\n**带上 `session_id` 时本份互动内容落一条新版本**（版本号在会话内单调递增，旧的互动内容版本保持可回看、可下载，也可用版本下载端点直内联打开）；会话不存在返回 `404`。",
         "operationId": "generate_interactive_api_v1_interactive_generate_post",
         "requestBody": {
           "content": {
@@ -2276,8 +2896,11 @@
             "content": {
               "application/json": {
                 "example": {
-                  "filename": "creative-3c2b1a09.html",
-                  "html": "<!doctype html><html lang=zh><body>…</body></html>"
+                  "filename": "creative_3c2b1a09.html",
+                  "html": "<!doctype html><html lang=zh><body>…</body></html>",
+                  "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                  "version": 1,
+                  "version_id": "8f7e6d5c-4b3a-4291-9c8d-7e6f5a4b3c2d"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/InteractiveGenerateResponse"
@@ -2285,6 +2908,16 @@
               }
             },
             "description": "互动内容已生成并落盘"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                }
+              }
+            },
+            "description": "备课会话不存在"
           },
           "422": {
             "content": {
@@ -3096,7 +3729,7 @@
     },
     "/api/v1/revise": {
       "post": {
-        "description": "对**所选课件**提修改意见并重新生成：把待改的课件结构连同意见交模型重排，再渲染为**新文件**（旧文件保留，因此可反复修改互不覆盖）。\n\n本接口只作用于传入的这一份课件，不影响同次备课的教案与提纲；`style` 用于沿用原课件风格（配色主题），不传则回退默认主题。",
+        "description": "对**所选课件**提修改意见并重新生成：把待改的课件结构连同意见交模型重排，再渲染为**新文件**（旧文件保留，因此可反复修改互不覆盖）。\n\n本接口只作用于传入的这一份课件，不影响同次备课的教案与提纲；`style` 用于沿用原课件风格（配色主题），不传则回退默认主题。\n\n**带上 `session_id` 时本次修改落一条新版本**（`origin=修改`）：版本号比基线更高，基线版本保持可回看、可下载；`base_version_id` 指定以哪一版为基线（版本 id 取自版本列表），不传时以该会话的当前版本为基线。基线或会话不存在返回 `404`，`base_version_id` 不是课件版本返回 `422`。\n\n不带 `session_id` / `base_version_id` 时保持既有语义：只返回修改后的结构与新文件名，不落版本记录。",
         "operationId": "revise_api_v1_revise_post",
         "requestBody": {
           "content": {
@@ -3113,7 +3746,8 @@
             "content": {
               "application/json": {
                 "example": {
-                  "filename": "ppt-6a5b4c3d.pptx",
+                  "filename": "courseware_ppt_6a5b4c3d.pptx",
+                  "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
                   "slides": [
                     {
                       "bullets": [
@@ -3122,14 +3756,26 @@
                       ],
                       "title": "一次函数"
                     }
-                  ]
+                  ],
+                  "version": 2,
+                  "version_id": "4a3b2c1d-0e9f-4a81-9b2c-3d4e5f6a7b8c"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ReviseResponse"
                 }
               }
             },
-            "description": "修改后的课件与新文件名"
+            "description": "修改后的课件、新文件名与（带会话时的）新版本标识"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "生成物版本不存在: 3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b"
+                }
+              }
+            },
+            "description": "基线版本或备课会话不存在"
           },
           "422": {
             "content": {
@@ -3169,7 +3815,7 @@
     },
     "/api/v1/revise/word": {
       "post": {
-        "description": "与课件修改同模式：完整教案结构交模型重排后**重新渲染为新 Word 文件**，旧文件保留。\n\n传 `references` 时再渲染的教案保留「参考资料」一节，保证修改后溯源不断。",
+        "description": "与课件修改同模式：完整教案结构交模型重排后**重新渲染为新 Word 文件**，旧文件保留。\n\n传 `references` 时再渲染的教案保留「参考资料」一节，保证修改后溯源不断。\n\n**带上 `session_id` 时本次修改落一条新版本**（`origin=修改`）：版本号比基线更高，基线版本保持可回看、可下载；`base_version_id` 指定以哪一版为基线，不传时以该会话的当前版本为基线。基线或会话不存在返回 `404`，`base_version_id` 不是教案版本返回 `422`。\n\n不带 `session_id` / `base_version_id` 时保持既有语义：只返回修改后的结构与新文件名，不落版本记录。",
         "operationId": "revise_word_endpoint_api_v1_revise_word_post",
         "requestBody": {
           "content": {
@@ -3186,7 +3832,10 @@
             "content": {
               "application/json": {
                 "example": {
-                  "filename": "word-9i8h7g6f.docx",
+                  "filename": "lesson_plan_9i8h7g6f.docx",
+                  "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                  "version": 2,
+                  "version_id": "6d5c4b3a-2e1f-4a90-8b7c-6d5e4f3a2b1c",
                   "word": {
                     "objectives": {
                       "knowledge": [
@@ -3207,7 +3856,17 @@
                 }
               }
             },
-            "description": "修改后的教案与新文件名"
+            "description": "修改后的教案、新文件名与（带会话时的）新版本标识"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "生成物版本不存在: 6d5c4b3a-2e1f-4a90-8b7c-6d5e4f3a2b1c"
+                }
+              }
+            },
+            "description": "基线版本或备课会话不存在"
           },
           "422": {
             "content": {
@@ -3640,6 +4299,161 @@
         "summary": "重命名备课会话",
         "tags": [
           "备课会话"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/artifacts": {
+      "get": {
+        "description": "返回某次备课（会话）的**全部生成物版本**，供生成物区按会话分组的版本时间线使用。\n\n结果按生成物类别（课件 / 教案 / 提纲 / 试卷 / 互动内容）分组；每组内 `versions` 按版本号升序，**当前版本与历史版本并列**——`current_version_id` 只是版本号最高的那一版（列表与预览默认打开的一版），不代表其它版本作废：历史版本一律可回看、可下载、可作基线继续修改。\n\n* `artifact_type` 非空时只看某一类生成物（例如生成物区的某一条时间线）；\n* 每个版本带 `filename` 与 `download_url`：由文件反查版本、由版本取回文件都可一步完成；\n* 版本号在同一生成物、同一会话内单调递增；`label` 是给教师看的「第 N 版」。\n\n会话不存在时返回 `404`（不静默返回空列表）。",
+        "operationId": "list_artifact_versions_api_v1_sessions__session_id__artifacts_get",
+        "parameters": [
+          {
+            "description": "备课会话 id，取自会话列表",
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "description": "备课会话 id，取自会话列表",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "只看某一类生成物；不传返回全部（课件 / 教案 / 提纲 / 试卷 / 互动内容）",
+            "in": "query",
+            "name": "artifact_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "课件",
+                    "教案",
+                    "提纲",
+                    "试卷",
+                    "互动内容"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "只看某一类生成物；不传返回全部（课件 / 教案 / 提纲 / 试卷 / 互动内容）",
+              "title": "Artifact Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "groups": [
+                    {
+                      "artifact_type": "课件",
+                      "current_version": 2,
+                      "current_version_id": "4a3b2c1d-0e9f-4a81-9b2c-3d4e5f6a7b8c",
+                      "versions": [
+                        {
+                          "artifact_type": "课件",
+                          "created_at": "2026-09-24T10:00:30",
+                          "download_url": "/api/v1/artifacts/3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b/download",
+                          "filename": "courseware_ppt_1a2b3c4d.pptx",
+                          "id": "3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b",
+                          "label": "第 1 版",
+                          "origin": "生成",
+                          "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                          "title": "一次函数",
+                          "version": 1
+                        },
+                        {
+                          "artifact_type": "课件",
+                          "created_at": "2026-09-24T10:05:00",
+                          "download_url": "/api/v1/artifacts/4a3b2c1d-0e9f-4a81-9b2c-3d4e5f6a7b8c/download",
+                          "filename": "courseware_ppt_5e6f7a8b.pptx",
+                          "id": "4a3b2c1d-0e9f-4a81-9b2c-3d4e5f6a7b8c",
+                          "label": "第 2 版",
+                          "origin": "修改",
+                          "parent_id": "3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b",
+                          "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                          "title": "一次函数",
+                          "version": 2
+                        }
+                      ]
+                    },
+                    {
+                      "artifact_type": "教案",
+                      "current_version": 1,
+                      "current_version_id": "5c4d3e2f-1a0b-4c92-8d3e-4f5a6b7c8d9e",
+                      "versions": [
+                        {
+                          "artifact_type": "教案",
+                          "created_at": "2026-09-24T10:00:30",
+                          "download_url": "/api/v1/artifacts/5c4d3e2f-1a0b-4c92-8d3e-4f5a6b7c8d9e/download",
+                          "filename": "lesson_plan_2b3c4d5e.docx",
+                          "id": "5c4d3e2f-1a0b-4c92-8d3e-4f5a6b7c8d9e",
+                          "label": "第 1 版",
+                          "origin": "生成",
+                          "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                          "title": "一次函数",
+                          "version": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactListResponse"
+                }
+              }
+            },
+            "description": "按生成物类别分组的版本列表（含当前版本与全部历史版本）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                }
+              }
+            },
+            "description": "备课会话不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "列出某次备课的生成物历史版本",
+        "tags": [
+          "生成物"
         ]
       }
     },
