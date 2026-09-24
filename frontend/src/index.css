@@ -1,22 +1,38 @@
-:root {
-  --accent: #4f7cff;
-  --border: #e3e5e8;
-  --card: #f2f3f5;
-  --muted: #888;
-  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
-    sans-serif;
-  color-scheme: light dark;
+@import 'tailwindcss';
+
+/*
+ * Minimalist Flat 主题（docs/style/minimalist-flat.md）：
+ * 只有黑、白与唯一强调色 #ff3366；强调色一律写成 bg-[#ff3366] / text-[#ff3366] / border-[#ff3366]，
+ * 便于 grep 一次性找出所有强调色使用点，也不会被禁用 class 规则 9 误伤。
+ * 字体自托管（见 main.tsx 里的 @fontsource 引入，无外链 CDN）：
+ * Space Grotesk 在前，数字与英文自动走它；中文回落 Noto Sans SC。
+ */
+@theme {
+  --font-sans: 'Space Grotesk', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  html {
+    color-scheme: light;
+  }
 
-body {
-  margin: 0;
-  font-size: 14px;
-}
+  body {
+    margin: 0;
+    background-color: #ffffff;
+    color: #000000;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-button {
-  font-family: inherit;
+  /* 聚焦一律可见，且不用浏览器默认蓝圈；组件再按需细化。 */
+  :focus-visible {
+    outline: 2px solid #000000;
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: #ff3366;
+    color: #000000;
+  }
 }
