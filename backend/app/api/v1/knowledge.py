@@ -182,13 +182,44 @@ async def retrieve(req: RetrieveRequest):
     )
 
 
+class WebSearchResult(BaseModel):
+    """一条网络搜索结果：标题 / 链接 / 摘要。"""
+
+    title: str
+    url: str
+    snippet: str
+
+
+class WebSearchResponse(BaseModel):
+    """网络搜索响应：结果列表（无 Key 时由 stub 返回带标记的占位结果）。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "results": [
+                    {
+                        "title": "一次函数的定义与图象",
+                        "url": "https://example.com/lesson/linear-function",
+                        "snippet": "一次函数 y=kx+b（k≠0）的图象是一条直线…",
+                    }
+                ]
+            }
+        }
+    )
+
+    results: list[WebSearchResult]
+
+
 @router.post(
     "/knowledge/web-search",
+    response_model=WebSearchResponse,
     tags=["知识库"],
     summary="网络搜索",
     description=(
         "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n"
-        "本能力无 stub 实现：`BOCHA_API_KEY` 未配置时请求失败（`500`，`detail` 为 "
+        "实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则回落 stub，"
+        "返回带「（stub 网络搜索）」标记的占位结果（无 Key 全链路可跑的又一条路径）。"
+        "显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时请求失败（`500`，`detail` 为 "
         "`BOCHA_API_KEY 未配置`），而不是静默返回空结果。"
     ),
     responses={
@@ -208,9 +239,9 @@ async def retrieve(req: RetrieveRequest):
         500: unconfigured("网络搜索（BOCHA_API_KEY）"),
     },
 )
-async def web_search(req: SearchRequest):
+async def web_search(req: SearchRequest) -> WebSearchResponse:
     results = await get_search().search(req.query, count=req.k)
-    return {"results": results}
+    return WebSearchResponse(results=[WebSearchResult(**r) for r in results])
 
 
 class GraphNode(BaseModel):

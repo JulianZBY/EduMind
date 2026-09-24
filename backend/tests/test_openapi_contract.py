@@ -6,8 +6,10 @@ OpenAPI 是接口文档的唯一事实源,注解缺失 = 文档缺失。本文�
 1. 每个端点带 `summary`、描述与 `tag`;
 2. 每个端点至少有一处请求或响应示例;
 3. 每个端点至少记录一个错误响应(>=400)且带说明文字;
-4. 全部端点都被 `tag` 覆盖,且顶层声明的 tag 分组都有描述、都不空置;
-5. 应用里全部 `APIRoute` 都出现在 schema 中(没有端点被静默排除出文档)。
+4. 全部端点都被 `tag` 覆盖，且顶层声明的 tag 分组都有描述、都不空置；
+5. 应用里全部 `APIRoute` 都出现在 schema 中（没有端点被静默排除出文档）；
+6. **回 JSON 的端点必须有响应模型**——没有 `response_model` 的端点在前端生成出 `unknown`，
+   等于前端拿不到字段类型（票 04 报告、票 14 收口）。
 """
 
 from __future__ import annotations
@@ -52,6 +54,17 @@ def _has_request_example(operation: dict) -> bool:
 def _has_response_example(operation: dict) -> bool:
     return any(_has_example(r) for r in (operation.get("responses") or {}).values())
 
+
+# 允许不声明响应模型的例外：这两个端点**不是 JSON**，回的是文件字节流，
+# 已经用 `application/octet-stream` 描述了内容。强行加 pydantic 模型反而会误导前端。
+FILE_STREAM_ENDPOINTS = {
+    ("/api/v1/artifacts/{version_id}/download", "get"),
+    ("/api/v1/files/{filename}", "get"),
+}
+
+# 判据：200 响应的 JSON schema 里出现了这些键，才算真的描述了结构；
+# 只有 `{}` 或只有示例（`example` 不算 schema）的端点都算缺模型。
+SCHEMA_HINTS = ("$ref", "allOf", "oneOf", "anyOf", "items", "properties", "additionalProperties")
 
 OPERATIONS = _collect_operations()
 IDS = [f"{method.upper()} {path}" for path, method, _ in OPERATIONS]
@@ -133,3 +146,24 @@ def test_no_route_is_hidden_from_the_schema():
     assert actual - documented == set(), (
         f"以下端点未出现在 OpenAPI: {sorted(actual - documented)}"
     )
+
+
+def test_json_endpoints_declare_a_response_model():
+    """回 JSON 的端点必须有响应模型:缺了前端生成出 `unknown`,类型管线就断了。
+
+    盘点口径:200 响应含 `application/json` 且 schema 里没有任何结构描述(只有示例不算),
+    就是缺 `response_model`。例外只有两个下载端点(回文件流,不是 JSON)。
+    """
+    missing = []
+    for path, method, operation in OPERATIONS:
+        if (path, method.lower()) in FILE_STREAM_ENDPOINTS:
+            continue
+        content = (operation.get("responses") or {}).get("200", {}).get("content") or {}
+        if "application/json" not in content:
+            continue
+        schema = content["application/json"].get("schema") or {}
+        if any(hint in schema for hint in SCHEMA_HINTS):
+            continue
+        missing.append(f"{method.upper()} {path}")
+
+    assert not missing, f"以下回 JSON 的端点缺 response_model:{missing}"

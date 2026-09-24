@@ -1,6 +1,7 @@
 """v1 业务路由汇总。"""
 
 from fastapi import APIRouter
+from pydantic import BaseModel, ConfigDict
 
 from app.api.openapi_examples import internal_error, json_response
 from app.api.v1.artifacts import router as artifacts_router
@@ -29,8 +30,20 @@ router.include_router(sessions_router)
 router.include_router(settings_router)
 
 
+class PingResponse(BaseModel):
+    """v1 存活探测响应：固定文本，表示 `/api/v1` 已挂载。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"status": "ok", "message": "EduMind API v1"}}
+    )
+
+    status: str  # 固定为 ok
+    message: str  # 固定为版本标识文本
+
+
 @router.get(
     "/ping",
+    response_model=PingResponse,
     tags=["系统"],
     summary="v1 存活探测",
     description=(
@@ -42,5 +55,5 @@ router.include_router(settings_router)
         500: internal_error(),
     },
 )
-async def ping():
-    return {"status": "ok", "message": "EduMind API v1"}
+async def ping() -> PingResponse:
+    return PingResponse(status="ok", message="EduMind API v1")

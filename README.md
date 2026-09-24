@@ -7,7 +7,7 @@
 - **多轮对话备课**——语音 + 文字输入，三档追问粒度（快速/标准/精细），主动澄清模糊需求
 - **本地知识库**——PDF/Word/PPT/图片/视频/录音 六路解析管道，RAG 语义检索，参考资料溯源
 - **知识图谱 + 冲突检测**——从资料自动提取知识点与四种关系（前置/包含/推导/相关）；检测**定义冲突**进入教师待审队列，教师三选一裁决（接受新/保留旧/并存）。结构冲突与常识存疑的**裁决动作与形态已就位，检测尚未实现**（见 ADR-0006）
-- **多样产物一键生成**——PPT（三套配色主题）/ Word 教案 / 提纲 / 试卷（自动入题库并标注考查知识点）/ HTML5 互动小游戏
+- **多种生成物一键生成**——课件（三套配色主题）/ Word 教案 / 提纲 / 试卷（自动入题库并标注考查知识点）/ HTML5 互动小游戏
 - **迭代优化**——预览当前版本 → 修改意见 → 局部重排再生成 → 下载 .pptx / .docx
 - **会话持久化**——多备课会话管理，刷新/重开浏览器完整恢复
 - **本地零重依赖**——大模型/PDF 解析/录音转写全部走云端 API，不装 torch、不要 Docker；**无 API Key 时全链路 stub 模式可跑通**
@@ -16,32 +16,37 @@
 
 ```mermaid
 flowchart TB
-    FE["前端 · React + Vite<br/>对话面板 / 知识库管理 / 课件预览 / 冲突审核"]
-
-    subgraph BE["后端 · Python FastAPI"]
-        direction TB
-        ORCH["Orchestrator 编排核心<br/>对话状态机：澄清 → 检索 → 生成 → 反馈"]
-        INTENT["意图分析<br/>LLM 结构化提取教学要素"]
-        KN["知识引擎<br/>RAG 检索 / 知识图谱 / 冲突检测"]
-        GEN["生成引擎<br/>PPT / Word / 试卷 / HTML5 创意"]
+    subgraph FE["前端 · React + Vite（六区 + 设置，URL 即路由）"]
+        A1["备课会话 · 知识库 · 生成物<br/>知识图谱 · 冲突审核 · 题库 · 设置"]
     end
 
-    DB[("SQLite + sqlite-vec<br/>向量库 + 图谱 + 题库")]
-    FS["本地文件系统<br/>原始资料存储"]
-    CLOUD["云端 API<br/>qwen LLM / qwen-vl 多模态 / Embedding /<br/>MinerU PDF / paraformer 录音转写 / 博查搜索"]
+    subgraph BE["后端 · Python FastAPI（会话与生成物的事实源）"]
+        direction TB
+        API["api/v1 路由层<br/>参数校验 + 转发"]
+        CORE["core 层<br/>对话状态机：澄清 → 检索 → 生成 → 反馈"]
+        CAPS["能力注册<br/>接口 + 工厂 + 必有 stub"]
+        KNOW["knowledge<br/>解析 · 分块 · 向量 · 图谱 · 冲突 · 检索"]
+        GEN["generate<br/>课件 / 教案 / 提纲 / 试卷 / 互动内容"]
+    end
 
-    FE -->|HTTP| ORCH
-    ORCH --> INTENT
-    ORCH --> KN
-    ORCH --> GEN
-    KN --> DB
-    KN --> FS
-    INTENT -.-> CLOUD
-    KN -.-> CLOUD
-    GEN -.-> CLOUD
+    DB[("SQLite + sqlite-vec<br/>会话 · 生成物版本 · 向量 · 图谱 · 冲突 · 题库")]
+    FS["落盘文件<br/>data/uploads · data/output"]
+    CLOUD["云端能力（可换供应商，无 Key 回落 stub）<br/>对话模型 · 向量化 · 多模态 · 语音转写 · PDF 解析 · 网络搜索"]
+
+    FE -->|"JSON，契约见 /openapi.json"| API
+    API --> CORE
+    CORE --> KNOW
+    CORE --> GEN
+    CORE --> CAPS
+    KNOW --> DB
+    KNOW --> FS
+    GEN --> DB
+    GEN --> FS
+    CAPS --> CLOUD
 ```
 
-实线为本地调用，虚线为云端 API 调用——所有重依赖推至云端，本地零 torch、零 Docker。
+所有重依赖推至云端（本地零 torch、零 Docker）；一切外部能力必须经「接口 + 工厂 + stub」一层，
+换供应商 / 换模型 / 换解析策略只改配置不改代码。**目标架构的一页图与分层职责见 [docs/architecture.md](docs/architecture.md)**。
 
 ## 快速开始
 
@@ -87,10 +92,34 @@ cd frontend && npm run dev
 
 各 provider 由 `LLM_PROVIDER` / `ASR_PROVIDER` 切换，默认 `stub`（固定内容网关），保证无 Key 环境可跑通全部流程与测试。
 
-> ⚠️ **stub 模式的演示内容与你的输入无关**：知识图谱提取只回显文档前几行作演示节点（带「[stub 演示提取]」标记）；意图分析 / PPT / 教案 / 试卷 / HTML5 为固定 TCP 演示数据。看到 TCP 主题内容不代表资料被真实解析，接入真实模型后才会基于实际上传内容生成。
+> ⚠️ **stub 模式的演示内容与你的输入无关**：知识图谱提取只回显文档前几行作演示节点（带「[stub 演示提取]」标记）；
+> 意图分析 / 课件 / 教案 / 试卷 / HTML5 为固定 TCP 演示数据。看到 TCP 主题内容不代表资料被真实解析，接入真实模型后才会基于实际上传内容生成。
+> 另外，stub 的意图固定且要素齐全，因此**澄清回复（追问粒度 / 跳过追问）在 stub 下走不到**，
+> 冲突队列也不会自然出现冲突——哪些分支在 stub 下不可达、怎么补验证，见 [docs/api/stub-mode.md](docs/api/stub-mode.md)。
 
-## 运行测试
+## 运行测试与自检
 
 ```bash
-cd backend && uv run pytest
+# 后端：全量测试（无 Key 也能跑；测试自己钉住 stub 档，不受你本机 .env 影响）
+cd backend && uv run pytest -q && uv run ruff check .
+
+# 前端：禁用 class 扫描 + lint + 构建
+cd frontend && npm run lint && npm run build
 ```
+
+无 Key 的 stub 全链路冒烟（上传 → 备课对话 → 生成物 → 下载 → 冲突裁决）与
+**只有人能做的验收步骤**（真浏览器逐区点选、真实 Key 联通性、人眼视觉项）见
+**[docs/acceptance-manual.md](docs/acceptance-manual.md)**。
+
+## 文档地图
+
+| 文档 | 回答什么 |
+| --- | --- |
+| [CONTEXT.md](CONTEXT.md) | 领域词汇表：面向教师的文案与命名用哪个词（唯一依据） |
+| [docs/architecture.md](docs/architecture.md) | 目标架构一页图 + 分层职责 + 现状落差 |
+| [docs/api/](docs/api/README.md) | OpenAPI 说不清的协议语义（冲突裁决、生成物取回、stub 模式行为） |
+| [docs/adr/](docs/adr/) | 决策记录（事实源、能力注册、冲突类别、前端栈与视觉标准） |
+| [docs/style/minimalist-flat.md](docs/style/minimalist-flat.md) | 前端视觉硬标准与交付自检清单（含禁用 class 清单） |
+| [docs/acceptance-manual.md](docs/acceptance-manual.md) | 人工验收手册：只有人能做的那些步骤 |
+| [backend/AGENTS.md](backend/AGENTS.md) / [frontend/AGENTS.md](frontend/AGENTS.md) | 后端 / 前端的工作规范与命令 |
+| `/docs`（Swagger UI）、`/redoc`、`/openapi.json` | 接口的唯一事实源 |
