@@ -118,6 +118,34 @@ class VectorStore:
         finally:
             conn.close()
 
+    def list_doc_chunks(self, doc_id: str, limit: int = 200) -> tuple[int, list[dict]]:
+        """按次序取某份资料的分块：返回 (分块总数, 至多 limit 条分块)。
+
+        知识库详情的只读入口：`chunk_index` 是分块在原文中的次序，`chunk_id` 是全局唯一
+        编号（检索命中与来源引用都用它回溯）。`limit` 只截断返回条数，总数照实回；
+        空库 / 该资料无分块时返回 `(0, [])`，不抛错。
+        """
+        conn = self._connect()
+        try:
+            exists = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='chunks'"
+            ).fetchone()
+            if not exists:
+                return 0, []
+            total = conn.execute(
+                "SELECT COUNT(*) FROM chunks WHERE doc_id = ?", (doc_id,)
+            ).fetchone()[0]
+            rows = conn.execute(
+                "SELECT id, chunk_index, content FROM chunks WHERE doc_id = ? "
+                "ORDER BY chunk_index LIMIT ?",
+                (doc_id, limit),
+            ).fetchall()
+            return total, [
+                {"chunk_id": r[0], "chunk_index": int(r[1] or 0), "content": r[2]} for r in rows
+            ]
+        finally:
+            conn.close()
+
     # ---- 知识点标题索引（冲突检测近名预筛用，ADR-0001，余弦距离）----
 
     def add_node_title(self, node_id: str, title: str, embedding: list[float]) -> None:

@@ -63,6 +63,106 @@ export type ChatResponse = {
 };
 
 /**
+ * DocumentChunk
+ *
+ * 一个分块：`chunk_id` 全局唯一，`chunk_index` 是它在原文中的次序。
+ */
+export type DocumentChunk = {
+    /**
+     * Chunk Id
+     */
+    chunk_id: number;
+    /**
+     * Chunk Index
+     */
+    chunk_index: number;
+    /**
+     * Content
+     */
+    content: string;
+};
+
+/**
+ * DocumentDetail
+ */
+export type DocumentDetail = {
+    /**
+     * Chunk Count
+     */
+    chunk_count: number;
+    /**
+     * Chunks
+     */
+    chunks: Array<DocumentChunk>;
+    /**
+     * Conflict Count
+     */
+    conflict_count: number;
+    /**
+     * File Type
+     */
+    file_type: string;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Is Reference
+     */
+    is_reference: boolean;
+    /**
+     * Parsed At
+     */
+    parsed_at: string | null;
+    /**
+     * Status
+     */
+    status: '处理中' | '已完成' | '有冲突' | '失败';
+};
+
+/**
+ * DocumentListResponse
+ */
+export type DocumentListResponse = {
+    /**
+     * Documents
+     */
+    documents: Array<DocumentView>;
+};
+
+/**
+ * DocumentView
+ *
+ * 一份教学资料：上传响应与列表项共用的形状。
+ */
+export type DocumentView = {
+    /**
+     * File Type
+     */
+    file_type: string;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Is Reference
+     */
+    is_reference: boolean;
+    /**
+     * Status
+     */
+    status: '处理中' | '已完成' | '有冲突' | '失败';
+};
+
+/**
  * ExamGenerateRequest
  *
  * 一键生成试卷的请求：备课意图 + 题目数量。
@@ -152,6 +252,106 @@ export type Message = {
      * Role
      */
     role: string;
+};
+
+/**
+ * ReferenceRequest
+ *
+ * 参考资料标记的目标值（幂等设置，不是翻转）。
+ */
+export type ReferenceRequest = {
+    /**
+     * Is Reference
+     */
+    is_reference: boolean;
+};
+
+/**
+ * RetrieveRequest
+ *
+ * 检索观察请求：备课意图 + 返回条数 + 本次备课的参考资料。
+ */
+export type RetrieveRequest = {
+    /**
+     * Intent
+     */
+    intent?: {
+        [key: string]: unknown;
+    };
+    /**
+     * K
+     */
+    k?: number;
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids?: Array<string>;
+};
+
+/**
+ * RetrieveResponse
+ */
+export type RetrieveResponse = {
+    /**
+     * Context
+     */
+    context: string;
+    /**
+     * Graph Nodes
+     */
+    graph_nodes: Array<RetrievedNode>;
+    /**
+     * Hits
+     */
+    hits: Array<RetrievedChunk>;
+    /**
+     * Sources
+     */
+    sources: Array<string>;
+    /**
+     * Strategy
+     */
+    strategy: string;
+};
+
+/**
+ * RetrievedChunk
+ */
+export type RetrievedChunk = {
+    /**
+     * Chunk Id
+     */
+    chunk_id: number;
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Distance
+     */
+    distance: number;
+    /**
+     * Doc Id
+     */
+    doc_id: string;
+};
+
+/**
+ * RetrievedNode
+ */
+export type RetrievedNode = {
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Title
+     */
+    title: string;
 };
 
 /**
@@ -458,8 +658,10 @@ export type ListDocumentsApiV1DocumentsGetResponses = {
     /**
      * 资料列表
      */
-    200: unknown;
+    200: DocumentListResponse;
 };
+
+export type ListDocumentsApiV1DocumentsGetResponse = ListDocumentsApiV1DocumentsGetResponses[keyof ListDocumentsApiV1DocumentsGetResponses];
 
 export type UploadDocumentApiV1DocumentsUploadPostData = {
     body: BodyUploadDocumentApiV1DocumentsUploadPost;
@@ -481,10 +683,90 @@ export type UploadDocumentApiV1DocumentsUploadPostErrors = {
 
 export type UploadDocumentApiV1DocumentsUploadPostResponses = {
     /**
-     * 已接收，后台解析中
+     * 已接收并交后台解析（`status` 为 `处理中`）
      */
-    200: unknown;
+    200: DocumentView;
 };
+
+export type UploadDocumentApiV1DocumentsUploadPostResponse = UploadDocumentApiV1DocumentsUploadPostResponses[keyof UploadDocumentApiV1DocumentsUploadPostResponses];
+
+export type GetDocumentApiV1DocumentsDocumentIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Document Id
+         *
+         * 教学资料 id，取自上传响应或资料列表
+         */
+        document_id: string;
+    };
+    query?: never;
+    url: '/api/v1/documents/{document_id}';
+};
+
+export type GetDocumentApiV1DocumentsDocumentIdGetErrors = {
+    /**
+     * 资料不存在：id 不属于任何一份已上传的教学资料
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type GetDocumentApiV1DocumentsDocumentIdGetError = GetDocumentApiV1DocumentsDocumentIdGetErrors[keyof GetDocumentApiV1DocumentsDocumentIdGetErrors];
+
+export type GetDocumentApiV1DocumentsDocumentIdGetResponses = {
+    /**
+     * 教学资料详情
+     */
+    200: DocumentDetail;
+};
+
+export type GetDocumentApiV1DocumentsDocumentIdGetResponse = GetDocumentApiV1DocumentsDocumentIdGetResponses[keyof GetDocumentApiV1DocumentsDocumentIdGetResponses];
+
+export type SetReferenceApiV1DocumentsDocumentIdReferencePatchData = {
+    body: ReferenceRequest;
+    path: {
+        /**
+         * Document Id
+         *
+         * 教学资料 id，取自上传响应或资料列表
+         */
+        document_id: string;
+    };
+    query?: never;
+    url: '/api/v1/documents/{document_id}/reference';
+};
+
+export type SetReferenceApiV1DocumentsDocumentIdReferencePatchErrors = {
+    /**
+     * 资料不存在：id 不属于任何一份已上传的教学资料
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type SetReferenceApiV1DocumentsDocumentIdReferencePatchResponses = {
+    /**
+     * 切换后的资料（标记已生效）
+     */
+    200: DocumentView;
+};
+
+export type SetReferenceApiV1DocumentsDocumentIdReferencePatchResponse = SetReferenceApiV1DocumentsDocumentIdReferencePatchResponses[keyof SetReferenceApiV1DocumentsDocumentIdReferencePatchResponses];
 
 export type GenerateExamPaperApiV1ExamGeneratePostData = {
     body: ExamGenerateRequest;
@@ -617,6 +899,33 @@ export type GetGraphApiV1KnowledgeGraphGetResponses = {
      */
     200: unknown;
 };
+
+export type RetrieveApiV1KnowledgeRetrievePostData = {
+    body: RetrieveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/knowledge/retrieve';
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostErrors = {
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostResponses = {
+    /**
+     * 本次检索命中的分块、来源与图谱知识点
+     */
+    200: RetrieveResponse;
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostResponse = RetrieveApiV1KnowledgeRetrievePostResponses[keyof RetrieveApiV1KnowledgeRetrievePostResponses];
 
 export type SearchApiV1KnowledgeSearchPostData = {
     body: SearchRequest;

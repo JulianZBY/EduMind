@@ -102,6 +102,170 @@
         "title": "ChatResponse",
         "type": "object"
       },
+      "DocumentChunk": {
+        "description": "一个分块：`chunk_id` 全局唯一，`chunk_index` 是它在原文中的次序。",
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "integer"
+          },
+          "chunk_index": {
+            "title": "Chunk Index",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "chunk_index",
+          "content"
+        ],
+        "title": "DocumentChunk",
+        "type": "object"
+      },
+      "DocumentDetail": {
+        "example": {
+          "file_type": "pdf",
+          "filename": "一次函数讲义.pdf",
+          "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+          "is_reference": true,
+          "status": "处理中"
+        },
+        "properties": {
+          "chunk_count": {
+            "title": "Chunk Count",
+            "type": "integer"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentChunk"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "conflict_count": {
+            "title": "Conflict Count",
+            "type": "integer"
+          },
+          "file_type": {
+            "title": "File Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_reference": {
+            "title": "Is Reference",
+            "type": "boolean"
+          },
+          "parsed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed At"
+          },
+          "status": {
+            "enum": [
+              "处理中",
+              "已完成",
+              "有冲突",
+              "失败"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "file_type",
+          "status",
+          "is_reference",
+          "parsed_at",
+          "conflict_count",
+          "chunk_count",
+          "chunks"
+        ],
+        "title": "DocumentDetail",
+        "type": "object"
+      },
+      "DocumentListResponse": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentView"
+            },
+            "title": "Documents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "documents"
+        ],
+        "title": "DocumentListResponse",
+        "type": "object"
+      },
+      "DocumentView": {
+        "description": "一份教学资料：上传响应与列表项共用的形状。",
+        "example": {
+          "file_type": "pdf",
+          "filename": "一次函数讲义.pdf",
+          "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+          "is_reference": true,
+          "status": "处理中"
+        },
+        "properties": {
+          "file_type": {
+            "title": "File Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_reference": {
+            "title": "Is Reference",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "处理中",
+              "已完成",
+              "有冲突",
+              "失败"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "file_type",
+          "status",
+          "is_reference"
+        ],
+        "title": "DocumentView",
+        "type": "object"
+      },
       "ExamGenerateRequest": {
         "description": "一键生成试卷的请求：备课意图 + 题目数量。",
         "example": {
@@ -223,6 +387,154 @@
           "content"
         ],
         "title": "Message",
+        "type": "object"
+      },
+      "ReferenceRequest": {
+        "description": "参考资料标记的目标值（幂等设置，不是翻转）。",
+        "example": {
+          "is_reference": true
+        },
+        "properties": {
+          "is_reference": {
+            "title": "Is Reference",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_reference"
+        ],
+        "title": "ReferenceRequest",
+        "type": "object"
+      },
+      "RetrieveRequest": {
+        "description": "检索观察请求：备课意图 + 返回条数 + 本次备课的参考资料。",
+        "example": {
+          "intent": {
+            "knowledge_points": [
+              "斜率"
+            ],
+            "topic": "一次函数"
+          },
+          "k": 5,
+          "reference_doc_ids": [
+            "5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"
+          ]
+        },
+        "properties": {
+          "intent": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Intent",
+            "type": "object"
+          },
+          "k": {
+            "default": 5,
+            "title": "K",
+            "type": "integer"
+          },
+          "reference_doc_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Reference Doc Ids",
+            "type": "array"
+          }
+        },
+        "title": "RetrieveRequest",
+        "type": "object"
+      },
+      "RetrieveResponse": {
+        "properties": {
+          "context": {
+            "title": "Context",
+            "type": "string"
+          },
+          "graph_nodes": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedNode"
+            },
+            "title": "Graph Nodes",
+            "type": "array"
+          },
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedChunk"
+            },
+            "title": "Hits",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "strategy": {
+            "title": "Strategy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy",
+          "context",
+          "sources",
+          "hits",
+          "graph_nodes"
+        ],
+        "title": "RetrieveResponse",
+        "type": "object"
+      },
+      "RetrievedChunk": {
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "distance": {
+            "title": "Distance",
+            "type": "number"
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "distance",
+          "doc_id",
+          "content"
+        ],
+        "title": "RetrievedChunk",
+        "type": "object"
+      },
+      "RetrievedNode": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "content"
+        ],
+        "title": "RetrievedNode",
         "type": "object"
       },
       "ReviewRequest": {
@@ -804,7 +1116,7 @@
     },
     "/api/v1/documents": {
       "get": {
-        "description": "返回全部教学资料及其解析状态，供知识库工作台轮询进度。\n\n`status` 取值：`处理中` → 后台解析尚未结束；`已完成` → 已入库可检索；`有冲突` → 已入库但检测到待裁决的定义冲突（见冲突审核区）；`失败` → 解析失败，可按原文重新上传。`is_reference` 为参考资料标记。",
+        "description": "返回全部教学资料及其解析状态，供知识库工作台轮询进度。\n\n`status` 取值：`处理中` → 后台解析尚未结束；`已完成` → 已入库可检索；`有冲突` → 已入库但检测到待裁决的矛盾（见冲突审核区）；`失败` → 解析失败，可按原文重新上传。`is_reference` 为参考资料标记。\n\n含 `处理中` 的资料时，客户端应保持轮询直到全部落到终态；单份资料的完整信息（分块、冲突数、完成时间）见 `GET /api/v1/documents/{document_id}`。",
         "operationId": "list_documents_api_v1_documents_get",
         "responses": {
           "200": {
@@ -828,7 +1140,9 @@
                     }
                   ]
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListResponse"
+                }
               }
             },
             "description": "资料列表"
@@ -852,7 +1166,7 @@
     },
     "/api/v1/documents/upload": {
       "post": {
-        "description": "上传一份教学资料并**立即返回**：文件落盘 + 建文档记录 + 交后台解析（解析完成前`status` 为 `处理中`）。\n\n上传后请轮询 `GET /api/v1/documents` 直到状态从 `处理中` 变为 `已完成`（或 `有冲突` / `失败`），不要靠等待本请求变慢来判断进度。\n\n`is_reference=true` 把文档标记为参考资料：发起备课时勾选其 id 会提高检索权重，并在生成物中溯源。",
+        "description": "上传一份教学资料并**立即返回**：文件落盘 + 建文档记录 + 交后台解析（解析完成前`status` 为 `处理中`）。\n\n上传后请轮询 `GET /api/v1/documents` 直到状态从 `处理中` 变为 `已完成`（或 `有冲突` / `失败`），不要靠等待本请求变慢来判断进度。\n\n`is_reference=true` 把文档标记为参考资料：发起备课时勾选其 id 会提高检索权重，并在生成物中溯源。后续可用 `PATCH /api/v1/documents/{document_id}/reference` 随时切换该标记。",
         "operationId": "upload_document_api_v1_documents_upload_post",
         "requestBody": {
           "content": {
@@ -875,10 +1189,12 @@
                   "is_reference": true,
                   "status": "处理中"
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentView"
+                }
               }
             },
-            "description": "已接收，后台解析中"
+            "description": "已接收并交后台解析（`status` 为 `处理中`）"
           },
           "422": {
             "content": {
@@ -911,6 +1227,179 @@
           }
         },
         "summary": "上传教学资料",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}": {
+      "get": {
+        "description": "一份教学资料的全部信息：解析状态与参考资料标记（与列表同一口径），外加解析完成时间、待审冲突数，以及入库的分块明细（可回溯到来源资料）。\n\n`chunks` 只返回前 200 个分块，`chunk_count` 是该资料的分块总数；资料仍在 `处理中` 时 `parsed_at` 为空、`chunks` 为空——列表与详情的状态都会随后台解析自动变化，客户端无需手动刷新。",
+        "operationId": "get_document_api_v1_documents__document_id__get",
+        "parameters": [
+          {
+            "description": "教学资料 id，取自上传响应或资料列表",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "教学资料 id，取自上传响应或资料列表",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "chunk_count": 12,
+                  "chunks": [
+                    {
+                      "chunk_id": 42,
+                      "chunk_index": 0,
+                      "content": "一次函数：形如 y=kx+b（k≠0）的函数。"
+                    }
+                  ],
+                  "conflict_count": 0,
+                  "file_type": "pdf",
+                  "filename": "一次函数讲义.pdf",
+                  "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                  "is_reference": true,
+                  "parsed_at": "2026-09-24T10:30:00",
+                  "status": "已完成"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetail"
+                }
+              }
+            },
+            "description": "教学资料详情"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "资料不存在: 7f6e5d4c-3b2a-4918-8776-655443322110"
+                }
+              }
+            },
+            "description": "资料不存在：id 不属于任何一份已上传的教学资料"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "教学资料详情",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/reference": {
+      "patch": {
+        "description": "把教学资料标记为参考资料（或取消标记），用于备课检索加权与生成物溯源。\n\n请求体给的是**目标值**而不是翻转动作，重复提交同一值结果一致（幂等）；响应即最新状态，切换无需等待任何后台任务。",
+        "operationId": "set_reference_api_v1_documents__document_id__reference_patch",
+        "parameters": [
+          {
+            "description": "教学资料 id，取自上传响应或资料列表",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "教学资料 id，取自上传响应或资料列表",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "file_type": "pdf",
+                  "filename": "一次函数讲义.pdf",
+                  "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                  "is_reference": true,
+                  "status": "已完成"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentView"
+                }
+              }
+            },
+            "description": "切换后的资料（标记已生效）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "资料不存在: 7f6e5d4c-3b2a-4918-8776-655443322110"
+                }
+              }
+            },
+            "description": "资料不存在：id 不属于任何一份已上传的教学资料"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "切换参考资料标记",
         "tags": [
           "知识库"
         ]
@@ -1213,6 +1702,89 @@
         "summary": "知识图谱数据",
         "tags": [
           "知识图谱"
+        ]
+      }
+    },
+    "/api/v1/knowledge/retrieve": {
+      "post": {
+        "description": "用**当前生效的检索策略**跑一次备课检索，看本次命中了什么：`strategy` 为策略名，`context` 为拼给生成器的上下文档（命中片段 + 融合的知识点，总量受预算约束），`sources` 为命中的来源资料名（按排名去重，备课回复与教案「参考资料」节溯源自此），`hits` 为命中分块明细，`graph_nodes` 为融合进上下文的图谱知识点。\n\n策略由 `RETRIEVAL_STRATEGY` 配置：`vector_graph`（默认，向量 + 图谱邻接融合）/ `vector`（纯向量，`context` 只有命中片段、`graph_nodes` 为空）。`intent` 与备课会话同一形状，结构不完整时退化为仅凭主题检索；`reference_doc_ids` 为本次备课勾选的参考资料，命中这些资料的片段在排名中加权。",
+        "operationId": "retrieve_api_v1_knowledge_retrieve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrieveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "context": "=== 知识片段 ===\n一次函数：形如 y=kx+b（k≠0）的函数。",
+                  "graph_nodes": [
+                    {
+                      "content": "形如 y=kx+b（k≠0）…",
+                      "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                      "title": "一次函数的定义"
+                    }
+                  ],
+                  "hits": [
+                    {
+                      "chunk_id": 42,
+                      "content": "一次函数：形如 y=kx+b（k≠0）的函数。",
+                      "distance": 0.18,
+                      "doc_id": "7f6e5d4c-3b2a-4918-8776-655443322110"
+                    }
+                  ],
+                  "sources": [
+                    "一次函数讲义.pdf"
+                  ],
+                  "strategy": "vector_graph"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/RetrieveResponse"
+                }
+              }
+            },
+            "description": "本次检索命中的分块、来源与图谱知识点"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "按检索策略观察命中",
+        "tags": [
+          "知识库"
         ]
       }
     },
