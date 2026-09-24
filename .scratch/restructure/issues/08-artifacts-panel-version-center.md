@@ -4,7 +4,7 @@
 
 **Blocked by:** 06 备课会话工作台; 07 生成物全版本留痕
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 预览 / 下载 / 修改意见 / 一键试卷 / 互动内容五类操作全部可用
 - [x] 修改意见只作用于所选生成物，且产生新版本
@@ -145,3 +145,24 @@ npm run check:routes                               # 七条路由可达 + 逐条
    若要「一屏看全站最近产出」，需要一个跨会话的版本读口径（会引出第二份事实源问题，需先决策）。
 5. **真浏览器点选未验**：本机无 Playwright，交互（勾选、点按钮、弹层焦点）按「导航与状态断言 + SSR 渲染」覆盖，
    留票 14 做端到端。
+
+## 协调者复核
+
+**结论：通过。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 预览 / 下载 / 修改意见 / 一键试卷 / 互动内容五类操作可用 | `frontend/src/areas/artifacts/{ArtifactPreview,ReviseDialog,GenerateExamDialog,GenerateInteractiveDialog}.tsx` + 会话区 `GenerationPreview.tsx` | 通过 |
+| 修改意见只作用所选生成物且产生新版本 | 后端按票内授权追加 `POST /revise/outline|exam|interactive`（`response_model` + 「生成物」tag，既有端点未动）；58 条真 HTTP 断言含此条 | 通过 |
+| 试卷题目入题库且可按考查知识点查到 | 复用票 12 的 `GET /questions?knowledge_point=`（未另造一套） | 通过 |
+| 各生成过程有进行中/失败态、失败可重试 | 交付记录含失败重试断言 | 通过 |
+| 生成物按会话分组、版本时间线清晰 | `ArtifactsSidebar.tsx` + `SessionVersionCenter.tsx` + `VersionTimeline.tsx` | 通过 |
+| 会话工作台与生成物区版本数据一致（同一事实源） | 两区共用 `useSessionArtifacts` + 同一条票 07 版本端点 | 通过 |
+| 方向性调整引导提示仍留在对话区 | 交付记录含该条断言 | 通过 |
+| 测试与静态检查 | 协调者亲跑 333 passed、`ruff check .` 干净、前端 `npm run lint` + `npm run build` 绿、**工作树干净且无临时脚本残留** | 通过 |
+
+**合并过程**：`merge-tree` 预探显示与主干**无冲突**（本批唯一一次全自动合并）。但协调者仍按惯例在合并后**重跑 `npm run gen:api` 并复跑全量**——生成类文件即便能自动合并也不保证语义自洽；随后确认再跑一次 `gen:api` 已无差异（快照幂等、含三个新 revise 端点）。
+
+- **合并点**：`3a2007a`（`merge(08)`）；合并后 main 复跑 → 333 passed + ruff 干净。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向**：会话累积意图无读端点（一键试卷/互动内容按弹层主题组装 intent）、课件修改回退默认配色主题（`style` 未随版本留痕）、无版本级删除与落盘回收 → 已逐条写入票 14 的派发约束。
