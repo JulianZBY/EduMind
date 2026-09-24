@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 前端基座; 05 会话持久层 + 状态机收编
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 会话列表的新建 / 重命名 / 删除 / 检索与服务端状态同步
 - [x] 对话流正确区分澄清与生成两种回复形态
@@ -137,3 +137,22 @@ dev server 实测（uvicorn 8000 stub + vite 5173，前后端真跑）：
    本票按工单口径（票 05 已给 `PATCH`，绑定动作由本票完成）未新增端点。
 5. **本机无浏览器 / Playwright**：交互（点击、弹层、键盘）只做了 SSR 渲染断言与真服务数据链路核对，
    真浏览器点选留票 14。
+
+## 协调者复核
+
+**结论：通过。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 会话列表新建/重命名/删除/检索与服务端同步 | 读 `frontend/src/areas/lesson-prep/SessionSidebar.tsx` + `queries.ts`（全部走服务端） | 通过 |
+| 对话流区分澄清/生成两形态 | `ConversationTranscript.tsx` + 交付记录的两形态断言 | 通过 |
+| 追问粒度切换与跳过即时影响后续对话 | `GranularityPicker.tsx` + 服务端为准 | 通过 |
+| 会话内上传归入参考资料 / 发起会话勾选参考资料 | `ReferencePicker.tsx` + 票 05 的 `PATCH /sessions/{id}` | 通过 |
+| **localStorage 会话彻底退场** | 协调者亲跑 `rg localStorage frontend/src` → **零命中** | 通过 |
+| 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → 226 passed、`ruff check .` 干净、工作树干净 | 通过 |
+
+**跨票协调**：票 07 交付时报告 `artifacts.outline` 由字符串变对象，协调者当即把这条变化通过 `orchestration send` 转达给**仍在跑**的本票；本票据此做了兼容读取与 `chat.py` 示例对齐（未扩大范围去实现票 07/08 的内容）。
+
+- **合并点**：`593876d`（`merge(06)`，与票 15 同批）；合并时只与派生物 `frontend/src/api/generated/*` 冲突，按「重生成」处置。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向**：`/documents` 两个端点缺 `response_model`（本票用运行时收窄顶住）→ 已登记进票 14 收口清单；真浏览器点选 → 票 14。

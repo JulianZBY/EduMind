@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 能力注册统一
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] `StubProvider` 实现对话接口里的视觉提取，返回带「stub 视觉提取」标记的确定性结果，不再抛 `NotImplementedError`
 - [x] 无任何云端 Key 时上传图片与视频，解析状态能走到终态「已完成」（不再必然「失败」）
@@ -139,3 +139,20 @@ GET  /health  -> {"status":"ok","app":"EduMind","llm_provider":"stub"}
 ## 协调者复核
 
 （待交付后填写）
+
+## 协调者复核
+
+**结论：通过。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| StubProvider 实现视觉提取、不再抛 NotImplementedError | 读 `app/core/llm/providers/stub.py` 中 `_STUB_VISION_MARK` / `_STUB_VISION_TEXT` 与 `vision` 实现 | 通过 |
+| 无 Key 时上传图片与视频到终态「已完成」 | `backend/tests/test_vision_stub.py` 4 例（含 2 例 HTTP 缝，图片用真 PNG、视频用测试内现造 MJPG/AVI） | 通过 |
+| 真实 provider 路径行为不变 | `tests/test_openai_compat_contract.py` 10 passed（dashscope 多模态 parts 载荷照旧、deepseek 无视觉模型仍抛 NotImplementedError） | 通过 |
+| 既有 stub 全链路保持绿 | 协调者亲跑 242 passed、`ruff check .` 干净、工作树干净 | 通过 |
+
+**协调者核错一处交付记录的说法（未记入本票结论）**：交付记录遗留里写「网络搜索依旧无 stub」，但协调者核对 `backend/app/core/search/` 后确认 **stub 存在且已注册**（`stub.py` + `SEARCH_BUILDERS` 里的 `stub`，无 Key 时即回落它）。该说法不准确，不作为遗留登记；如需修正该句，随票 14 一并处理。
+
+- **合并点**：`6ce8da1`（`merge(15)`）。
+- **状态迁移**：`ready-for-agent` → `done`。**本票是「按阻塞顺序推进」之外的插队票**：由票 09 的交付记录取证建立，原因是它违反 ADR-0003「每项能力必有 stub」的不变式，并会卡住票 14 的多模态冒烟。
+- **遗留去向**：stub 视觉文本与画面无关、视频仍只取 4 帧 → 票 14 收口清单（作为「可解释」项而非缺陷）。

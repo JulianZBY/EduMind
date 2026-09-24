@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 能力注册统一; 04 前端基座
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 目录选择 + 填 Key 后无重启即生效（可当场验证 stub → 真实切换）
       （`PUT /api/v1/settings` 写穿 = 校验 → 落库 → 同步进程内配置 → `invalidate_capabilities()`；
@@ -269,3 +269,25 @@ $ uv run pytest -q                              → 244 passed
    产品代码的重复定义（ruff 默认规则不报），行为无影响，但应删一处；不在本单边界内。
 
 本票 `Status` 未动（仍是文件里的原值），验收勾选也未改。
+
+## 协调者复核
+
+**结论：通过（含一次由协调者发现缺陷后触发的收尾补丁）。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 目录选择 + 填 Key 后无重启即生效 | `app/core/settings_store.py` 的写穿 + `invalidate_capabilities()`；交付记录有真进程实测 | 通过 |
+| 任务级模型与回落全局默认行为可见 | `app/core/llm/task_routing.py` + 8 个模块按任务取模型（协调者放行的最小调用点替换） | 通过 |
+| 自定义 OpenAI 兼容接入 | 目录外的 `base_url` + 模型 ID | 通过 |
+| Key 全程掩码 | 交付记录含「PUT/GET 原始响应体无明文」断言 | 通过 |
+| 无效配置返回明确错误码 | `unknown_provider` / `unknown_model` / `unknown_capability_impl` / `invalid_base_url`，400 | 通过 |
+| 能力切换即时生效 | 检索策略改成 `vector` 后紧接着的检索请求即返回 `strategy=vector` | 通过 |
+| 测试与静态检查 | 协调者亲跑 244 passed、`ruff check .` 干净 | 通过（修复前） |
+
+**协调者放行的两处越界（已按用户裁决）**：① `main.py` 追加「设置」tag（与票 12 的「题库」同法）；② 7 处「任务档位」最小调用点替换——协调者判定「只留 seam 等于功能未实现」，故放行并要求只改那一行。
+
+**协调者发现的缺陷 → 同工作树续派修复**：合入主干后，`tests/test_settings_api.py::test_read_starts_from_bootstrap_defaults` 在**带真实 `.env` 的仓库**里失败。甄别结论：**产品行为正确，是用例假设了「`.env` 为空」**（引导默认里有 Key 本就该显示为已配置）。续派（新终端 + 既有工作树，因 Orca runtime 期间重启过）后交付 `f8aee68`：新增 autouse 夹具把引导默认钉成「本机无 `.env`」的代码默认，**产品代码一行未动**；带假 Key `.env` 与改名后**两个方向都全绿**。协调者在真实 `.env` 存在的 main 上复验：该文件 **24 passed / 3 秒**。
+
+- **合并点**：`df4e8eb`（`merge(13)`）+ `1d4f67a`（密封性补丁）。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向（均登记进票 14）**：① 同类环境依赖仍在 `test_rag_strategies.py`（2 条）与 `test_graph_retrieval.py`（2 条）；② `app/api/v1/settings.py` 的 `_capabilities()` 重复定义两处；③ 写穿无并发加锁、Key 原文入库、无「测试连接」按钮。

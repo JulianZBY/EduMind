@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 前端基座; 10 知识图谱工作台
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] category 落库，存量冲突数据回填为定义冲突
 - [x] 三类别的审核动作 API 行为各有测试
@@ -165,3 +165,24 @@ jsdom 是用 `npm install --no-save jsdom` 临时装的，`package.json` / `pack
 - **没有真浏览器验证**：证据是 HTTP 缝测试 + 真机冒烟 + jsdom 真渲染；真机五条主路径冒烟归票 14/08。
 - **`data/output` 与开发库不受本票影响**：冒烟与测试全部用临时路径（脚本跑完已删净）。
 - 覆盖率提示：`pi-lens` 的 LSP 对 Python 是「静默即干净」，本票的静态证据以 `ruff` + `pytest` 为准。
+
+## 协调者复核
+
+**结论：通过。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| category 落库 + 存量回填为定义冲突 | `Conflict` 末尾三列（`category` / `revised_content` / `review_action`）+ `db/engine.py` 幂等补列 | 通过 |
+| 三类别审核动作 API 各有测试 | `backend/tests/test_conflict_categories.py`，422 与 409 分开 | 通过 |
+| 「编辑修正后入库」落库为修正后内容 | `revised_content` 与原文 `new_knowledge` 双留痕（ADR-0004 口径） | 通过 |
+| 结构冲突三终态图与裁决后图谱一致 | 交付记录的真机冒烟 18/18 + jsdom 真 mermaid 渲染校验 37/37（协调者核过测试文件存在与用例数） | 通过 |
+| 裁决后队列即时更新、终态与动作对应 | 前端裁决成功后作废整类队列 | 通过 |
+| README 与面向教师文案不再承诺未实现检测 | `CONTEXT.md` 第 6 节文案纪律已落实；README 改毕 | 通过 |
+| **协调者指派的 ADR-0001 遗留** | 新增 `docs/adr/0006-conflict-detection-scope.md`；协调者通读其「被否决的替代方案」——**明确拒绝凭空重建 ADR-0001 的正文**（理由：没有原始文本，重建等于编造决策史），改为给悬空引用一个可查落点 | 通过 |
+| 测试与静态检查 | 协调者亲跑 263 passed、`ruff check .` 干净、工作树干净 | 通过 |
+
+**合并冲突（协调者手工解析）**：本票与票 07 同时改了 `backend/app/db/models.py`（07 在 `Conflict` 之后插入 `ArtifactVersion`，11 给 `Conflict` 追加三列），撞在同一锚点。解析口径：11 的三列**必须排在版本表之前**（它们属于 `Conflict`），版本表保持 07 的写法不变。另与派生物冲突按「重生成」处置。合并后 main 复跑 292 passed。
+
+- **合并点**：`f021df1`（`merge(11)`）。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向**：结构冲突与常识存疑的检测逻辑（ADR-0006 已明写「只落模型与动作」）、`/conflicts/:conflictId` 详情路由占位、队列不分页 → 票 14 收口清单。
