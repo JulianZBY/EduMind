@@ -20,4 +20,4 @@ npm run lint     # oxlint
 - 自建组件住 `src/components/`(扁平皮肤,交互原语用 Radix,无障碍由 Radix 承担)。
 - API 类型从后端 OpenAPI schema 生成,**禁止手抄接口类型**。
 - 服务端数据一律 TanStack Query;跨组件 UI 状态才用 zustand。
-- 信息架构:六区(会话/知识库/产物/图谱/冲突/题库)+ 设置,默认路由 = 会话;布局见 `docs/architecture.md`。
+- 信息架构:六区(会话/知识库/生成物/图谱/冲突/题库)+ 设置,默认路由 = 会话;布局见 `docs/architecture.md`。
