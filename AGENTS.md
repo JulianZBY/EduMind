@@ -23,7 +23,7 @@ Issues are tracked as local markdown files under `.scratch/<feature>/` in this r
 
 ### Triage labels
 
-Default label vocabulary — each role label equals its name (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+Default label vocabulary — each role label equals its name (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), plus the local terminal state `done`（已交付且复核通过）。 See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 

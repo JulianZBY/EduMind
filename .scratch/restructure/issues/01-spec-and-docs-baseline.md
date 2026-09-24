@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] AGENTS.md 与工单引用的每一份文档都能打开：ADR-0002~0005、架构一页图、风格文档、词汇表、agent 协作规范三份
 - [x] 风格文档含禁用 class 清单与交付自检清单，前端工单可逐项核对
@@ -133,3 +133,21 @@ git ls-files docs CONTEXT.md                          # 列出全部 14 份文�
    票 07 落地后需回校该文档与 `docs/architecture.md` 的落差节。
 6. **GET 型系统端点的错误码是通用 500**（未捕获异常）：`/health`、`/api/v1/ping`、`/` 没有业务错误分支，
    契约测试要求「每个端点至少记录一个错误响应」，因此记录的是事实性的通用 500，而非新增的承诺。
+
+## 协调者复核
+
+**结论：通过。** 复核人 = 协调者（主代理），2026-09-24。复核方式 = 独立复验，不采信交付记录里的自报数字。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 必读指针全可打开 | `git ls-files` 确认 14 份文档入库（ADR-0002~0005 / architecture.md / minimalist-flat.md / agents×3 / api×4 / CONTEXT.md） | 通过 |
+| 风格文档含禁用清单 + 自检清单 | 通读 `docs/style/minimalist-flat.md`：10 条禁用 class 正则 + 7 节交付自检清单 + mermaid 扁平主题配方 | 通过 |
+| 词汇表用语与全版本留痕一致 | 通读 `CONTEXT.md`：新增「版本用语（硬约束）」节并点名禁用表述；「产物」列作禁用写法 | 通过 |
+| 全端点 OpenAPI 注解 | 协调者独立执行 `app.openapi()`：paths 16 / operations 16 / 缺 summary、description 或 tags 的端点 = `[]` | 通过 |
+| 文档入库、过程稿仍排除 | `.git/info/exclude` 只剩 `DESIGN.md` / `PLAN.md` / `proposal.md` / `paseo.json` 四条 | 通过 |
+| 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **131 passed**；`uv run ruff check .` → 干净 | 通过 |
+
+- **合并点**：`19071fd`（`merge(01)`）。合并后与分支树逐步一致（`git diff main <分支> --stat` 为空）。
+- **越界披露（接受）**：`frontend/AGENTS.md` 六区那一行（「产物」→「生成物」）—— 属验收项 3 的必需修正，范围合理。
+- **状态迁移**：`ready-for-agent` → `done`（由本轮复核产生）。
+- **遗留去向（协调者登记，不当口头约定）**：① ADR-0001 缺位 → 随票 11 处理；② README / `frontend/src/App.tsx` 的「产物」残留 → 票 04/06 与票 14；③ `backend/app/db/models.py` 指向不入库 DESIGN.md 的断链 → 已写入票 05 派发约束；④ 题库 OpenAPI 分组 → 已写入票 12 派发约束；⑤ `docs/api/artifacts.md` 版本语义回校 → 已写入票 07 派发约束。

@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 五项能力（对话 / 向量化 / 语音转写 / PDF 解析 / 网络搜索）都是接口 + 按配置选择的工厂，新增实现无需改动调用方
 - [x] OpenAI 兼容 provider 经 MockTransport 契约测试覆盖三家方言各一例
@@ -144,3 +144,25 @@ $ EMBEDDING_PROVIDER=openai + EMBEDDING_BASE_URL/MODEL/API_KEY/DIMENSIONS
 3. **未做真实云端联通性验证**（本工作树无任何 Key）：dashscope / deepseek / siliconflow / mineru / bocha 全部走 stub + MockTransport；也未在浏览器/前端验证。
 4. **`SEARCH_PROVIDER` 默认语义变化**：未配 Key 时从「请求报错」变为「stub 占位结果」（本票要求），占位结果带 `（stub 网络搜索）` 标记与 `https://example.com/stub/*` 假链接，不会冒充真实资料。
 5. 既有未实现、本票未扩大范围：embedding 批量分片（dashscope 单请求 10 条上限）、多模态 embedding、`/embeddings` 失败重试。
+
+## 协调者复核
+
+**结论：通过（含一次人工解冲突）。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 五项能力 = 接口 + 工厂 | 通读 `app/core/registry.py`、`dialects.py`、`embedding/`、`search/`、`parser/`、`llm/providers/openai_compat.py` | 通过 |
+| 三家方言契约测试 | `tests/test_openai_compat_contract.py`（httpx MockTransport） | 通过 |
+| 向量化独立、调用方不依赖对话 provider | 调用点改为 `get_embedder()`；`tests/test_capability_registry.py` 断言调用方不 import 具体实现 | 通过 |
+| PDF 三策略 + 失败兜底 | `tests/test_pdf_strategy.py` 8 例 | 通过 |
+| stub 全链路可跑 | 协调者亲跑 `uv run pytest -q` → **128 passed**（本分支基线 95）、`ruff check .` 干净 | 通过 |
+| 端点未被改动 | `git diff --stat eadc76c <分支> -- backend/app/api/` = `knowledge.py` 仅 4 增 5 删 | 通过 |
+
+**合并冲突（协调者手工解析）**：票 01 与票 02 都动了 `backend/app/api/v1/knowledge.py`——01 补端点注解、02 换能力调用点，冲突落在 import 块。
+解析口径 = 两边都要：保留 01 的 `openapi_examples` 导入，采用 02 的 `get_embedder` / `get_search`，去掉已删除的 `get_llm` / `BochaSearchClient`。
+合并后协调者亲跑 `uv run pytest -q` → **164 passed**（131 + 33）、`ruff check .` 干净。
+
+- **合并点**：`04fc0e3`（`merge(02)`）。
+- **越界披露（接受）**：`backend/scripts/verify_services.py`（被删 provider 的调用点，不修即 ImportError）、`backend/.env.example`（新配置的唯一文档面）—— 均属必要修正。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **未完成的验证（登记为 `ready-for-human`）**：真实云端联通性（dashscope / deepseek / siliconflow / mineru / bocha）未验证——本工作树无任何 Key，且 `.env` 不入库。需人工带真实 Key 跑一次 `backend/scripts/verify_services.py` 才能确认。
