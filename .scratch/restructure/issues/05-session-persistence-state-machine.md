@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 RAG 策略收编
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 会话 API：创建 / 列表 / 历史 / 重命名 / 删除，全部经 HTTP 缝测试
       （`POST /api/v1/sessions`、`GET /api/v1/sessions`、`GET|PATCH|DELETE /api/v1/sessions/{session_id}`；
@@ -164,3 +164,24 @@ style=情境导入 / key_points=[斜率与图象]`——即累积结果既不丢
    与创建时的 `reference_doc_ids`，绑定动作留票 06。
 5. 生成物全版本留痕（版本表、下载、以历史版本为基线）归票 07；本票只落消息与累积意图。
 6. `POST /chat` 响应新增 `session_id: null` 字段：对既有调用方是纯增量（既有字段仍在、语义未变）。
+
+## 协调者复核
+
+**结论：通过。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 会话 API 五个动作经 HTTP 缝 | `tests/test_sessions_api.py` + 新端点契约用例（`test_openapi_contract.py` 由 15 → 20 个 operation 仍全绿） | 通过 |
+| 意图增量累积 | `tests/test_session_turns.py`：一次生成回复的意图分析调用 2 → 1（同一探针在基线 `beedb64` 与本工作树各跑一次） | 通过 |
+| 跳过追问为语义判定 | 正反例用例全绿；硬编码子串词表已删 | 通过 |
+| 路由层无澄清/追问判断 | 守卫用例 `test_api_layer_holds_no_clarify_or_skip_judgement` | 通过 |
+| 测试只断言响应与数据变迁 | 通读新测试，未断言内部函数调用 | 通过 |
+| **协调者指派的遗留修正** | `app/db/models.py` 已无指向不入库 `DESIGN.md` 的断链（`rg DESIGN.md` 无命中） | 通过 |
+| 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **214 passed**（合并前基线 181）、`uv run ruff check .` 干净 | 通过 |
+
+**发现并处置的状态不一致**：pi-lens 的 deferred formatter 在 worker 报完之后又改了 8 个文件且未提交（`chat.py` / `router.py` / `sessions.py` / `conversation.py` / `orchestrator.py` / `models.py` / `db/sessions.py` / `test_session_turns.py`）。协调者逐处核过 diff（**纯折行，无语义变化**，且我指派的 DESIGN.md 断链修正已在 worker 的提交里）后**代为提交**为 `710a0af`，使「合并的状态 = 复核过的状态」。
+> 这是本轮的**第二个实例**（票 03 也是）：pi-lens 的收尾格式化发生在 worker 的 turn 结束**之后**，worker 无法自行提交。故「合并前先看 `git status`，把格式化落地」已作为协调者的固定动作。
+
+- **合并点**：`bb61726`（`merge(05)`）；合并后 main 复跑 → 214 passed + ruff 干净。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向**：会话列表/历史未分页、会话内上传归入参考资料（票 06）、生成物版本（票 07）均已登记。

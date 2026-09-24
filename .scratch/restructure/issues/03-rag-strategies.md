@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 能力注册统一
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Retriever / Chunker 接口 + 两实现，配置按名切换
       （`RETRIEVAL_STRATEGY` = `vector_graph`（默认）/ `vector`；`CHUNK_STRATEGY` = `paragraph`，
@@ -146,3 +146,22 @@ ValueError: 未实现的分块策略: nowhere（可选：paragraph）
 4. 上下文预算仍是常量 `CONTEXT_BUDGET_CHARS = 6000`，未配置化（收编前同款；本票不改行为）。
 5. `Retriever.retrieve(intent)` 的意图类型只在 `TYPE_CHECKING` 下引用 `app.core.intent.TeachingIntent`，
    运行时 knowledge 层不反依赖 core（分层箭头仍单向）。
+
+## 协调者复核
+
+**结论：通过（含一次同终端续派收尾）。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 接口 + 两实现 + 配置按名切换 | 读 `app/knowledge/retrieval/factory.py`：`RETRIEVER_BUILDERS` 注册 `vector` / `vector_graph`，默认档 `vector_graph`（收编前行为） | 通过 |
+| 编排器内不再有检索细节 | 通读 `app/core/orchestrator.py`：只剩 `get_retriever().retrieve(intent, reference_doc_ids=…)` 与 `retrieval.sources`；加权 / 图谱邻接 / 溯源均在策略层 | 通过 |
+| 默认档与收编前一致 | 黄金比对用例 `test_default_retrieval_matches_pre_refactor_golden` + 既有 `test_graph_retrieval.py` / `test_reference.py` 未改绿 | 通过 |
+| 两策略差异可观测 | 新增纯新增端点 `POST /knowledge/retrieve`（既有端点注解与字段未动）+ `test_two_strategies_differ_over_http` | 通过 |
+| 调用方只依赖接口 | `test_callers_only_depend_on_interface_and_factory` 守卫用例 | 通过 |
+| 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **181 passed**（合并前基线 164）、`uv run ruff check .` 干净 | 通过 |
+
+**发现并处置的状态不一致**：worker 报 `worker_done` 之后，pi-lens 的 deferred formatter 又改了 3 个文件且**未提交**（`knowledge.py` / `retrieval/search.py` / `test_rag_strategies.py`，纯折行）。协调者逐处看过 diff 后**同终端续派**（`reused_terminal`）要求其落地为 `1590ffa`，并在最终态复跑 181 passed——**使「合并的状态 = 复核过的状态」**。
+
+- **合并点**：`beedb64`（`merge(03)`）；合并后 main 复跑 → 181 passed。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向（已登记）**：工厂 `lru_cache` 导致「运行时改配置需清缓存才能换实例」→ 已写入票 13 派发约束（设置写穿即时生效）。

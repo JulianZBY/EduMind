@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 规范与决策文档基线; 02 能力注册统一
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 七条路由可达，默认路由 = 备课会话区
 - [x] 基线组件逐项通过风格文档自检清单（零阴影 / 零渐变 / 零灰底 / border-2 border-black / rounded-none / 悬停黑白反色）
@@ -198,3 +198,26 @@ cd ../frontend && npm run gen:api
 5. **设置区是只读骨架**：控件全部 `disabled`，读写接口接入（票 13）后才开放；届时 `src/areas/settings/queries.ts` 里长 hooks，界面文件不动路由注册。
 6. **冲突三类别只有形态没有检测**：结构冲突与常识存疑的检测逻辑尚未实现（ADR-0004），本票在标签页文案里明确写了「检测尚未实现，本区只呈现裁决形态」，未承诺能自动发现（CONTEXT 第 6 节文案纪律）。
 7. `backend/.venv` 是本次为跑通类型管线而 `uv sync` 生成的（在 `.gitignore` 内，不影响仓库）；后续会话重跑类型管线无需再装。
+
+## 协调者复核
+
+**结论：通过（两处风格偏离与一项后端缺口已提交用户裁决）。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 七条路由可达、默认 = 备课会话 | 读 `src/areas/registry.ts`：`import.meta.glob('./*/index.tsx')` 自动汇总；七个区目录就位；`npm run check:routes` 逐条渲染断言 | 通过 |
+| 基线组件过风格自检清单 | 逐项核对交付记录第四节四态表；组件均 `border-2 border-black` + `rounded-none` | 通过 |
+| 接口类型由 OpenAPI 生成 | `npm run gen:api`（dump FastAPI app、不起后端）；无手抄类型 | 通过 |
+| 禁用类扫描挂入 lint/build | **协调者突击检查**：向 `src/areas/lesson-prep/` 注入含 `shadow-md`/`rounded-lg`/`bg-gray-100`/`transition-all` 的探针文件 → `npm run lint` **exit 1**（4 处命中，规则号与行列均报出）；删掉探针后回到 exit 0 | 通过 |
+| 工作台密度 | 列表/表格紧凑行高，空状态/设置用编辑密度 | 通过 |
+| 构建 | 协调者亲跑 `npm run lint`（57 文件零违规）+ `npm run build` 成功；工作树干净 | 通过 |
+
+**为并行开发留的缝（本次编排的关键收获）**：一区一目录 + `import.meta.glob` 自注册，使票 09/10/12/13 能在各自分支上并行落地而**不需要改任何共享文件**——本波四张票的并行与合并因此成立。
+
+**两处风格偏离（提交用户裁决，结论：接受）**：① 输入框悬停 = 边线加粗（反色会盖住输入内容）；② 禁用态 = 边线 2px→1px + `text-black/40`（中文文字描边不可读）。
+协调者已把两条例外**写进 `docs/style/minimalist-flat.md`**（第 1 节禁用态定义、第 3 节悬停例外、第 7 节自检清单同步，commit `547f6fd`），使文档与现实一致，后续 7 张前端票的 DoD 不再悬空。
+
+**遗留去向**：① 「16 个操作只有 6 个带 `response_model`」→ 按用户裁决写入票 13 与后续票的约束；② 真浏览器冒烟（本机无 Playwright）→ 票 14；③ `@hey-api/openapi-ts` 带来 4 条 dev-only npm audit high → 票 14 收口时评估升级。
+
+- **合并点**：`142b59a`（`merge(04)`）；`frontend/` 与分支逐步一致。
+- **状态迁移**：`ready-for-agent` → `done`。
