@@ -1,8 +1,10 @@
-"""试卷按需生成接口：LLM 自编出题 → 题目入库（自编+关联知识点）→ 落盘。"""
+"""试卷按需生成接口：LLM 自编出题 → 题目入库（自编+关联知识点）→ 落盘；另含题库查询。"""
 
+from datetime import datetime
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.api.openapi_examples import (
@@ -12,7 +14,13 @@ from app.api.openapi_examples import (
     json_response,
 )
 from app.core.intent import TeachingIntent
-from app.generate.exam import generate_exam, render_exam, save_questions_to_bank
+from app.generate.exam import (
+    generate_exam,
+    query_question,
+    query_questions,
+    render_exam,
+    save_questions_to_bank,
+)
 from app.knowledge.retrieval.factory import get_retriever
 
 router = APIRouter()
@@ -103,3 +111,146 @@ async def generate_exam_paper(req: ExamGenerateRequest):
     return ExamGenerateResponse(
         questions=questions, filename=Path(path).name, bank_saved=bank_saved
     )
+
+
+class QuestionKnowledgeRef(BaseModel):
+    """题目的一道考查知识点：标题 + 权重（主考 / 涉及）。"""
+
+    id: str
+    title: str
+    weight: str
+
+
+class QuestionSummary(BaseModel):
+    """列表行：题干 / 题型 / 来源 / 考查知识点（答案在详情里，列表不带）。"""
+
+    id: str
+    type: str
+    content: str
+    source_type: str
+    created_at: datetime
+    knowledge_points: list[QuestionKnowledgeRef]
+
+
+class KnowledgePointCount(BaseModel):
+    """题库筛选项：一个考查知识点及它的题目数。"""
+
+    title: str
+    question_count: int
+
+
+class QuestionListResponse(BaseModel):
+    items: list[QuestionSummary]
+    total: int  # 当前筛选条件下的题目总数（分页前）
+    limit: int
+    offset: int
+    # 全部考查知识点（不随筛选变化）：教师换筛选时清单不会自己消失
+    knowledge_points: list[KnowledgePointCount]
+
+
+class QuestionDetail(BaseModel):
+    """题目详情：题型 / 答案 / 来源 / 考查知识点齐备。"""
+
+    id: str
+    type: str
+    content: str
+    answer: str
+    source_type: str  # 来源：自编 / 上传 / 网络
+    source_url: str | None
+    created_at: datetime
+    knowledge_points: list[QuestionKnowledgeRef]
+
+
+_BANK_QUESTION = {
+    "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+    "type": "选择",
+    "content": "下列函数中，属于一次函数的是？",
+    "source_type": "自编",
+    "created_at": "2026-09-24T10:20:30",
+    "knowledge_points": [
+        {
+            "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+            "title": "一次函数的定义",
+            "weight": "主考",
+        }
+    ],
+}
+
+_BANK_QUESTION_DETAIL = {**_BANK_QUESTION, "answer": "A", "source_url": None}
+
+
+@router.get(
+    "/questions",
+    response_model=QuestionListResponse,
+    tags=["题库"],
+    summary="题目列表（按考查知识点筛选）",
+    description=(
+        "题库查询入口：按**考查知识点**筛选题目，返回分页结果与筛选项。\n\n"
+        "* `knowledge_point` 填图谱节点标题（与 `GET /api/v1/knowledge/graph` 的 `title` 一致）；"
+        "不传则返回全部题目。题目按入库时间**倒序**：试卷刚入库的题目就出现在第一页。\n"
+        "* 每道题的 `knowledge_points` 带权重：`主考` 排在前、`涉及` 排在后。\n"
+        "* `items` 只带列表要用的字段（题干 / 题型 / 来源 / 考查知识点）；答案在 "
+        "`GET /api/v1/questions/{question_id}`。\n"
+        "* `knowledge_points` 是**全量**筛选项（含各自题目数），不随当前筛选收窄——"
+        "筛过一次之后仍能换回别的知识点。\n"
+        "* `limit` 上限 100（一屏工作台密度容量），`total` 为筛选后的总数，供前端翻页。"
+    ),
+    responses={
+        200: json_response(
+            "题目列表（含全部筛选项）",
+            {
+                "items": [_BANK_QUESTION],
+                "total": 12,
+                "limit": 20,
+                "offset": 0,
+                "knowledge_points": [
+                    {"title": "一次函数的定义", "question_count": 5},
+                    {"title": "一次函数的图象", "question_count": 3},
+                ],
+            },
+        ),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+async def list_questions(
+    knowledge_point: Annotated[
+        str | None,
+        Query(
+            description=(
+                "按考查知识点筛选：填图谱节点标题（见 GET /api/v1/knowledge/graph 的 title）；"
+                "不传返回全部题目"
+            ),
+            examples=["一次函数的定义"],
+        ),
+    ] = None,
+    limit: Annotated[
+        int, Query(ge=1, le=100, description="本页最多返回多少道题（1–100，默认 20）")
+    ] = 20,
+    offset: Annotated[int, Query(ge=0, description="跳过前多少道题，用于翻页")] = 0,
+):
+    return query_questions(knowledge_point=knowledge_point, limit=limit, offset=offset)
+
+
+@router.get(
+    "/questions/{question_id}",
+    response_model=QuestionDetail,
+    tags=["题库"],
+    summary="题目详情",
+    description=(
+        "取一道题的完整内容：题干 / 题型 / 答案 / 来源 / 考查知识点（含主考与涉及）。\n\n"
+        "`question_id` 取自题目列表返回的 `id`；题目不存在时返回 `404`，"
+        "而不是空对象——前端据此区分「题目没了」与「题目是空的」。"
+    ),
+    responses={
+        200: json_response("题目详情", _BANK_QUESTION_DETAIL),
+        404: error_response("题目不存在：id 写错或题目已删除", "题目不存在"),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+async def get_question(question_id: str):
+    question = query_question(question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="题目不存在")
+    return question
