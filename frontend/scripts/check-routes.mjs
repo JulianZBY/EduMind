@@ -133,7 +133,9 @@ try {
     ...EXPECTED_AREAS.map((area) => ({ path: area.path, expect: area.label })),
     { path: '/lesson-prep/session-abc', expect: 'session-abc' },
     { path: '/settings', expect: '供应商目录' },
-    { path: '/conflicts?category=structure', expect: '没有待审的结构冲突' },
+    // 冲突审核的队列是服务端数据（票 11 起按类别取数），SSR 渲染时停在取数态，
+    // 故这里断言面板自己的文案（带类别名）而不是空状态标题——它同样证明 ?category= 选中了该分区。
+    { path: '/conflicts?category=structure', expect: '正在取「结构冲突」队列' },
     { path: '/no-such-area', expect: '这个地址不存在' },
   ]
   console.log('逐条渲染（react-dom/server，无浏览器；默认路由 / 的重定向已在上面的 loader 断言里跑过）：')

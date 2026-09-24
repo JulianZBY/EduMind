@@ -146,7 +146,7 @@ class VectorStore:
         finally:
             conn.close()
 
-    # ---- 知识点标题索引（冲突检测近名预筛用，ADR-0001，余弦距离）----
+    # ---- 知识点标题索引（冲突检测近名预筛用，ADR-0006，余弦距离）----
 
     def add_node_title(self, node_id: str, title: str, embedding: list[float]) -> None:
         """入库/更新知识点标题向量（同 node_id 幂等覆盖）。"""

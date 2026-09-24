@@ -350,6 +350,121 @@
         "title": "ChatResponse",
         "type": "object"
       },
+      "ConflictItem": {
+        "description": "一条冲突：类别 + 新旧知识对照 + 差异说明 + 状态。",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "diff_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff Description"
+          },
+          "doc_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doc Id"
+          },
+          "existing_knowledge": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExistingKnowledgeEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "new_knowledge": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NewKnowledgeEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "review_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Action"
+          },
+          "revised_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revised Content"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "structure_preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StructurePreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "status"
+        ],
+        "title": "ConflictItem",
+        "type": "object"
+      },
+      "ConflictList": {
+        "description": "冲突列表。",
+        "properties": {
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/ConflictItem"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conflicts"
+        ],
+        "title": "ConflictList",
+        "type": "object"
+      },
       "DocumentChunk": {
         "description": "一个分块：`chunk_id` 全局唯一，`chunk_index` 是它在原文中的次序。",
         "properties": {
@@ -609,6 +724,35 @@
           "bank_saved"
         ],
         "title": "ExamGenerateResponse",
+        "type": "object"
+      },
+      "ExistingKnowledgeEntry": {
+        "additionalProperties": true,
+        "description": "库里的旧知识点：比新知多一个图谱节点 id。",
+        "properties": {
+          "content": {
+            "default": "",
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "ExistingKnowledgeEntry",
         "type": "object"
       },
       "GraphEdge": {
@@ -1003,6 +1147,24 @@
         "title": "MessageItem",
         "type": "object"
       },
+      "NewKnowledgeEntry": {
+        "additionalProperties": true,
+        "description": "待审的新知：标题 + 正文（结构冲突还带 `relations`）。\n\n已知字段给出类型（前端对照卡片直接用），其余键原样保留——冲突记录里的知识点字典是\n检测阶段存下的，不因本接口丢字段，也不凭空多出键。",
+        "properties": {
+          "content": {
+            "default": "",
+            "title": "Content",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "NewKnowledgeEntry",
+        "type": "object"
+      },
       "QuestionDetail": {
         "description": "题目详情：题型 / 答案 / 来源 / 考查知识点齐备。",
         "properties": {
@@ -1318,25 +1480,70 @@
         "type": "object"
       },
       "ReviewRequest": {
-        "description": "裁决动作：三选一，与冲突终态一一对应。",
+        "description": "裁决动作；「编辑修正后入库」另需带修正后的内容。",
         "example": {
           "action": "接受新"
         },
         "properties": {
           "action": {
+            "description": "裁决动作。定义冲突与结构冲突用 接受新 / 保留旧 / 并存；常识存疑用 照常入库 / 拒绝 / 编辑修正后入库。",
             "enum": [
               "接受新",
               "保留旧",
-              "并存"
+              "并存",
+              "照常入库",
+              "拒绝",
+              "编辑修正后入库"
             ],
             "title": "Action",
             "type": "string"
+          },
+          "revised_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "仅「编辑修正后入库」需要：教师改对后的正文。落库的是这份内容，原文留在冲突记录里（两条都可追溯）。",
+            "title": "Revised Content"
           }
         },
         "required": [
           "action"
         ],
         "title": "ReviewRequest",
+        "type": "object"
+      },
+      "ReviewResult": {
+        "description": "裁决结果：冲突 id、类别、终态与教师选的动作。",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "status",
+          "action"
+        ],
+        "title": "ReviewResult",
         "type": "object"
       },
       "ReviseRequest": {
@@ -1844,6 +2051,135 @@
         "title": "SessionUpdateRequest",
         "type": "object"
       },
+      "StructureEdge": {
+        "description": "终态图上的一条关系。键名与知识图谱接口一致，前端复用同一套画布。",
+        "properties": {
+          "from": {
+            "title": "From",
+            "type": "string"
+          },
+          "relation_type": {
+            "title": "Relation Type",
+            "type": "string"
+          },
+          "to": {
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "relation_type"
+        ],
+        "title": "StructureEdge",
+        "type": "object"
+      },
+      "StructureGraph": {
+        "description": "一张小图：节点 + 关系。",
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/StructureEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/StructureNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "StructureGraph",
+        "type": "object"
+      },
+      "StructureNode": {
+        "description": "终态图上的一个节点。\n\n新知用占位 id `__new__`（真实 id 要等裁决入库后才生成）；`is_new` 让前端把新知\n画成强调色描边（CONTEXT.md 的「接受新」语义：旧知识点的位置换成新知）。",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_new": {
+            "default": false,
+            "title": "Is New",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "StructureNode",
+        "type": "object"
+      },
+      "StructureOutcome": {
+        "description": "一种裁决终态的图示 + 它对应的冲突终态。",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/StructureEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/StructureNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges",
+          "action",
+          "status"
+        ],
+        "title": "StructureOutcome",
+        "type": "object"
+      },
+      "StructurePreview": {
+        "description": "「图谱现状 vs 三种裁决终态」（仅待审的结构冲突带它）。\n\n以冲突知识点为中心的一跳邻域子图；终态图与实际裁决走的是一套语义，\n因此图上画的终态就是裁决后图谱的样子。",
+        "properties": {
+          "current": {
+            "$ref": "#/components/schemas/StructureGraph"
+          },
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/StructureOutcome"
+            },
+            "title": "Outcomes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "current",
+          "outcomes"
+        ],
+        "title": "StructurePreview",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2221,7 +2557,7 @@
     },
     "/api/v1/conflicts": {
       "get": {
-        "description": "返回待审及已裁决的冲突。每条包含新旧知识对照（`new_knowledge` / `existing_knowledge`）与差异说明，供教师判断谁对。\n\n当前唯一类别是**定义冲突**（同一知识点两段矛盾描述）；结构冲突与常识存疑两种类别的数据模型见 ADR-0004，检测逻辑尚未实现，因此不会出现在本列表。",
+        "description": "返回待审及已裁决的冲突，每条带**类别**（定义冲突 / 结构冲突 / 常识存疑）与新旧知识对照（`new_knowledge` / `existing_knowledge`）、差异说明。\n\n结构冲突另带 `structure_preview`：「图谱现状 vs 三种裁决终态」的小图数据（以冲突知识点为中心的一跳邻域），供审核界面在按下按钮前就画出图谱会变成什么样。\n\n**当前只有定义冲突由检测产出**（ADR-0006）：结构冲突与常识存疑的检测逻辑尚未实现，两类冲突的形态与裁决动作已就位，因此在队列里出现要等检测落地。",
         "operationId": "list_conflicts_api_v1_conflicts_get",
         "parameters": [
           {
@@ -2241,35 +2577,217 @@
               "description": "按状态过滤：待审 / 已接受 / 已拒绝 / 并存；不传返回全部",
               "title": "Status"
             }
+          },
+          {
+            "description": "按类别过滤：定义冲突 / 结构冲突 / 常识存疑；不传返回全部",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "按类别过滤：定义冲突 / 结构冲突 / 常识存疑；不传返回全部",
+              "title": "Category"
+            }
           }
         ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "example": {
-                  "conflicts": [
-                    {
-                      "diff_description": "新知识多了常数项 b，旧知识把正比例函数当成一次函数全集。",
-                      "doc_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
-                      "existing_knowledge": {
-                        "content": "形如 y=kx（k≠0）的函数叫一次函数。",
-                        "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
-                        "title": "一次函数的定义"
-                      },
-                      "id": "c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-                      "new_knowledge": {
-                        "content": "形如 y=kx+b（k≠0）的函数叫一次函数。",
-                        "title": "一次函数的定义"
-                      },
-                      "status": "待审"
+                "examples": {
+                  "定义冲突": {
+                    "summary": "定义冲突：新旧描述对照，三选一",
+                    "value": {
+                      "conflicts": [
+                        {
+                          "category": "定义冲突",
+                          "diff_description": "新知识多了常数项 b，旧知识把正比例函数当成一次函数全集。",
+                          "doc_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                          "existing_knowledge": {
+                            "content": "形如 y=kx（k≠0）的函数叫一次函数。",
+                            "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                            "title": "一次函数的定义"
+                          },
+                          "id": "c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                          "new_knowledge": {
+                            "content": "形如 y=kx+b（k≠0）的函数叫一次函数。",
+                            "title": "一次函数的定义"
+                          },
+                          "status": "待审"
+                        }
+                      ]
                     }
-                  ]
+                  },
+                  "常识存疑": {
+                    "summary": "常识存疑：红旗标记 + 原文 + 两选一 / 编辑修正后入库",
+                    "value": {
+                      "conflicts": [
+                        {
+                          "category": "常识存疑",
+                          "diff_description": "内容可能是错的常识，需要教师决定要不要让它进库。",
+                          "doc_id": "8f7e6d5c-4b3a-4928-8776-655443322119",
+                          "id": "e3c4d5f6-7081-4293-a4b5-c6d7e8f90134",
+                          "new_knowledge": {
+                            "content": "地球是平的。",
+                            "title": "地球的形状"
+                          },
+                          "status": "待审"
+                        }
+                      ]
+                    }
+                  },
+                  "结构冲突": {
+                    "summary": "结构冲突：图谱现状 vs 三种裁决终态",
+                    "value": {
+                      "conflicts": [
+                        {
+                          "category": "结构冲突",
+                          "diff_description": "新知识想插在定义与图象之间，与现状的层级冲突。",
+                          "existing_knowledge": {
+                            "content": "形如 y=kx+b（k≠0）的函数叫一次函数。",
+                            "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                            "title": "一次函数的定义"
+                          },
+                          "id": "d2b3c4e5-6f70-4182-93a4-b5c6d7e8f902",
+                          "new_knowledge": {
+                            "content": "一次函数的图象是一条直线。",
+                            "relations": [
+                              {
+                                "from_title": "一次函数的图象",
+                                "relation": "推导关系",
+                                "to_title": "一次函数的定义"
+                              }
+                            ],
+                            "title": "一次函数的图象"
+                          },
+                          "status": "待审",
+                          "structure_preview": {
+                            "current": {
+                              "edges": [
+                                {
+                                  "from": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                                  "relation_type": "父子包含",
+                                  "to": "3c4d5e6f-7081-4293-a4b5-c6d7e8f90123"
+                                }
+                              ],
+                              "nodes": [
+                                {
+                                  "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                                  "is_new": false,
+                                  "title": "一次函数的定义"
+                                },
+                                {
+                                  "id": "3c4d5e6f-7081-4293-a4b5-c6d7e8f90123",
+                                  "is_new": false,
+                                  "title": "函数的三种表示法"
+                                }
+                              ]
+                            },
+                            "outcomes": [
+                              {
+                                "action": "接受新",
+                                "edges": [
+                                  {
+                                    "from": "__new__",
+                                    "relation_type": "父子包含",
+                                    "to": "3c4d5e6f-7081-4293-a4b5-c6d7e8f90123"
+                                  },
+                                  {
+                                    "from": "__new__",
+                                    "relation_type": "推导关系",
+                                    "to": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901"
+                                  }
+                                ],
+                                "nodes": [
+                                  {
+                                    "id": "3c4d5e6f-7081-4293-a4b5-c6d7e8f90123",
+                                    "is_new": false,
+                                    "title": "函数的三种表示法"
+                                  },
+                                  {
+                                    "id": "__new__",
+                                    "is_new": true,
+                                    "title": "一次函数的图象"
+                                  }
+                                ],
+                                "status": "已接受"
+                              },
+                              {
+                                "action": "保留旧",
+                                "edges": [
+                                  {
+                                    "from": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                                    "relation_type": "父子包含",
+                                    "to": "3c4d5e6f-7081-4293-a4b5-c6d7e8f90123"
+                                  }
+                                ],
+                                "nodes": [
+                                  {
+                                    "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                                    "is_new": false,
+                                    "title": "一次函数的定义"
+                                  },
+                                  {
+                                    "id": "3c4d5e6f-7081-4293-a4b5-c6d7e8f90123",
+                                    "is_new": false,
+                                    "title": "函数的三种表示法"
+                                  }
+                                ],
+                                "status": "已拒绝"
+                              },
+                              {
+                                "action": "并存",
+                                "edges": [
+                                  {
+                                    "from": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                                    "relation_type": "父子包含",
+                                    "to": "3c4d5e6f-7081-4293-a4b5-c6d7e8f90123"
+                                  },
+                                  {
+                                    "from": "__new__",
+                                    "relation_type": "推导关系",
+                                    "to": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901"
+                                  }
+                                ],
+                                "nodes": [
+                                  {
+                                    "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                                    "is_new": false,
+                                    "title": "一次函数的定义"
+                                  },
+                                  {
+                                    "id": "3c4d5e6f-7081-4293-a4b5-c6d7e8f90123",
+                                    "is_new": false,
+                                    "title": "函数的三种表示法"
+                                  },
+                                  {
+                                    "id": "__new__",
+                                    "is_new": true,
+                                    "title": "一次函数的图象"
+                                  }
+                                ],
+                                "status": "并存"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictList"
+                }
               }
             },
-            "description": "冲突列表（不传 status 时返回全部）"
+            "description": "冲突列表（不传 status / category 时返回全部）"
           },
           "422": {
             "content": {
@@ -2300,7 +2818,7 @@
     },
     "/api/v1/conflicts/{conflict_id}/review": {
       "post": {
-        "description": "教师三选一处置待审冲突，每条冲突只能裁决一次：\n\n* `接受新`：新知识点替换旧知识点，旧知识点上的关系边重挂到新知识点，终态 `已接受`；\n* `保留旧`：丢弃新知，图谱不动，终态 `已拒绝`；\n* `并存`：新旧双知识点保留，差异说明留在冲突记录中，终态 `并存`。\n\n裁决后该知识点才进入知识图谱（审核前新知不入图）。",
+        "description": "教师处置待审冲突，每条冲突只能裁决一次。**动作集合按类别收窄**：\n\n* 定义冲突 / 结构冲突（三选一）：`接受新`：新知识点替换旧知识点，旧知识点上的关系边重挂到新知识点，终态 `已接受`；`保留旧`：丢弃新知，图谱不动，终态 `已拒绝`；`并存`：新旧双知识点保留，差异说明留在冲突记录中，终态 `并存`。\n* 常识存疑（两选一 + 编辑修正后入库）：`照常入库`：按原文进库，终态 `已接受`；`拒绝`：不让它进库，终态 `已拒绝`；`编辑修正后入库`：教师改对了再入库，**落库的是修正后的内容**（原文留在冲突记录里），终态 `已接受`。\n\n动作不属于该类别 = `422`（与冲突当前状态无关的请求语义错误）；对已裁决的冲突再提交 = `409`（状态冲突，不是请求格式错误）。\n\n审核前新知不入知识图谱——「待审」期间图谱里看不到它；结构冲突的新知可自带关系（`new_knowledge[\"relations\"]`，端点按知识点标题解析），随「接受新」/「并存」一并入图。",
         "operationId": "review_conflict_api_v1_conflicts__conflict_id__review_post",
         "parameters": [
           {
@@ -2329,14 +2847,32 @@
           "200": {
             "content": {
               "application/json": {
-                "example": {
-                  "id": "c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-                  "status": "已接受"
+                "examples": {
+                  "接受新（定义冲突 / 结构冲突）": {
+                    "summary": "接受新 → 已接受",
+                    "value": {
+                      "action": "接受新",
+                      "category": "定义冲突",
+                      "id": "c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                      "status": "已接受"
+                    }
+                  },
+                  "编辑修正后入库（常识存疑）": {
+                    "summary": "编辑修正后入库 → 已接受（落库的是修正后的内容）",
+                    "value": {
+                      "action": "编辑修正后入库",
+                      "category": "常识存疑",
+                      "id": "e3c4d5f6-7081-4293-a4b5-c6d7e8f90134",
+                      "status": "已接受"
+                    }
+                  }
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResult"
+                }
               }
             },
-            "description": "裁决成功，返回冲突 id 与终态"
+            "description": "裁决成功，返回冲突 id、类别与终态"
           },
           "404": {
             "content": {
@@ -2361,21 +2897,31 @@
           "422": {
             "content": {
               "application/json": {
-                "example": {
-                  "detail": [
-                    {
-                      "loc": [
-                        "body",
-                        "messages"
-                      ],
-                      "msg": "Field required",
-                      "type": "missing"
+                "examples": {
+                  "动作与类别不匹配": {
+                    "summary": "动作与类别不匹配",
+                    "value": {
+                      "detail": "常识存疑的动作是 照常入库 / 拒绝 / 编辑修正后入库，不接受: 并存"
                     }
-                  ]
+                  },
+                  "请求体校验失败": {
+                    "summary": "请求体校验失败",
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "body"
+                          ],
+                          "msg": "Value error, 「编辑修正后入库」必须带修正后的内容（revised_content）",
+                          "type": "value_error"
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             },
-            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+            "description": "动作不属于该冲突类别的动作集合，或请求体校验失败（未知动作 / 「编辑修正后入库」缺修正后的内容）"
           },
           "500": {
             "content": {
