@@ -24,3 +24,11 @@ knowledge_base/
 .DS_Store
 Thumbs.db
 e2e-artifacts/
+
+# ---- 本地残留：不属于产品仓库（误入库过，勿再跟踪）----
+# .demo-backup：演示产物的日期备份（几百个 pptx/html，约 10 MB）
+# .playwright-cli：Playwright CLI 的页面转储
+# EduMind-demo：本地演示录屏与录制脚手架（含 mp4/webm 与素材 docx/png）
+.demo-backup/
+.playwright-cli/
+EduMind-demo/
