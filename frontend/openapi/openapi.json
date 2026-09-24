@@ -23,7 +23,7 @@
         "type": "object"
       },
       "ChatRequest": {
-        "description": "备课对话请求：整段对话历史 + 追问粒度 + 本次备课的参考资料。",
+        "description": "备课对话请求：对话内容 + 追问粒度 + 本次备课的参考资料 +（可选）备课会话 id。",
         "example": {
           "granularity": "标准",
           "messages": [
@@ -42,7 +42,8 @@
           ],
           "reference_doc_ids": [
             "5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"
-          ]
+          ],
+          "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
         },
         "properties": {
           "granularity": {
@@ -64,6 +65,17 @@
             },
             "title": "Reference Doc Ids",
             "type": "array"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           }
         },
         "required": [
@@ -94,12 +106,187 @@
           "content": {
             "title": "Content",
             "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
           }
         },
         "required": [
           "content"
         ],
         "title": "ChatResponse",
+        "type": "object"
+      },
+      "DocumentChunk": {
+        "description": "一个分块：`chunk_id` 全局唯一，`chunk_index` 是它在原文中的次序。",
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "integer"
+          },
+          "chunk_index": {
+            "title": "Chunk Index",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "chunk_index",
+          "content"
+        ],
+        "title": "DocumentChunk",
+        "type": "object"
+      },
+      "DocumentDetail": {
+        "example": {
+          "file_type": "pdf",
+          "filename": "一次函数讲义.pdf",
+          "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+          "is_reference": true,
+          "status": "处理中"
+        },
+        "properties": {
+          "chunk_count": {
+            "title": "Chunk Count",
+            "type": "integer"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentChunk"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "conflict_count": {
+            "title": "Conflict Count",
+            "type": "integer"
+          },
+          "file_type": {
+            "title": "File Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_reference": {
+            "title": "Is Reference",
+            "type": "boolean"
+          },
+          "parsed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed At"
+          },
+          "status": {
+            "enum": [
+              "处理中",
+              "已完成",
+              "有冲突",
+              "失败"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "file_type",
+          "status",
+          "is_reference",
+          "parsed_at",
+          "conflict_count",
+          "chunk_count",
+          "chunks"
+        ],
+        "title": "DocumentDetail",
+        "type": "object"
+      },
+      "DocumentListResponse": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentView"
+            },
+            "title": "Documents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "documents"
+        ],
+        "title": "DocumentListResponse",
+        "type": "object"
+      },
+      "DocumentView": {
+        "description": "一份教学资料：上传响应与列表项共用的形状。",
+        "example": {
+          "file_type": "pdf",
+          "filename": "一次函数讲义.pdf",
+          "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+          "is_reference": true,
+          "status": "处理中"
+        },
+        "properties": {
+          "file_type": {
+            "title": "File Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_reference": {
+            "title": "Is Reference",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "处理中",
+              "已完成",
+              "有冲突",
+              "失败"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "file_type",
+          "status",
+          "is_reference"
+        ],
+        "title": "DocumentView",
         "type": "object"
       },
       "ExamGenerateRequest": {
@@ -242,6 +429,63 @@
           "content"
         ],
         "title": "Message",
+        "type": "object"
+      },
+      "MessageItem": {
+        "properties": {
+          "artifacts": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "role",
+          "content",
+          "created_at"
+        ],
+        "title": "MessageItem",
         "type": "object"
       },
       "QuestionDetail": {
@@ -408,6 +652,23 @@
           "knowledge_points"
         ],
         "title": "QuestionSummary",
+        "type": "object"
+      },
+      "ReferenceRequest": {
+        "description": "参考资料标记的目标值（幂等设置，不是翻转）。",
+        "example": {
+          "is_reference": true
+        },
+        "properties": {
+          "is_reference": {
+            "title": "Is Reference",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_reference"
+        ],
+        "title": "ReferenceRequest",
         "type": "object"
       },
       "RetrieveRequest": {
@@ -760,6 +1021,200 @@
         "title": "SearchResponse",
         "type": "object"
       },
+      "SessionCreateRequest": {
+        "description": "新建备课会话：标题可留空（首轮需求自动充当标题），并带上本次备课的参考资料。",
+        "example": {
+          "granularity": "标准",
+          "reference_doc_ids": [
+            "5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"
+          ],
+          "title": "一次函数（初二）"
+        },
+        "properties": {
+          "granularity": {
+            "default": "标准",
+            "enum": [
+              "快速",
+              "标准",
+              "精细"
+            ],
+            "title": "Granularity",
+            "type": "string"
+          },
+          "reference_doc_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Reference Doc Ids",
+            "type": "array"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "SessionCreateRequest",
+        "type": "object"
+      },
+      "SessionDeleteResponse": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "deleted"
+        ],
+        "title": "SessionDeleteResponse",
+        "type": "object"
+      },
+      "SessionHistoryResponse": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageItem"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "session": {
+            "$ref": "#/components/schemas/SessionSummary"
+          }
+        },
+        "required": [
+          "session",
+          "messages"
+        ],
+        "title": "SessionHistoryResponse",
+        "type": "object"
+      },
+      "SessionListResponse": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionSummary"
+            },
+            "title": "Sessions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sessions"
+        ],
+        "title": "SessionListResponse",
+        "type": "object"
+      },
+      "SessionSummary": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "granularity": {
+            "title": "Granularity",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message_count": {
+            "title": "Message Count",
+            "type": "integer"
+          },
+          "reference_doc_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reference Doc Ids",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "granularity",
+          "reference_doc_ids",
+          "message_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SessionSummary",
+        "type": "object"
+      },
+      "SessionUpdateRequest": {
+        "description": "重命名会话 / 改会话设置：只改传入的字段，未传的字段保持原值。",
+        "example": {
+          "granularity": "精细",
+          "reference_doc_ids": [
+            "5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"
+          ],
+          "title": "一次函数（初二·修订）"
+        },
+        "properties": {
+          "granularity": {
+            "anyOf": [
+              {
+                "enum": [
+                  "快速",
+                  "标准",
+                  "精细"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granularity"
+          },
+          "reference_doc_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Doc Ids"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "SessionUpdateRequest",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -846,7 +1301,7 @@
     },
     "/api/v1/chat": {
       "post": {
-        "description": "备课对话主入口，后端按**累积需求**分析意图后二选一：\n\n1. **澄清回复**：`clarifying=true`、`artifacts=null`，内容是下一个追问；追问粒度分快速 / 标准 / 精细三档，粒度越高追问越细。\n2. **生成回复**：`clarifying=false`，`artifacts` 携带本次的课件、教案、提纲，以及命中的参考资料来源。\n\n最后一轮命中「开始生成」一类的跳过表达时不再追问，直接出生成物。`reference_doc_ids` 为发起备课勾选的参考资料，命中后在 `artifacts.references` 溯源。\n\n对话历史由调用方整段带上（本轮无状态）；会话持久化与状态机收编见票 05。",
+        "description": "备课对话主入口，后端按**累积需求**分析意图后二选一：\n\n1. **澄清回复**：`clarifying=true`、`artifacts=null`，内容是下一个追问；追问粒度分快速 / 标准 / 精细三档，粒度越高追问越细。\n2. **生成回复**：`clarifying=false`，`artifacts` 携带本次的课件、教案、提纲，以及命中的参考资料来源。\n\n教师表示「信息已经够用」时（按语义判断，不靠关键词匹配）不再追问，直接出生成物。\n\n**两种调用方式**：\n\n* 带 `session_id`（取自会话列表）：以服务端会话为事实源——本轮需求与回复入库，意图按会话增量累积（不重析全部历史）。此时 `messages` 里**最后一条教师消息**是本轮新增需求，其余内容以服务端历史为准；追问粒度与参考资料也以会话上的设置为准（改它们用 `PATCH /api/v1/sessions/{session_id}`），请求里的 `granularity` / `reference_doc_ids` 不生效。会话不存在时返回 `404`。\n* 不带 `session_id`：保持无状态既有行为——整段对话历史由调用方带上，后端每轮全量重析意图，不落库、不回显 `session_id`。",
         "operationId": "chat_api_v1_chat_post",
         "requestBody": {
           "content": {
@@ -867,7 +1322,8 @@
                     "summary": "信息不足，继续追问",
                     "value": {
                       "clarifying": true,
-                      "content": "还差一点信息：这节课的重点难点是什么？（也可以回复「开始生成」跳过追问）"
+                      "content": "还差一点信息：这节课的重点难点是什么？（也可以回复「开始生成」跳过追问）",
+                      "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
                     }
                   },
                   "生成回复": {
@@ -896,7 +1352,8 @@
                         }
                       },
                       "clarifying": false,
-                      "content": "已完成备课「一次函数」：生成 PPT 12 页、Word 教案、教学提纲。（已融合本地知识库） 本次命中的来源文档：一次函数讲义.pdf。"
+                      "content": "已完成备课「一次函数」：生成 PPT 12 页、Word 教案、教学提纲。（已融合本地知识库） 本次命中的来源文档：一次函数讲义.pdf。",
+                      "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
                     }
                   }
                 },
@@ -906,6 +1363,16 @@
               }
             },
             "description": "澄清回复或生成回复，由 `clarifying` 区分"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                }
+              }
+            },
+            "description": "备课会话不存在"
           },
           "422": {
             "content": {
@@ -1120,7 +1587,7 @@
     },
     "/api/v1/documents": {
       "get": {
-        "description": "返回全部教学资料及其解析状态，供知识库工作台轮询进度。\n\n`status` 取值：`处理中` → 后台解析尚未结束；`已完成` → 已入库可检索；`有冲突` → 已入库但检测到待裁决的定义冲突（见冲突审核区）；`失败` → 解析失败，可按原文重新上传。`is_reference` 为参考资料标记。",
+        "description": "返回全部教学资料及其解析状态，供知识库工作台轮询进度。\n\n`status` 取值：`处理中` → 后台解析尚未结束；`已完成` → 已入库可检索；`有冲突` → 已入库但检测到待裁决的矛盾（见冲突审核区）；`失败` → 解析失败，可按原文重新上传。`is_reference` 为参考资料标记。\n\n含 `处理中` 的资料时，客户端应保持轮询直到全部落到终态；单份资料的完整信息（分块、冲突数、完成时间）见 `GET /api/v1/documents/{document_id}`。",
         "operationId": "list_documents_api_v1_documents_get",
         "responses": {
           "200": {
@@ -1144,7 +1611,9 @@
                     }
                   ]
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListResponse"
+                }
               }
             },
             "description": "资料列表"
@@ -1168,7 +1637,7 @@
     },
     "/api/v1/documents/upload": {
       "post": {
-        "description": "上传一份教学资料并**立即返回**：文件落盘 + 建文档记录 + 交后台解析（解析完成前`status` 为 `处理中`）。\n\n上传后请轮询 `GET /api/v1/documents` 直到状态从 `处理中` 变为 `已完成`（或 `有冲突` / `失败`），不要靠等待本请求变慢来判断进度。\n\n`is_reference=true` 把文档标记为参考资料：发起备课时勾选其 id 会提高检索权重，并在生成物中溯源。",
+        "description": "上传一份教学资料并**立即返回**：文件落盘 + 建文档记录 + 交后台解析（解析完成前`status` 为 `处理中`）。\n\n上传后请轮询 `GET /api/v1/documents` 直到状态从 `处理中` 变为 `已完成`（或 `有冲突` / `失败`），不要靠等待本请求变慢来判断进度。\n\n`is_reference=true` 把文档标记为参考资料：发起备课时勾选其 id 会提高检索权重，并在生成物中溯源。后续可用 `PATCH /api/v1/documents/{document_id}/reference` 随时切换该标记。",
         "operationId": "upload_document_api_v1_documents_upload_post",
         "requestBody": {
           "content": {
@@ -1191,10 +1660,12 @@
                   "is_reference": true,
                   "status": "处理中"
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentView"
+                }
               }
             },
-            "description": "已接收，后台解析中"
+            "description": "已接收并交后台解析（`status` 为 `处理中`）"
           },
           "422": {
             "content": {
@@ -1227,6 +1698,179 @@
           }
         },
         "summary": "上传教学资料",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}": {
+      "get": {
+        "description": "一份教学资料的全部信息：解析状态与参考资料标记（与列表同一口径），外加解析完成时间、待审冲突数，以及入库的分块明细（可回溯到来源资料）。\n\n`chunks` 只返回前 200 个分块，`chunk_count` 是该资料的分块总数；资料仍在 `处理中` 时 `parsed_at` 为空、`chunks` 为空——列表与详情的状态都会随后台解析自动变化，客户端无需手动刷新。",
+        "operationId": "get_document_api_v1_documents__document_id__get",
+        "parameters": [
+          {
+            "description": "教学资料 id，取自上传响应或资料列表",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "教学资料 id，取自上传响应或资料列表",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "chunk_count": 12,
+                  "chunks": [
+                    {
+                      "chunk_id": 42,
+                      "chunk_index": 0,
+                      "content": "一次函数：形如 y=kx+b（k≠0）的函数。"
+                    }
+                  ],
+                  "conflict_count": 0,
+                  "file_type": "pdf",
+                  "filename": "一次函数讲义.pdf",
+                  "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                  "is_reference": true,
+                  "parsed_at": "2026-09-24T10:30:00",
+                  "status": "已完成"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetail"
+                }
+              }
+            },
+            "description": "教学资料详情"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "资料不存在: 7f6e5d4c-3b2a-4918-8776-655443322110"
+                }
+              }
+            },
+            "description": "资料不存在：id 不属于任何一份已上传的教学资料"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "教学资料详情",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/reference": {
+      "patch": {
+        "description": "把教学资料标记为参考资料（或取消标记），用于备课检索加权与生成物溯源。\n\n请求体给的是**目标值**而不是翻转动作，重复提交同一值结果一致（幂等）；响应即最新状态，切换无需等待任何后台任务。",
+        "operationId": "set_reference_api_v1_documents__document_id__reference_patch",
+        "parameters": [
+          {
+            "description": "教学资料 id，取自上传响应或资料列表",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "教学资料 id，取自上传响应或资料列表",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "file_type": "pdf",
+                  "filename": "一次函数讲义.pdf",
+                  "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                  "is_reference": true,
+                  "status": "已完成"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentView"
+                }
+              }
+            },
+            "description": "切换后的资料（标记已生效）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "资料不存在: 7f6e5d4c-3b2a-4918-8776-655443322110"
+                }
+              }
+            },
+            "description": "资料不存在：id 不属于任何一份已上传的教学资料"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "切换参考资料标记",
         "tags": [
           "知识库"
         ]
@@ -2155,6 +2799,404 @@
         "summary": "按修改意见重做教案",
         "tags": [
           "生成物"
+        ]
+      }
+    },
+    "/api/v1/sessions": {
+      "get": {
+        "description": "返回全部备课会话，最近使用（改名或对话过）的排在最前，供会话列表按时间回看。\n\n`q` 非空时按会话标题过滤：用于长期积累的备课记录里检索标题。`message_count` 是会话内的消息条数（教师说的 + 助手说的）。",
+        "operationId": "list_sessions_api_v1_sessions_get",
+        "parameters": [
+          {
+            "description": "按标题过滤会话；不传返回全部会话",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "按标题过滤会话；不传返回全部会话",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "sessions": [
+                    {
+                      "created_at": "2026-09-24T10:00:00",
+                      "granularity": "标准",
+                      "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                      "message_count": 4,
+                      "reference_doc_ids": [],
+                      "title": "一次函数（初二）",
+                      "updated_at": "2026-09-24T10:20:00"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SessionListResponse"
+                }
+              }
+            },
+            "description": "会话列表（最近使用在前）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "备课会话列表",
+        "tags": [
+          "备课会话"
+        ]
+      },
+      "post": {
+        "description": "新建一个备课会话并立即落库：标题、追问粒度与参考资料都由服务端保存，供教师换设备、清浏览器数据后继续备课（后端是唯一事实源）。\n\n* `title` 留空时先用「新的备课会话」占位，首轮教师需求自动充当标题；\n* `granularity` 是追问粒度三档：快速 / 标准 / 精细；\n* `reference_doc_ids` 是本次备课勾选的参考资料（文档 id），影响检索加权与生成物溯源。\n\n随后的备课对话走 `POST /api/v1/chat` 并携带本接口返回的 `id`。",
+        "operationId": "create_session_api_v1_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_at": "2026-09-24T10:00:00",
+                  "granularity": "标准",
+                  "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                  "message_count": 0,
+                  "reference_doc_ids": [
+                    "5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"
+                  ],
+                  "title": "一次函数（初二）",
+                  "updated_at": "2026-09-24T10:00:00"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            },
+            "description": "新建成功，返回落库后的会话"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "新建备课会话",
+        "tags": [
+          "备课会话"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}": {
+      "delete": {
+        "description": "删除一个备课会话，连同它的全部消息（不留孤儿消息）。删除后历史接口返回 `404`，会话列表里也不再出现该会话。",
+        "operationId": "delete_session_api_v1_sessions__session_id__delete",
+        "parameters": [
+          {
+            "description": "备课会话 id，取自会话列表",
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "description": "备课会话 id，取自会话列表",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "deleted": true,
+                  "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDeleteResponse"
+                }
+              }
+            },
+            "description": "删除成功"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                }
+              }
+            },
+            "description": "会话不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "删除备课会话",
+        "tags": [
+          "备课会话"
+        ]
+      },
+      "get": {
+        "description": "返回一个备课会话及其**完整消息历史**（按会话内序号升序），换设备或清浏览器数据后据此完整回看这次备课。\n\n`messages[].role`：`user` = 教师说的，`assistant` = 助手说的；`messages[].kind` 区分助手消息的回复形态——`澄清回复`（内容是追问，`artifacts` 为空）或 `生成回复`（`artifacts` 携带课件、教案、提纲与命中来源）。",
+        "operationId": "session_history_api_v1_sessions__session_id__get",
+        "parameters": [
+          {
+            "description": "备课会话 id，取自会话列表",
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "description": "备课会话 id，取自会话列表",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "messages": [
+                    {
+                      "content": "给初二讲一次函数，40 分钟",
+                      "created_at": "2026-09-24T10:00:00",
+                      "id": "1a2b3c4d-5e6f-4071-8293-a4b5c6d7e8f9",
+                      "role": "user",
+                      "seq": 1
+                    },
+                    {
+                      "content": "还差一点信息：希望课件是什么风格？（也可以回复「开始生成」跳过追问）",
+                      "created_at": "2026-09-24T10:00:30",
+                      "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                      "kind": "澄清回复",
+                      "role": "assistant",
+                      "seq": 2
+                    }
+                  ],
+                  "session": {
+                    "created_at": "2026-09-24T10:00:00",
+                    "granularity": "标准",
+                    "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                    "message_count": 2,
+                    "reference_doc_ids": [],
+                    "title": "一次函数（初二）",
+                    "updated_at": "2026-09-24T10:00:30"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHistoryResponse"
+                }
+              }
+            },
+            "description": "会话与按序号排好的消息历史"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                }
+              }
+            },
+            "description": "会话不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "备课会话历史",
+        "tags": [
+          "备课会话"
+        ]
+      },
+      "patch": {
+        "description": "修改备课会话：`title` 重命名，`granularity` 切追问粒度（快速 / 标准 / 精细），`reference_doc_ids` 换本次备课的参考资料。只改传入的字段，未传的字段保持原值。\n\n会话内对话时的追问粒度与参考资料以会话上的设置为准，因此改完立即影响后续对话。",
+        "operationId": "rename_session_api_v1_sessions__session_id__patch",
+        "parameters": [
+          {
+            "description": "备课会话 id，取自会话列表",
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "description": "备课会话 id，取自会话列表",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_at": "2026-09-24T10:00:00",
+                  "granularity": "精细",
+                  "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                  "message_count": 2,
+                  "reference_doc_ids": [
+                    "5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"
+                  ],
+                  "title": "一次函数（初二·修订）",
+                  "updated_at": "2026-09-24T10:05:00"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            },
+            "description": "修改成功，返回更新后的会话"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
+                }
+              }
+            },
+            "description": "会话不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "重命名备课会话",
+        "tags": [
+          "备课会话"
         ]
       }
     },
