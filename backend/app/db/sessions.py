@@ -20,9 +20,7 @@ class ConversationStore:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def create(
-        self, *, title: str, granularity: str, reference_doc_ids: list[str]
-    ) -> PrepSession:
+    def create(self, *, title: str, granularity: str, reference_doc_ids: list[str]) -> PrepSession:
         prep = PrepSession(
             user_id=DEFAULT_USER_ID,
             title=title,
@@ -83,11 +81,7 @@ class ConversationStore:
         )
 
     def message_count(self, session_id: str) -> int:
-        return (
-            self.db.query(SessionMessage)
-            .filter(SessionMessage.session_id == session_id)
-            .count()
-        )
+        return self.db.query(SessionMessage).filter(SessionMessage.session_id == session_id).count()
 
     def append_message(
         self,

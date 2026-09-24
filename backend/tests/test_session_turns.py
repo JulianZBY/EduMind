@@ -25,6 +25,7 @@ def _isolated_outputs(isolated_output_dir):
     """本模块每条用例都会产出备课文件：落盘重定向到临时目录（不写 backend/data）。"""
     return isolated_output_dir
 
+
 # 教师两轮表述 + 语义网关据此抽取的要素（网关按「最新表述覆盖旧值」合并，见 session_support）
 FIRST_TURN = "给初二讲一次函数，时长 40 分钟，教学目标是理解一次函数的图象"
 FIRST_FIELDS = {
@@ -107,12 +108,16 @@ def test_session_turns_persist_history_for_other_devices(install_semantic_llm):
 
 def test_chat_with_session_uses_session_granularity(install_semantic_llm):
     """追问粒度以会话设置为准：同一句话在快速档直接出结果，在标准档继续追问。"""
-    install_semantic_llm(learned={"给初二讲一次函数，时长 40 分钟，风格是情境导入": {
-        "topic": "一次函数",
-        "grade": "初二",
-        "duration_minutes": 40,
-        "style": "情境导入",
-    }})
+    install_semantic_llm(
+        learned={
+            "给初二讲一次函数，时长 40 分钟，风格是情境导入": {
+                "topic": "一次函数",
+                "grade": "初二",
+                "duration_minutes": 40,
+                "style": "情境导入",
+            }
+        }
+    )
     utterance = "给初二讲一次函数，时长 40 分钟，风格是情境导入"
     quick = _create(granularity="快速")
     standard = _create(granularity="标准")
@@ -130,7 +135,10 @@ def test_chat_with_unknown_session_returns_404():
     """未知会话不静默降级成无状态，而是 404（前端据此提示会话已不存在）。"""
     r = client.post(
         "/api/v1/chat",
-        json={"session_id": "not-a-session", "messages": [{"role": "user", "content": "讲一次函数"}]},
+        json={
+            "session_id": "not-a-session",
+            "messages": [{"role": "user", "content": "讲一次函数"}],
+        },
     )
     assert r.status_code == 404
     assert "会话不存在" in r.json()["detail"]

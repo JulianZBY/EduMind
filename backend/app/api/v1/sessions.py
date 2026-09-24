@@ -74,9 +74,7 @@ class SessionUpdateRequest(BaseModel):
     @model_validator(mode="after")
     def _require_at_least_one_field(self):
         if self.title is None and self.granularity is None and self.reference_doc_ids is None:
-            raise ValueError(
-                "至少提供一个要修改的字段：title / granularity / reference_doc_ids"
-            )
+            raise ValueError("至少提供一个要修改的字段：title / granularity / reference_doc_ids")
         return self
 
 
@@ -168,9 +166,7 @@ def _message(item: SessionMessage) -> MessageItem:
         500: internal_error(),
     },
 )
-async def create_session(
-    req: SessionCreateRequest, db: Annotated[Session, Depends(get_session)]
-):
+async def create_session(req: SessionCreateRequest, db: Annotated[Session, Depends(get_session)]):
     """新建备课会话（标题可留空，追回粒度默认标准，参考资料可选）。"""
     prep = session_service.create_session(
         ConversationStore(db),
@@ -213,9 +209,7 @@ async def create_session(
 )
 async def list_sessions(
     db: Annotated[Session, Depends(get_session)],
-    q: Annotated[
-        str | None, Query(description="按标题过滤会话；不传返回全部会话")
-    ] = None,
+    q: Annotated[str | None, Query(description="按标题过滤会话；不传返回全部会话")] = None,
 ):
     """备课会话列表（最近使用在前，可按标题检索）。"""
     store = ConversationStore(db)
@@ -271,9 +265,7 @@ async def list_sessions(
                 ],
             },
         ),
-        404: error_response(
-            "会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
-        ),
+        404: error_response("会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
         500: internal_error(),
     },
 )
@@ -315,9 +307,7 @@ async def session_history(
                 "updated_at": "2026-09-24T10:05:00",
             },
         ),
-        404: error_response(
-            "会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
-        ),
+        404: error_response("会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
         422: VALIDATION_ERROR,
         500: internal_error(),
     },
@@ -355,9 +345,7 @@ async def rename_session(
         200: json_response(
             "删除成功", {"id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b", "deleted": True}
         ),
-        404: error_response(
-            "会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
-        ),
+        404: error_response("会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
         500: internal_error(),
     },
 )

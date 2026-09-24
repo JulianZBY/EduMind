@@ -41,9 +41,7 @@ class TurnOutcome:
         return CLARIFY_REPLY if self.clarifying else GENERATE_REPLY
 
 
-async def accumulate_intent(
-    previous: TeachingIntent | None, utterance: str
-) -> TeachingIntent:
+async def accumulate_intent(previous: TeachingIntent | None, utterance: str) -> TeachingIntent:
     """按会话累积意图：上一轮意图 + 本轮新增；没有上一轮时才全量分析本轮原话。
 
     同一会话多轮对话不再每轮把全部历史重析一遍——增量合并只喂「已累积意图 +
@@ -81,9 +79,7 @@ async def run_turn(
     """
     # 1. 澄清：连主题都没有时先问主题
     if not intent.topic:
-        return TurnOutcome(
-            content=TOPIC_QUESTION, clarifying=True, artifacts=None, intent=intent
-        )
+        return TurnOutcome(content=TOPIC_QUESTION, clarifying=True, artifacts=None, intent=intent)
 
     # 2. 澄清：按追问粒度看还缺哪些要素；教师表示「信息够了」则跳过追问
     missing = missing_fields(intent, granularity)

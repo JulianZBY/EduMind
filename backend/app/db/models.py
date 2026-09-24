@@ -35,7 +35,9 @@ class PrepSession(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
-    title: Mapped[str] = mapped_column(String(200))  # 会话标题：默认「新的备课会话」，首轮需求自动充当标题
+    title: Mapped[str] = mapped_column(
+        String(200)
+    )  # 会话标题：默认「新的备课会话」，首轮需求自动充当标题
     granularity: Mapped[str] = mapped_column(String(20), default="标准")  # 追问粒度：快速/标准/精细
     # 累积意图：上一轮意图 + 本轮新增（避免每轮把全部对话重析一遍）
     intent: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -58,9 +60,7 @@ class SessionMessage(Base):
     __tablename__ = "session_messages"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    session_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("prep_sessions.id"), index=True
-    )
+    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("prep_sessions.id"), index=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
     seq: Mapped[int] = mapped_column(Integer)  # 会话内消息序号：从 1 单调递增，历史按此排序
     role: Mapped[str] = mapped_column(String(20))  # user = 教师说的 / assistant = 助手说的

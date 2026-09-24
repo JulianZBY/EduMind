@@ -14,9 +14,7 @@ from app.knowledge.retrieval.factory import get_retriever
 logger = logging.getLogger(__name__)
 
 
-async def orchestrate(
-    intent: TeachingIntent, reference_doc_ids: list[str] | None = None
-) -> dict:
+async def orchestrate(intent: TeachingIntent, reference_doc_ids: list[str] | None = None) -> dict:
     """一次备课的编排：检索（按配置的检索策略）→ 生成 PPT/Word/提纲 + 互动内容。
 
     意图由调用方（core 状态机：按会话累积或全量分析）传入：本轮不再重析一次意图，

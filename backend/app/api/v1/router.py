@@ -34,9 +34,7 @@ router.include_router(sessions_router)
         "适合作为前端连接异常时的最小排查点（若 `/health` 也失败则是进程问题）。"
     ),
     responses={
-        200: json_response(
-            "v1 已就绪", {"status": "ok", "message": "EduMind API v1"}
-        ),
+        200: json_response("v1 已就绪", {"status": "ok", "message": "EduMind API v1"}),
         500: internal_error(),
     },
 )

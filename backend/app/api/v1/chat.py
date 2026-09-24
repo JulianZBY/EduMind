@@ -121,8 +121,15 @@ def _full_history_text(messages: list[Message]) -> str:
                         ),
                         "artifacts": {
                             "intent": {"topic": "一次函数", "grade": "初二"},
-                            "ppt": {"slides": [], "path": "data/output/ppt-1a2b3c.pptx", "filename": "ppt-1a2b3c.pptx"},
-                            "word": {"path": "data/output/word-4d5e6f.docx", "filename": "word-4d5e6f.docx"},
+                            "ppt": {
+                                "slides": [],
+                                "path": "data/output/ppt-1a2b3c.pptx",
+                                "filename": "ppt-1a2b3c.pptx",
+                            },
+                            "word": {
+                                "path": "data/output/word-4d5e6f.docx",
+                                "filename": "word-4d5e6f.docx",
+                            },
                             "outline": {"path": "data/output/outline-7g8h9i.docx"},
                             "references": ["一次函数讲义.pdf"],
                             "knowledge_hits": 3,
@@ -133,9 +140,7 @@ def _full_history_text(messages: list[Message]) -> str:
                 ),
             },
         ),
-        404: error_response(
-            "备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
-        ),
+        404: error_response("备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
         422: VALIDATION_ERROR,
         500: internal_error(),
     },
