@@ -104,8 +104,9 @@ dev server 实测（uvicorn 8000 stub + vite 5173，前后端真跑）：
 - 追加组件：`frontend/src/components/ui/Textarea.tsx` + `components/ui/index.ts` 追加两行 export
   （不改既有组件视觉）
 - 重新生成：`frontend/openapi/openapi.json`、`frontend/src/api/generated/{index,types.gen}.ts`
-- 后端最小改动：`backend/app/api/v1/chat.py` 的 200 响应示例里 `outline` 从 `{"path": …}` 改成 Markdown 文本
-  （与 `core/orchestrator.py` 的真实返回一致；示例与真实形状不符会误导前端读法，只改示例不动端点语义）
+- 后端最小改动：`backend/app/api/v1/chat.py` 的 200 响应示例里 `outline` 改成 **对象形态**
+  `{text, path, filename}`（与票 07 已交付的 `core/orchestrator.py` 一致——`artifacts.outline` 从字符串变成与课件/教案同形的对象）。
+  只改示例，不动端点语义与字段名；本票的读法对两种形态都兼容（见下）。
 
 ### 设计取舍
 
