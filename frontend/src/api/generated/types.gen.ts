@@ -25,7 +25,7 @@ export type BodyUploadDocumentApiV1DocumentsUploadPost = {
 /**
  * ChatRequest
  *
- * 备课对话请求：整段对话历史 + 追问粒度 + 本次备课的参考资料。
+ * 备课对话请求：对话内容 + 追问粒度 + 本次备课的参考资料 +（可选）备课会话 id。
  */
 export type ChatRequest = {
     /**
@@ -40,6 +40,10 @@ export type ChatRequest = {
      * Reference Doc Ids
      */
     reference_doc_ids?: Array<string>;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
 };
 
 /**
@@ -60,6 +64,10 @@ export type ChatResponse = {
      * Content
      */
     content: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
 };
 
 /**
@@ -168,6 +176,42 @@ export type Message = {
      * Role
      */
     role: string;
+};
+
+/**
+ * MessageItem
+ */
+export type MessageItem = {
+    /**
+     * Artifacts
+     */
+    artifacts?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind?: string | null;
+    /**
+     * Role
+     */
+    role: string;
+    /**
+     * Seq
+     */
+    seq: number;
 };
 
 /**
@@ -513,6 +557,115 @@ export type SearchResponse = {
 };
 
 /**
+ * SessionCreateRequest
+ *
+ * 新建备课会话：标题可留空（首轮需求自动充当标题），并带上本次备课的参考资料。
+ */
+export type SessionCreateRequest = {
+    /**
+     * Granularity
+     */
+    granularity?: '快速' | '标准' | '精细';
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids?: Array<string>;
+    /**
+     * Title
+     */
+    title?: string;
+};
+
+/**
+ * SessionDeleteResponse
+ */
+export type SessionDeleteResponse = {
+    /**
+     * Deleted
+     */
+    deleted: boolean;
+    /**
+     * Id
+     */
+    id: string;
+};
+
+/**
+ * SessionHistoryResponse
+ */
+export type SessionHistoryResponse = {
+    /**
+     * Messages
+     */
+    messages: Array<MessageItem>;
+    session: SessionSummary;
+};
+
+/**
+ * SessionListResponse
+ */
+export type SessionListResponse = {
+    /**
+     * Sessions
+     */
+    sessions: Array<SessionSummary>;
+};
+
+/**
+ * SessionSummary
+ */
+export type SessionSummary = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Granularity
+     */
+    granularity: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Message Count
+     */
+    message_count: number;
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids: Array<string>;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * SessionUpdateRequest
+ *
+ * 重命名会话 / 改会话设置：只改传入的字段，未传的字段保持原值。
+ */
+export type SessionUpdateRequest = {
+    /**
+     * Granularity
+     */
+    granularity?: '快速' | '标准' | '精细' | null;
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids?: Array<string> | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -569,6 +722,10 @@ export type ChatApiV1ChatPostData = {
 };
 
 export type ChatApiV1ChatPostErrors = {
+    /**
+     * 备课会话不存在
+     */
+    404: unknown;
     /**
      * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
@@ -1075,6 +1232,187 @@ export type ReviseWordEndpointApiV1ReviseWordPostResponses = {
 };
 
 export type ReviseWordEndpointApiV1ReviseWordPostResponse = ReviseWordEndpointApiV1ReviseWordPostResponses[keyof ReviseWordEndpointApiV1ReviseWordPostResponses];
+
+export type ListSessionsApiV1SessionsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         *
+         * 按标题过滤会话；不传返回全部会话
+         */
+        q?: string | null;
+    };
+    url: '/api/v1/sessions';
+};
+
+export type ListSessionsApiV1SessionsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ListSessionsApiV1SessionsGetError = ListSessionsApiV1SessionsGetErrors[keyof ListSessionsApiV1SessionsGetErrors];
+
+export type ListSessionsApiV1SessionsGetResponses = {
+    /**
+     * 会话列表（最近使用在前）
+     */
+    200: SessionListResponse;
+};
+
+export type ListSessionsApiV1SessionsGetResponse = ListSessionsApiV1SessionsGetResponses[keyof ListSessionsApiV1SessionsGetResponses];
+
+export type CreateSessionApiV1SessionsPostData = {
+    body: SessionCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/sessions';
+};
+
+export type CreateSessionApiV1SessionsPostErrors = {
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type CreateSessionApiV1SessionsPostResponses = {
+    /**
+     * 新建成功，返回落库后的会话
+     */
+    200: SessionSummary;
+};
+
+export type CreateSessionApiV1SessionsPostResponse = CreateSessionApiV1SessionsPostResponses[keyof CreateSessionApiV1SessionsPostResponses];
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Session Id
+         *
+         * 备课会话 id，取自会话列表
+         */
+        session_id: string;
+    };
+    query?: never;
+    url: '/api/v1/sessions/{session_id}';
+};
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteErrors = {
+    /**
+     * 会话不存在
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteError = DeleteSessionApiV1SessionsSessionIdDeleteErrors[keyof DeleteSessionApiV1SessionsSessionIdDeleteErrors];
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteResponses = {
+    /**
+     * 删除成功
+     */
+    200: SessionDeleteResponse;
+};
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteResponse = DeleteSessionApiV1SessionsSessionIdDeleteResponses[keyof DeleteSessionApiV1SessionsSessionIdDeleteResponses];
+
+export type SessionHistoryApiV1SessionsSessionIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Session Id
+         *
+         * 备课会话 id，取自会话列表
+         */
+        session_id: string;
+    };
+    query?: never;
+    url: '/api/v1/sessions/{session_id}';
+};
+
+export type SessionHistoryApiV1SessionsSessionIdGetErrors = {
+    /**
+     * 会话不存在
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type SessionHistoryApiV1SessionsSessionIdGetError = SessionHistoryApiV1SessionsSessionIdGetErrors[keyof SessionHistoryApiV1SessionsSessionIdGetErrors];
+
+export type SessionHistoryApiV1SessionsSessionIdGetResponses = {
+    /**
+     * 会话与按序号排好的消息历史
+     */
+    200: SessionHistoryResponse;
+};
+
+export type SessionHistoryApiV1SessionsSessionIdGetResponse = SessionHistoryApiV1SessionsSessionIdGetResponses[keyof SessionHistoryApiV1SessionsSessionIdGetResponses];
+
+export type RenameSessionApiV1SessionsSessionIdPatchData = {
+    body: SessionUpdateRequest;
+    path: {
+        /**
+         * Session Id
+         *
+         * 备课会话 id，取自会话列表
+         */
+        session_id: string;
+    };
+    query?: never;
+    url: '/api/v1/sessions/{session_id}';
+};
+
+export type RenameSessionApiV1SessionsSessionIdPatchErrors = {
+    /**
+     * 会话不存在
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type RenameSessionApiV1SessionsSessionIdPatchResponses = {
+    /**
+     * 修改成功，返回更新后的会话
+     */
+    200: SessionSummary;
+};
+
+export type RenameSessionApiV1SessionsSessionIdPatchResponse = RenameSessionApiV1SessionsSessionIdPatchResponses[keyof RenameSessionApiV1SessionsSessionIdPatchResponses];
 
 export type HealthHealthGetData = {
     body?: never;

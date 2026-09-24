@@ -130,7 +130,7 @@ def _full_history_text(messages: list[Message]) -> str:
                                 "path": "data/output/word-4d5e6f.docx",
                                 "filename": "word-4d5e6f.docx",
                             },
-                            "outline": {"path": "data/output/outline-7g8h9i.docx"},
+                            "outline": "# 一次函数\n## 定义与图像\n- 正比例函数",
                             "references": ["一次函数讲义.pdf"],
                             "knowledge_hits": 3,
                         },

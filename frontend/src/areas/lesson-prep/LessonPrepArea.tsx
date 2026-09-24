@@ -1,46 +1,46 @@
-import { Outlet } from 'react-router'
-import { AreaStub } from '../../components/layout/AreaStub'
-import { SidebarNote } from '../../components/layout/SidebarNote'
-import { MainPanel, Workbench, WorkbenchSidebar } from '../../components/layout/Workbench'
-
 /**
  * 备课会话区（二级侧栏 = 会话列表，主区 = 对话轴）。
- * 本文件是本区的界面落点：票 05/06 在这里长出会话列表与对话轴，不动路由注册（index.tsx）。
+ *
+ * 本区是教师的日常主线：发起备课、回答追问、看生成结果。全部事实源在服务端（ADR-0002）：
+ * 会话列表、历史、追问粒度与参考资料都从 API 读写，浏览器侧不存会话（票 04 已把浏览器里的
+ * 会话整体退场）。生成物的版本中心不在这里（票 08）。
  */
+import { Link, Outlet, useParams } from 'react-router'
+import { MainPanel, Workbench } from '../../components/layout/Workbench'
+import { Button } from '../../components/ui/Button'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { ConversationAxis } from './ConversationAxis'
+import { SessionSidebar } from './SessionSidebar'
+
 export function LessonPrepArea() {
   return (
-    <Workbench
-      sidebar={
-        <WorkbenchSidebar title="会话列表" meta="0 个会话">
-          <SidebarNote>还没有备课会话。发起一次备课后，会话会出现在这里。</SidebarNote>
-        </WorkbenchSidebar>
-      }
-    >
-      <MainPanel title="备课会话" tagline="一次备课的完整对话现场">
-        <Outlet />
-      </MainPanel>
+    <Workbench sidebar={<SessionSidebar />}>
+      <Outlet />
     </Workbench>
   )
 }
 
-/** 主区默认内容（未选中会话时）。 */
+/** 主区默认内容（未选中会话时）：编辑密度，一次只做一件事。 */
 export function LessonPrepIndex() {
   return (
-    <AreaStub
-      title="还没有选中备课会话"
-      description="左列会列出全部备课会话，选中一次备课，这里显示它的对话与生成物。"
-    />
+    <MainPanel title="备课会话" tagline="一次备课的完整对话现场">
+      <EmptyState
+        title="还没有选中备课会话"
+        description="左列是全部备课会话：新建一次备课，或选中一条继续。会话与历史存在服务端，刷新、换设备都不丢。"
+        action={
+          <Button asChild>
+            {/* 新建走地址（`?new=1`）：URL 即状态，刷新后弹层还在，不引第二份浏览器状态 */}
+            <Link to="?new=1">新建备课会话</Link>
+          </Button>
+        }
+      />
+    </MainPanel>
   )
 }
 
-/** 选中一次备课后可寻址的详情位（`/lesson-prep/:sessionId`）。 */
+/** 选中一次备课后的主区：对话轴（`/lesson-prep/:sessionId`）。 */
 export function LessonPrepSession() {
-  return (
-    <AreaStub
-      title="备课会话已选中"
-      description="对话轴、追问粒度三档与参考资料在这里展开；当前只保证路由可寻址。"
-      paramKey="sessionId"
-      objectLabel="备课会话"
-    />
-  )
+  const { sessionId } = useParams()
+  if (!sessionId) return <LessonPrepIndex />
+  return <ConversationAxis sessionId={sessionId} />
 }
