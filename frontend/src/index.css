@@ -1,22 +1,22 @@
 :root {
-  --accent: #4f7cff;
-  --border: #e3e5e8;
-  --card: #f2f3f5;
-  --muted: #888;
-  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
-    sans-serif;
-  color-scheme: light dark;
+  --accent: #365e51;
+  --border: #dfe4df;
+  --card: #f0f3ef;
+  --muted: #7a827d;
+  font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  color: #2b332e;
+  background: #f3f5f1;
+  color-scheme: light;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
 }
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-size: 14px;
-}
-
-button {
-  font-family: inherit;
-}
+* { box-sizing: border-box; }
+body { margin: 0; font-size: 14px; }
+button, input, textarea, select { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { color: inherit; }
+button:not(:disabled), summary { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+:focus-visible { outline: 2px solid #7ba991; outline-offset: 3px; }
+::selection { background: #dbe9df; }
+[hidden] { display: none !important; }

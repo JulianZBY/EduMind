@@ -9,6 +9,7 @@ from app.core.intent import TeachingIntent, analyze_intent, wants_interactive_co
 from app.generate.creative import generate_html_creative, save_html
 from app.generate.outline import generate_outline
 from app.generate.ppt import generate_ppt_structure, render_ppt
+from app.generate.ppt_layout import pages
 from app.generate.word import generate_word_structure, render_word
 
 logger = logging.getLogger(__name__)
@@ -145,6 +146,7 @@ async def orchestrate(message: str, reference_doc_ids: list[str] | None = None) 
     else:
         slides = ppt_slides
     # 课件主题化：页面角色差异化版式 + 风格偏好映射配色主题（简约/学术/活泼）在渲染层生效
+    slides = list(pages(slides))
     ppt_path = render_ppt(slides, style=intent_dict.get("style", ""))
 
     word: dict

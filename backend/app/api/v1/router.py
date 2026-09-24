@@ -9,6 +9,7 @@ from app.api.v1.exam import router as exam_router
 from app.api.v1.files import router as files_router
 from app.api.v1.interactive import router as interactive_router
 from app.api.v1.knowledge import router as knowledge_router
+from app.api.v1.ppt_edit import router as ppt_edit_router
 from app.api.v1.revise import router as revise_router
 
 router = APIRouter()
@@ -20,6 +21,7 @@ router.include_router(files_router)
 router.include_router(interactive_router)
 router.include_router(knowledge_router)
 router.include_router(revise_router)
+router.include_router(ppt_edit_router)
 
 
 @router.get("/ping")

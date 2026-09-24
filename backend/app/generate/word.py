@@ -3,11 +3,15 @@
 import json
 
 from docx import Document as DocxDocument
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Pt, RGBColor
 
 from app.core.llm.base import ChatMessage
 from app.core.llm.factory import get_llm
 from app.core.llm.parsing import parse_json
 from app.generate import unique_output_path
+from app.generate.document_style import style_document
 
 _WORD_PROMPT = """你是教学设计专家。根据教学意图和知识内容，生成详细教案。
 
@@ -43,7 +47,12 @@ def render_word(
         output_path = unique_output_path("lesson_plan", ".docx")
 
     doc = DocxDocument()
-    doc.add_heading("教案", level=0)
+    style_document(doc)
+    label = doc.add_paragraph("EDUMIND  /  TEACHING NOTES")
+    label.runs[0].font.size = Pt(9)
+    label.runs[0].font.color.rgb = RGBColor.from_string("728577")
+    doc.add_heading(data.get("title") or "课堂教学设计", level=0)
+    doc.add_paragraph("教案 · 教学目标 / 课堂路径 / 学习活动", style="Subtitle")
 
     objectives = data.get("objectives", {})
     doc.add_heading("一、教学目标", level=1)
@@ -64,10 +73,13 @@ def render_word(
     doc.add_paragraph("难点：" + "；".join(data.get("difficult_points", [])))
 
     doc.add_heading("三、教学过程", level=1)
-    for step in data.get("process", []):
-        doc.add_paragraph(
-            f"[{step.get('minutes', '?')}分钟] {step.get('stage', '')}：{step.get('content', '')}"
-        )
+    for i, step in enumerate(data.get("process", []), 1):
+        heading = doc.add_paragraph(style="Heading 2")
+        heading.add_run(f"{i:02}  {step.get('stage', '')}    /    {step.get('minutes', '?')} 分钟")
+        shading = OxmlElement("w:shd")
+        shading.set(qn("w:fill"), "EFF4EC")
+        heading._p.get_or_add_pPr().append(shading)
+        doc.add_paragraph(str(step.get("content", "")))
 
     doc.add_heading("四、课堂活动设计", level=1)
     for act in data.get("activities", []):

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
+import Icon, { type IconName } from "./Icon";
+import PresentationEditor from "./PresentationEditor";
 import type { Artifacts, Granularity, Message } from "./types";
 import {
   createSession,
@@ -41,7 +43,10 @@ interface ExamPaper {
   bank_saved: number;
 }
 
-const TABS = ["知识库", "产物预览", "冲突审核", "会话信息"] as const;
+const TABS = ["会话", "知识库", "产物预览", "修改 PPT", "冲突审核", "会话信息"] as const;
+
+const NAV_ICONS: Record<(typeof TABS)[number], IconName> = { "会话": "chat", "知识库": "library", "产物预览": "layers", "修改 PPT": "slides", "冲突审核": "shield", "会话信息": "info" };
+const RESOURCE_DESCRIPTIONS: Record<string, string> = { "知识库": "把零散资料，沉淀为随时可用的教学知识。", "产物预览": "本次备课的课件、教案与互动内容，尽在这里。", "修改 PPT": "延续已有积累，让课件更适合下一堂课。", "冲突审核": "审阅知识之间的差异，决定如何保留。", "会话信息": "查看当前备课会话的信息与偏好。" };
 
 type ReviseTarget = "课件" | "教案";
 
@@ -110,7 +115,7 @@ function PreviewPanel({
   return (
     <div className="artifacts">
       <div className="artifact-title">
-        📦 当前版本（
+        <Icon name="layers" /> 当前版本（
         {artifacts.knowledge_hits ? "已融合知识库" : "AI 直接生成"}）
       </div>
       <div className="artifact-buttons">
@@ -119,14 +124,14 @@ function PreviewPanel({
           href={`/api/v1/files/${artifacts.ppt.filename}`}
           download
         >
-          ⬇ PPT（{artifacts.ppt.slides.length} 页）
+          <Icon name="download" /> PPT（{artifacts.ppt.slides.length} 页）
         </a>
         <a
           className="btn"
           href={`/api/v1/files/${artifacts.word.filename}`}
           download
         >
-          ⬇ Word 教案
+          <Icon name="download" /> Word 教案
         </a>
         <button
           className="btn"
@@ -134,11 +139,11 @@ function PreviewPanel({
           disabled={generatingExam}
           title="根据本次备课意图与知识库自编试卷，题目自动收入题库"
         >
-          {generatingExam ? "出题中…" : "📝 生成试卷"}
+          {generatingExam ? "出题中…" : "生成试卷"}
         </button>
         {exam && (
           <a className="btn" href={`/api/v1/files/${exam.filename}`} download>
-            ⬇ 试卷（{exam.questions.length} 题）
+            <Icon name="download" /> 试卷（{exam.questions.length} 题）
           </a>
         )}
         {artifacts.interactive && (
@@ -149,7 +154,7 @@ function PreviewPanel({
             rel="noreferrer"
             title="在新标签页打开互动内容（HTML5 小游戏/动画）"
           >
-            ▶ 互动内容
+            <Icon name="play" /> 互动内容
           </a>
         )}
         <button
@@ -158,7 +163,7 @@ function PreviewPanel({
           disabled={generatingInteractive}
           title="按本次备课意图生成本节课的互动内容（HTML5 小游戏/知识点动画）"
         >
-          {generatingInteractive ? "生成中…" : "✨ 生成互动内容"}
+          {generatingInteractive ? "生成中…" : "生成互动内容"}
         </button>
       </div>
       {examError && <p className="placeholder">{examError}</p>}
@@ -210,7 +215,7 @@ function PreviewPanel({
         </button>
       </div>
       <p className="revise-hint">
-        💡 方向性调整（主题/学段/目标级变化）请回对话区说明
+        <Icon name="info" size={14} /> 方向性调整（主题/学段/目标级变化）请回对话区说明
       </p>
       <details className="artifact-outline">
         <summary>查看教学提纲</summary>
@@ -258,9 +263,9 @@ function KnowledgePanel({ refreshKey }: { refreshKey: number }) {
 
   return (
     <div className="panel">
-      <h4>📁 已上传文档（{docs.length}）</h4>
+      <h4><Icon name="library" /> 已上传文档（{docs.length}）</h4>
       {docs.length === 0 && (
-        <p className="placeholder">还没有上传资料，用输入框旁的 📎 上传</p>
+        <p className="placeholder">还没有上传资料，点击「上传教学资料」添加文件</p>
       )}
       {docs.map((d) => (
         <div key={d.id} className="doc-item">
@@ -270,7 +275,7 @@ function KnowledgePanel({ refreshKey }: { refreshKey: number }) {
         </div>
       ))}
       <h4>
-        🧠 知识图谱（{nodes.length} 节点 / {edges} 关系）
+        <Icon name="graph" /> 知识图谱（{nodes.length} 节点 / {edges} 关系）
       </h4>
       {nodes.length === 0 && (
         <p className="placeholder">上传资料后自动提取知识点</p>
@@ -324,7 +329,7 @@ function ConflictPanel() {
   return (
     <div className="panel">
       <h4>
-        ⚠️ 冲突待审（{conflicts.filter((c) => c.status === "待审").length}）
+        <Icon name="shield" /> 冲突待审（{conflicts.filter((c) => c.status === "待审").length}）
       </h4>
       {conflicts.length === 0 && (
         <p className="placeholder">暂无冲突，上传的新知识与已有图谱一致</p>
@@ -411,13 +416,23 @@ function App() {
   const active: StoredSession =
     store.sessions.find((s) => s.id === store.activeId) ?? store.sessions[0];
   const [input, setInput] = useState("");
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("知识库");
+  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("会话");
   const [sending, setSending] = useState(false);
   const [markReference, setMarkReference] = useState(false);
   const [listening, setListening] = useState(false);
   const [revising, setRevising] = useState(false);
   const [generatingInteractive, setGeneratingInteractive] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [sessionQuery, setSessionQuery] = useState("");
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const working = sending || revising || generatingInteractive || uploading;
+
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [active.messages, sending]);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [kbRefresh, setKbRefresh] = useState(0); // 上传后触发知识库面板刷新
   const recognitionRef = useRef<any>(null);
@@ -438,19 +453,22 @@ function App() {
 
   // 多会话：新建 / 切换 / 删除；删空回落全新会话，保证界面始终可用
   function startNewSession() {
+    setSessionQuery("");
     const s = createSession();
     setStore((st) => ({
       ...st,
       activeId: s.id,
       sessions: [s, ...st.sessions],
     }));
-    setMenuOpen(false);
+    setHistoryOpen(false);
+    setActiveTab("会话");
     setPendingDeleteId(null);
   }
 
   function switchTo(id: string) {
     setStore((st) => ({ ...st, activeId: id }));
-    setMenuOpen(false);
+    setHistoryOpen(false);
+    setActiveTab("会话");
     setPendingDeleteId(null);
   }
 
@@ -461,7 +479,8 @@ function App() {
     }
     setStore((st) => removeSession(st, id));
     setPendingDeleteId(null);
-    setMenuOpen(false);
+    setHistoryOpen(false);
+    setActiveTab("会话");
   }
 
   async function send() {
@@ -605,6 +624,9 @@ function App() {
   }
 
   async function uploadFile(file: File) {
+    if (uploading) return;
+    setUploading(true);
+    setUploadStatus(`正在上传「${file.name}」…`);
     const formData = new FormData();
     formData.append("file", file);
     if (markReference) formData.append("is_reference", "true");
@@ -616,6 +638,8 @@ function App() {
         body: formData,
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "上传失败");
+      setUploadStatus(`「${file.name}」已上传，正在解析入库`);
       appendMessages({
         role: "assistant",
         content: marked
@@ -625,10 +649,13 @@ function App() {
       void data;
       setKbRefresh((n) => n + 1);
     } catch {
+      setUploadStatus(`上传「${file.name}」失败，请重试`);
       appendMessages({
         role: "assistant",
         content: `上传「${file.name}」失败`,
       });
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -678,169 +705,93 @@ function App() {
   );
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <div className="logo">EduMind</div>
-        <div className="granularity" title="追问粒度（随会话保持）">
-          {(["快速", "标准", "精细"] as Granularity[]).map((g) => (
-            <button
-              key={g}
-              className={g === active.granularity ? "active" : ""}
-              onClick={() => updateActive(() => ({ granularity: g }))}
-            >
-              {g}
-            </button>
-          ))}
+    <div className={`studio-shell${historyOpen ? " history-open" : ""}`}>
+      <nav className="primary-sidebar" aria-label="主导航">
+        <a className="studio-brand" href="#" onClick={(e) => { e.preventDefault(); setActiveTab("会话"); }} aria-label="EduMind 首页">
+          <span className="studio-emblem"><Icon name="layers" size={23} /></span><span>EduMind<span className="brand-subtitle">教学灵感工作室</span></span>
+        </a>
+        <button className="new-session glass-button" aria-label="新建会话" title="新建会话" onClick={startNewSession} disabled={working}><Icon name="plus" /><span>新建会话</span></button>
+        <span className="nav-caption">工作空间</span>
+        <div className="nav-items">
+          {TABS.map((item) => <button key={item} className={`nav-item${activeTab === item ? " selected" : ""}`} aria-current={activeTab === item ? "page" : undefined} onClick={() => { setActiveTab(item); setHistoryOpen(false); }} title={item}>
+            <Icon name={NAV_ICONS[item]} /><span>{item}</span>{item === "会话" && <span className="nav-count">{store.sessions.length}</span>}
+          </button>)}
         </div>
-        <div className="spacer" />
-        <div className="session-wrap">
-          <button
-            className={`ghost${menuOpen ? " menu-open" : ""}`}
-            onClick={() => {
-              setMenuOpen(!menuOpen);
-              setPendingDeleteId(null);
-            }}
-          >
-            会话（{store.sessions.length}）
-          </button>
-          {menuOpen && (
-            <>
-              <div
-                className="menu-backdrop"
-                onClick={() => setMenuOpen(false)}
-              />
-              <div className="session-menu">
-                <button className="session-new" onClick={startNewSession}>
-                  ＋ 新建备课会话
-                </button>
-                <p className="session-hint">
-                  不同班级 / 课程的备课分开存放，仅保存在本浏览器
-                </p>
-                {sortedSessions.map((s) => (
-                  <div
-                    key={s.id}
-                    className={`session-item${s.id === active.id ? " active" : ""}`}
-                  >
-                    <div
-                      className="session-main"
-                      onClick={() => switchTo(s.id)}
-                    >
-                      <div className="session-name">
-                        {s.name}
-                        {s.id === active.id && (
-                          <span className="tag">当前</span>
-                        )}
-                      </div>
-                      <div className="session-meta">
-                        {formatTime(s.updatedAt)} · {s.messages.length} 条消息
-                        {s.artifacts ? " · 已有产物" : ""}
-                      </div>
-                    </div>
-                    <button
-                      className={`session-delete${pendingDeleteId === s.id ? " confirm" : ""}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteSession(s.id);
-                      }}
-                    >
-                      {pendingDeleteId === s.id ? "确认删除？" : "删除"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-        <button className="ghost">设置</button>
-      </header>
+        <div className="sidebar-bottom"><div className="local-note"><Icon name="shield" size={15} /><span>会话保存在本机浏览器</span></div><div className="profile"><span className="profile-avatar">T</span><div><strong>教师工作空间</strong><span>让每一堂课更进一步</span></div></div></div>
+      </nav>
 
-      <div className="main">
-        <section className="chat-panel">
-          <div className="chat-history">
-            {active.messages.map((m, i) => (
-              <div key={i} className={`msg ${m.role}`}>
-                {m.content}
-              </div>
-            ))}
+      {activeTab === "会话" && <>
+        {historyOpen && <button className="history-scrim" aria-label="关闭会话列表" onClick={() => setHistoryOpen(false)} />}
+        <aside className="conversation-sidebar" aria-label="会话列表">
+          <div className="history-title"><h2>会话</h2><span>{store.sessions.length}</span><button className="icon-button mobile-history-close" aria-label="关闭会话列表" onClick={() => setHistoryOpen(false)}><Icon name="close" /></button></div>
+          <label className="session-search"><Icon name="search" size={15} /><input aria-label="搜索会话" placeholder="搜索会话…" value={sessionQuery} onChange={(e) => setSessionQuery(e.target.value)} /></label>
+          <div className="history-group">最近的备课</div>
+          <div className="conversation-list">
+            {sortedSessions.filter(s => s.name.toLowerCase().includes(sessionQuery.toLowerCase())).map(s => <div className={`conversation-item${s.id === active.id ? " selected" : ""}`} key={s.id}>
+              <button className="conversation-link" onClick={() => switchTo(s.id)} disabled={working} aria-current={s.id === active.id ? "true" : undefined}>
+                <span className="conversation-name"><Icon name="chat" size={15} /><span>{s.name}</span></span><span className="conversation-meta">{formatTime(s.updatedAt)}{s.artifacts ? " · 已有生成物" : " · 备课会话"}</span>
+              </button>
+              <button className={`conversation-delete${pendingDeleteId === s.id ? " confirm" : ""}`} disabled={working} aria-label={pendingDeleteId === s.id ? `确认删除 ${s.name}` : `删除 ${s.name}`} title={pendingDeleteId === s.id ? "再次点击确认删除" : "删除会话"} onClick={() => deleteSession(s.id)}><Icon name={pendingDeleteId === s.id ? "check" : "trash"} size={14} /></button>
+            </div>)}
+            {!sortedSessions.some(s => s.name.toLowerCase().includes(sessionQuery.toLowerCase())) && <p className="history-empty">没有找到匹配的会话</p>}
           </div>
-          <div className="input-area">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.mp4,.mp3,.wav,.m4a,.aac,.flac,.ogg,.oga,.opus,.wma,.amr"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
-            <button
-              className="voice"
-              onClick={() => fileInputRef.current?.click()}
-              title="上传资料"
-            >
-              📎
-            </button>
-            <button
-              className={markReference ? "voice ref-on" : "voice"}
-              onClick={() => setMarkReference(!markReference)}
-              title="标记为参考资料：下一个上传的资料在备课生成时优先采用，并在回复与教案中注明来源"
-            >
-              📌
-            </button>
-            <button
-              className={listening ? "voice listening" : "voice"}
-              onClick={toggleVoice}
-              title="语音输入"
-            >
-              {listening ? "🔴" : "🎤"}
-            </button>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder="输入教学需求，或上传资料建知识库…"
-            />
-            <button onClick={send} disabled={sending}>
-              {sending ? "备课中…" : "发送"}
-            </button>
+          <div className="history-footer"><span className="subtle-dot" />从一个想法，开始下一堂课</div>
+        </aside>
+      </>}
+
+      <main className="studio-main">
+        <header className="workspace-bar">
+          <div className="workspace-breadcrumb">{activeTab === "会话" && <button className="icon-button history-toggle" aria-label="打开会话列表" aria-expanded={historyOpen} onClick={() => setHistoryOpen(!historyOpen)}><Icon name="panel" /></button>}<span>{activeTab}</span><span className="breadcrumb-divider">/</span><strong>{active.name}</strong></div>
+          <span className="workspace-status"><span className="subtle-dot" />{working ? "正在处理" : "准备就绪"}</span>
+        </header>
+
+        <section className={`conversation-workspace${active.messages.length <= 1 ? " is-empty" : ""}`} hidden={activeTab !== "会话"} aria-label="备课对话">
+          <div className="conversation-scroll" ref={chatScrollRef}>
+            {active.messages.length <= 1 ? <div className="welcome">
+              <div className="welcome-symbol"><Icon name="spark" size={31} /></div>
+              <span className="eyebrow">A LITTLE INSPIRATION, A GREAT LESSON</span>
+              <h1>今天，想带来怎样的一堂课？</h1>
+              <p>从一个想法开始。一起梳理知识，让教学设计自然成形。</p>
+              <div className="suggestions">
+                <button onClick={() => setInput("请帮我设计一节 45 分钟的 TCP 三次握手课程，面向大学一年级学生，包含生活类比和课堂练习。")}><Icon name="chat" /><strong>设计一堂新课</strong><span>梳理目标与课堂活动</span><Icon name="diagonal" size={14} /></button>
+                <button onClick={() => setActiveTab("修改 PPT")}><Icon name="slides" /><strong>打磨已有课件</strong><span>上传 PPT，按需求调整</span><Icon name="diagonal" size={14} /></button>
+                <button onClick={() => fileInputRef.current?.click()}><Icon name="library" /><strong>从参考资料开始</strong><span>连接你的教学知识库</span><Icon name="diagonal" size={14} /></button>
+              </div>
+            </div> : <div className="message-list">{active.messages.map((m, i) => <div key={i} className={`message-row ${m.role}`}>
+              <span className="message-avatar">{m.role === "assistant" ? <Icon name="layers" size={17} /> : "我"}</span><div className="message-body"><span className="message-author">{m.role === "assistant" ? "EduMind" : "你"}</span><div className="message-text">{m.content}</div></div>
+            </div>)}{sending && <div className="thinking" role="status"><span /><span /><span />正在整理教学思路</div>}</div>}
+          </div>
+          <div className="composer-wrap">
+            <div className={`composer${listening ? " recording" : ""}`}>
+              <textarea rows={3} aria-label="教学需求" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} placeholder="描述你的教学想法，剩下的交给 EduMind…" />
+              <div className="composer-toolbar">
+                <div className="composer-tools">
+                  <button className="icon-button" title="上传资料" aria-label="上传资料" onClick={() => fileInputRef.current?.click()}><Icon name="attach" /></button>
+                  <button className={`icon-button${markReference ? " enabled" : ""}`} title="将下次上传标记为参考资料" aria-label="标记为参考资料" aria-pressed={markReference} onClick={() => setMarkReference(!markReference)}><Icon name="pin" /></button>
+                  <button className={`icon-button${listening ? " enabled" : ""}`} title={listening ? "停止语音输入" : "语音输入"} aria-label={listening ? "停止语音输入" : "语音输入"} onClick={toggleVoice}><Icon name="mic" /></button>
+                  <span className="tool-divider" />
+                  <div className="composer-granularity" role="group" aria-label="追问粒度">{(["快速", "标准", "精细"] as Granularity[]).map((g) => <button key={g} className={g === active.granularity ? "active" : ""} aria-pressed={g === active.granularity} onClick={() => updateActive(() => ({ granularity: g }))}>{g}</button>)}</div>
+                </div>
+                <button className="send-button" onClick={() => void send()} disabled={sending || !input.trim()} aria-label={sending ? "备课中" : "发送"} title="发送"><Icon name={sending ? "spark" : "arrow"} /></button>
+              </div>
+            </div>
+            <div className="composer-footnote"><span>{markReference ? "下次上传将作为参考资料" : "AI 辅助创作，教学内容请审阅"}</span><span>Enter 发送 · Shift + Enter 换行</span></div>
           </div>
         </section>
 
-        <aside className="context-panel">
-          <div className="tabs">
-            {TABS.map((t) => (
-              <button
-                key={t}
-                className={t === activeTab ? "active" : ""}
-                onClick={() => setActiveTab(t)}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="tab-content">
-            {activeTab === "知识库" && (
-              <KnowledgePanel refreshKey={kbRefresh} />
-            )}
-            {activeTab === "产物预览" && (
-              <PreviewPanel
-                key={active.id}
-                artifacts={active.artifacts}
-                revising={revising}
-                generatingInteractive={generatingInteractive}
-                onRevise={reviseArtifact}
-                onGenerateInteractive={generateInteractive}
-              />
-            )}
+        <section className="resource-workspace" hidden={activeTab === "会话"} aria-label="资源工作区">
+          <div className="resource-heading"><span className="eyebrow">YOUR TEACHING SPACE</span><h1>{activeTab}</h1><p>{RESOURCE_DESCRIPTIONS[activeTab]}</p></div>
+          <div className="resource-content">
+            {uploadStatus && activeTab === "知识库" && <p className="upload-status" role="status">{uploadStatus}</p>}
+            <div hidden={activeTab !== "修改 PPT"}><PresentationEditor /></div>
+            {activeTab === "知识库" && <><button className="resource-upload glass-button" onClick={() => fileInputRef.current?.click()}><Icon name="plus" />上传教学资料</button><KnowledgePanel refreshKey={kbRefresh} /></>}
+            {activeTab === "产物预览" && <PreviewPanel key={active.id} artifacts={active.artifacts} revising={revising} generatingInteractive={generatingInteractive} onRevise={reviseArtifact} onGenerateInteractive={generateInteractive} />}
             {activeTab === "冲突审核" && <ConflictPanel />}
-            {activeTab === "会话信息" && (
-              <SessionPanel
-                name={active.name}
-                granularity={active.granularity}
-                msgCount={active.messages.length}
-              />
-            )}
+            {activeTab === "会话信息" && <SessionPanel name={active.name} granularity={active.granularity} msgCount={active.messages.length} />}
           </div>
-        </aside>
-      </div>
+        </section>
+        <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.mp4,.mp3,.wav,.m4a,.aac,.flac,.ogg,.oga,.opus,.wma,.amr" hidden onChange={handleFileChange} />
+      </main>
     </div>
   );
 }

@@ -156,13 +156,13 @@ def test_render_role_layouts_distinguishable(tmp_path):
     assert first is not None and last is not None
     assert first is not last
 
-    # 内容页：默认版式（标题 + 正文占位符）
-    content_title = content.shapes.title
+    # 内容页：主题卡片版式
+    content_title = _shape_with_text(content, "三次握手")
     assert content_title is not None
     assert content_title.text == "三次握手"
 
-    # 总结：标题占位符强调色加粗 + 强调色条
-    summary_title = summary.shapes.title
+    # 总结：标题强调色加粗 + 强调色条
+    summary_title = _shape_with_text(summary, "小结")
     assert summary_title is not None
     runs = summary_title.text_frame.paragraphs[0].runs
     assert runs and runs[0].font.bold
@@ -193,7 +193,7 @@ def test_theme_maps_style_preference(tmp_path):
 
 
 def test_render_without_role_falls_back_to_default_layout(tmp_path):
-    """旧结构（缺失角色字段）不崩溃：回退默认版式（标题+正文占位符），无封面色块。"""
+    """旧结构（缺失角色字段）不崩溃：回退主题内容版式，保留标题及要点。"""
     slides = [
         {"title": "封面", "points": ["TCP 三次握手"]},
         {"title": "内容页", "points": ["要点1", "要点2"]},
@@ -204,9 +204,9 @@ def test_render_without_role_falls_back_to_default_layout(tmp_path):
     s0, s1, s2, s3 = Presentation(path).slides
 
     for s in (s0, s1, s2):  # 缺失/非法角色 → 默认版式
-        assert s.shapes.title is not None
-        assert _accent_rgb(s) is None
-    t0 = s0.shapes.title
+        assert _accent_rgb(s) is not None
+        assert any(shape.has_text_frame and shape.text for shape in s.shapes)
+    t0 = _shape_with_text(s0, "封面")
     assert t0 is not None
     assert t0.text == "封面"
     assert s3.shapes.title is None  # 「封面页」容错归一化为封面版式

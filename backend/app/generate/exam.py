@@ -13,6 +13,7 @@ from app.core.llm.base import ChatMessage
 from app.core.llm.factory import get_llm
 from app.core.llm.parsing import parse_json
 from app.generate import unique_output_path
+from app.generate.document_style import style_document
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -105,6 +106,7 @@ def render_exam(questions: list[dict], output_path: str | None = None) -> str:
     if output_path is None:
         output_path = unique_output_path("exam", ".docx")
     doc = DocxDocument()
+    style_document(doc)
     doc.add_heading("试卷", level=0)
     doc.add_heading("试题", level=1)
     for i, q in enumerate(questions, 1):
@@ -113,6 +115,7 @@ def render_exam(questions: list[dict], output_path: str | None = None) -> str:
         doc.add_paragraph(f"{i}. [{q.get('type', '')}]{tag} {q.get('content', '')}")
         for option in q.get("options") or []:
             doc.add_paragraph(f"　　{option}")
+    doc.add_page_break()
     doc.add_heading("答案解析", level=1)
     for i, q in enumerate(questions, 1):
         line = f"{i}. {q.get('answer', '')}"

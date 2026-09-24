@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.generate.ppt import render_ppt
+from app.generate.ppt_layout import pages
 from app.generate.revise import revise_ppt, revise_word
 from app.generate.word import render_word
 
@@ -38,7 +39,7 @@ class ReviseWordResponse(BaseModel):
 
 @router.post("/revise", response_model=ReviseResponse)
 async def revise(req: ReviseRequest):
-    new_slides = await revise_ppt(req.slides, req.feedback)
+    new_slides = list(pages(await revise_ppt(req.slides, req.feedback)))
     path = render_ppt(new_slides, style=req.style)  # 默认统一随机命名，连续修改互不覆盖
     return ReviseResponse(slides=new_slides, filename=Path(path).name)
 
