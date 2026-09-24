@@ -1051,6 +1051,35 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HealthResponse": {
+        "description": "健康检查响应：服务状态 + 应用名 + 当前生效的对话模型供应商。",
+        "example": {
+          "app": "EduMind",
+          "llm_provider": "stub",
+          "status": "ok"
+        },
+        "properties": {
+          "app": {
+            "title": "App",
+            "type": "string"
+          },
+          "llm_provider": {
+            "title": "Llm Provider",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "app",
+          "llm_provider"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
       "InteractiveGenerateRequest": {
         "description": "互动内容生成请求：备课意图（可透传上次备课的意图对象）。",
         "example": {
@@ -1379,6 +1408,29 @@
           }
         },
         "title": "NewKnowledgeEntry",
+        "type": "object"
+      },
+      "PingResponse": {
+        "description": "v1 存活探测响应：固定文本，表示 `/api/v1` 已挂载。",
+        "example": {
+          "message": "EduMind API v1",
+          "status": "ok"
+        },
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "PingResponse",
         "type": "object"
       },
       "ProviderView": {
@@ -2376,6 +2428,35 @@
         "title": "ReviseWordResponse",
         "type": "object"
       },
+      "RootResponse": {
+        "description": "服务信息：应用名与两个运维入口（接口文档 / 健康检查）的地址。",
+        "example": {
+          "docs": "/docs",
+          "health": "/health",
+          "name": "EduMind"
+        },
+        "properties": {
+          "docs": {
+            "title": "Docs",
+            "type": "string"
+          },
+          "health": {
+            "title": "Health",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "docs",
+          "health"
+        ],
+        "title": "RootResponse",
+        "type": "object"
+      },
       "SearchHit": {
         "properties": {
           "chunk_id": {
@@ -3242,6 +3323,56 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "WebSearchResponse": {
+        "description": "网络搜索响应：结果列表（无 Key 时由 stub 返回带标记的占位结果）。",
+        "example": {
+          "results": [
+            {
+              "snippet": "一次函数 y=kx+b（k≠0）的图象是一条直线…",
+              "title": "一次函数的定义与图象",
+              "url": "https://example.com/lesson/linear-function"
+            }
+          ]
+        },
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/WebSearchResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "WebSearchResponse",
+        "type": "object"
+      },
+      "WebSearchResult": {
+        "description": "一条网络搜索结果：标题 / 链接 / 摘要。",
+        "properties": {
+          "snippet": {
+            "title": "Snippet",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "snippet"
+        ],
+        "title": "WebSearchResult",
+        "type": "object"
       }
     }
   },
@@ -3265,7 +3396,9 @@
                   "health": "/health",
                   "name": "EduMind"
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RootResponse"
+                }
               }
             },
             "description": "服务信息"
@@ -4977,7 +5110,7 @@
     },
     "/api/v1/knowledge/web-search": {
       "post": {
-        "description": "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n本能力无 stub 实现：`BOCHA_API_KEY` 未配置时请求失败（`500`，`detail` 为 `BOCHA_API_KEY 未配置`），而不是静默返回空结果。",
+        "description": "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则回落 stub，返回带「（stub 网络搜索）」标记的占位结果（无 Key 全链路可跑的又一条路径）。显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时请求失败（`500`，`detail` 为 `BOCHA_API_KEY 未配置`），而不是静默返回空结果。",
         "operationId": "web_search_api_v1_knowledge_web_search_post",
         "requestBody": {
           "content": {
@@ -5002,7 +5135,9 @@
                     }
                   ]
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/WebSearchResponse"
+                }
               }
             },
             "description": "搜索结果"
@@ -5055,7 +5190,9 @@
                   "message": "EduMind API v1",
                   "status": "ok"
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PingResponse"
+                }
               }
             },
             "description": "v1 已就绪"
@@ -6881,7 +7018,9 @@
                   "llm_provider": "stub",
                   "status": "ok"
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
               }
             },
             "description": "服务可用"

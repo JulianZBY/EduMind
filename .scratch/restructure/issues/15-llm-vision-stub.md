@@ -132,7 +132,12 @@ GET  /health  -> {"status":"ok","app":"EduMind","llm_provider":"stub"}
    图片没有可回显的文本层，做不到像图谱 stub 那样「回显正文前几行」）。要真实识别须配云端 Key，属 `ready-for-human`。
    影响面：stub 下同一批资料会得到同名同文的提取节点，重复上传走既有「重名不入图」路径，不会误报「有冲突」。
 2. **视频帧数上限是既有行为**：`VideoParser` 取 `n = min(4, 总帧数)` 帧，stub 下这 4 帧同文；超长视频的覆盖度问题不在本票范围。
-3. **网络搜索仍无 stub**（`docs/api/stub-mode.md` 有意为之），因此票 14 的 stub 冒烟里搜索这条仍须排除——本票只补上图片 / 视频这两条，不改变搜索的口径。
+3. **【票 14 更正】网络搜索「无 stub」的说法有误**：原写「网络搜索仍无 stub（`docs/api/stub-mode.md` 有意为之），
+   因此票 14 的 stub 冒烟里搜索这条仍须排除」。协调者与票 14 复核确认：**stub 存在且已注册**
+   （`backend/app/core/search/stub.py` + `SEARCH_BUILDERS` 里的 `stub`；`SEARCH_PROVIDER` 留空即自动档：
+   有 `BOCHA_API_KEY` 走博查，否则回落 stub，返回带「（stub 网络搜索）」标记的占位结果）。
+   `docs/api/stub-mode.md` 已按此修正，票 14 的 stub 冒烟**不需要**排除搜索。
+   本票只补图片 / 视频两条，与搜索口径无关。
 4. **`backend/data/output` 是既有共享落盘路径**（其它票已记录）：本票测试不写它（实测 90 → 90）；本票没有新增隔离需求。
 5. **没有真浏览器验证**：本票只碰后端，浏览器端「上传图片 → 看到已完成」留给票 14 的 Playwright 冒烟。
 

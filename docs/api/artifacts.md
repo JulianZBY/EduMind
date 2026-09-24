@@ -1,7 +1,9 @@
 # 生成物：落盘与取回
 
 相关端点：`POST /api/v1/exam/generate`、`POST /api/v1/interactive/generate`、
-`POST /api/v1/revise`、`POST /api/v1/revise/word`、`GET /api/v1/files/{filename}`、
+`POST /api/v1/revise`（课件）、`POST /api/v1/revise/word`（教案）、`POST /api/v1/revise/outline`（提纲）、
+`POST /api/v1/revise/exam`（试卷）、`POST /api/v1/revise/interactive`（互动内容）、
+`GET /api/v1/files/{filename}`、
 `GET /api/v1/sessions/{session_id}/artifacts`、`GET /api/v1/artifacts/{version_id}`、
 `GET /api/v1/artifacts/{version_id}/download`。
 字段与示例以 `/openapi.json` 为准；本文只解释文件名、取回方式与版本语义这三件 OpenAPI 说不清的事。
@@ -55,8 +57,10 @@
 | 回看某一版 | `GET /api/v1/artifacts/{version_id}` | 带这一版的**内容快照**（课件 slides / 教案结构 / 提纲正文 / 题目 / 互动内容 HTML） |
 | 下载某一版 | `GET /api/v1/artifacts/{version_id}/download` | 取回**该版本对应的文件**；`inline=true` 时不附下载头（互动内容在浏览器直接打开试用） |
 
-以历史版本为基线继续修改：把 `base_version_id`（取自版本列表）随修改请求（`POST /revise`、
-`POST /revise/word`）传回，或不传而只带 `session_id`（以当前版本为基线）。
+以历史版本为基线继续修改：把 `base_version_id`（取自版本列表）随修改请求传回，或不传而只带 `session_id`
+（以当前版本为基线）。**五类生成物各有自己的修改端点**（课件 / 教案 / 提纲 / 试卷 / 互动内容），
+每个端点都接受同样的 `session_id` + `base_version_id`，因此 `CONTEXT.md` 第 3 节的
+「历史版本一律可回看、可下载、可作基线继续修改」在五类生成物上都成立（票 08 补齐后三类）。
 基线版本或会话不存在是 `404`，`base_version_id` 不是对应类别的版本（拿教案版本去改课件）是 `422`。
 `GET /api/v1/files/{filename}` 仍然按文件名取文件，用于拿到文件名后的直接下载；
 按版本取回请走上面第三个端点，两者取的是同一批落盘文件，差别在寻址方式（文件名 vs 版本）。

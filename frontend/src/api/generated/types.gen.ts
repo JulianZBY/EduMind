@@ -657,6 +657,26 @@ export type HttpValidationError = {
 };
 
 /**
+ * HealthResponse
+ *
+ * 健康检查响应：服务状态 + 应用名 + 当前生效的对话模型供应商。
+ */
+export type HealthResponse = {
+    /**
+     * App
+     */
+    app: string;
+    /**
+     * Llm Provider
+     */
+    llm_provider: string;
+    /**
+     * Status
+     */
+    status: string;
+};
+
+/**
  * InteractiveGenerateRequest
  *
  * 互动内容生成请求：备课意图（可透传上次备课的意图对象）。
@@ -870,6 +890,22 @@ export type NewKnowledgeEntry = {
      */
     title?: string;
     [key: string]: unknown;
+};
+
+/**
+ * PingResponse
+ *
+ * v1 存活探测响应：固定文本，表示 `/api/v1` 已挂载。
+ */
+export type PingResponse = {
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Status
+     */
+    status: string;
 };
 
 /**
@@ -1445,6 +1481,26 @@ export type ReviseWordResponse = {
 };
 
 /**
+ * RootResponse
+ *
+ * 服务信息：应用名与两个运维入口（接口文档 / 健康检查）的地址。
+ */
+export type RootResponse = {
+    /**
+     * Docs
+     */
+    docs: string;
+    /**
+     * Health
+     */
+    health: string;
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
  * SearchHit
  */
 export type SearchHit = {
@@ -1984,6 +2040,38 @@ export type ValidationError = {
     type: string;
 };
 
+/**
+ * WebSearchResponse
+ *
+ * 网络搜索响应：结果列表（无 Key 时由 stub 返回带标记的占位结果）。
+ */
+export type WebSearchResponse = {
+    /**
+     * Results
+     */
+    results: Array<WebSearchResult>;
+};
+
+/**
+ * WebSearchResult
+ *
+ * 一条网络搜索结果：标题 / 链接 / 摘要。
+ */
+export type WebSearchResult = {
+    /**
+     * Snippet
+     */
+    snippet: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Url
+     */
+    url: string;
+};
+
 export type RootGetData = {
     body?: never;
     path?: never;
@@ -2002,8 +2090,10 @@ export type RootGetResponses = {
     /**
      * 服务信息
      */
-    200: unknown;
+    200: RootResponse;
 };
+
+export type RootGetResponse = RootGetResponses[keyof RootGetResponses];
 
 export type GetArtifactVersionApiV1ArtifactsVersionIdGetData = {
     body?: never;
@@ -2655,8 +2745,10 @@ export type WebSearchApiV1KnowledgeWebSearchPostResponses = {
     /**
      * 搜索结果
      */
-    200: unknown;
+    200: WebSearchResponse;
 };
+
+export type WebSearchApiV1KnowledgeWebSearchPostResponse = WebSearchApiV1KnowledgeWebSearchPostResponses[keyof WebSearchApiV1KnowledgeWebSearchPostResponses];
 
 export type PingApiV1PingGetData = {
     body?: never;
@@ -2676,8 +2768,10 @@ export type PingApiV1PingGetResponses = {
     /**
      * v1 已就绪
      */
-    200: unknown;
+    200: PingResponse;
 };
+
+export type PingApiV1PingGetResponse = PingApiV1PingGetResponses[keyof PingApiV1PingGetResponses];
 
 export type ListQuestionsApiV1QuestionsGetData = {
     body?: never;
@@ -3237,5 +3331,7 @@ export type HealthHealthGetResponses = {
     /**
      * 服务可用
      */
-    200: unknown;
+    200: HealthResponse;
 };
+
+export type HealthHealthGetResponse = HealthHealthGetResponses[keyof HealthHealthGetResponses];

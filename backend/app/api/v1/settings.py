@@ -303,25 +303,6 @@ def _capabilities(stored: Mapping[str, str]) -> list[CapabilityView]:
     return rows
 
 
-def _capabilities(stored: Mapping[str, str]) -> list[CapabilityView]:
-    rows = []
-    for spec in CAPABILITIES:
-        ready, reason = probe(spec.probe)
-        value = value_of(spec.key) or spec.auto_id
-        rows.append(
-            CapabilityView(
-                key=spec.key,
-                label=spec.label,
-                value=value,
-                value_label=spec.option_label(value),
-                source=source_of(spec.key, stored),
-                ready=ready,
-                reason=reason,
-            )
-        )
-    return rows
-
-
 def _view(db: Session) -> SettingsView:
     """装配当前生效设置：`stored` 是「哪些项在设置页改过」的判据，决定每项的 `source`。"""
     stored = read_stored(db)

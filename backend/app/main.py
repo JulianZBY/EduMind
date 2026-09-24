@@ -3,6 +3,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from pydantic import BaseModel, ConfigDict
 
 from app.api.health import router as health_router
 from app.api.openapi_examples import internal_error, json_response
@@ -75,8 +76,21 @@ app.include_router(health_router)
 app.include_router(v1_router, prefix="/api/v1")
 
 
+class RootResponse(BaseModel):
+    """服务信息：应用名与两个运维入口（接口文档 / 健康检查）的地址。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"name": "EduMind", "docs": "/docs", "health": "/health"}}
+    )
+
+    name: str  # 应用名
+    docs: str  # Swagger UI 地址（接口文档入口）
+    health: str  # 健康检查地址
+
+
 @app.get(
     "/",
+    response_model=RootResponse,
     tags=["系统"],
     summary="服务信息",
     description="返回应用名与文档、健康检查入口地址，供启动自检与人工排查使用。",
@@ -85,5 +99,5 @@ app.include_router(v1_router, prefix="/api/v1")
         500: internal_error(),
     },
 )
-async def root():
-    return {"name": settings.app_name, "docs": "/docs", "health": "/health"}
+async def root() -> RootResponse:
+    return RootResponse(name=settings.app_name, docs="/docs", health="/health")
