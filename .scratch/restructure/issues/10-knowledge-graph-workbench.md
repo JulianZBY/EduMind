@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 前端基座
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 图谱渲染符合风格文档的 mermaid 扁平主题配方，一眼可辨为 Minimalist Flat
 - [x] 学科 / 章节过滤后节点与边正确收缩
@@ -117,3 +117,23 @@ const { source, nodeIdByMermaidId } = buildFlowchartSource(
 - 节点详情抽屉暂无「跳到题库 / 冲突审核」的联动（跨区跳转不在本票范围）。
 - 覆盖率提示：`pi-lens` 的 opengrep/typos 运行器在本环境静默，故静态检查结果不是「全清」证明，只能说没有报告问题。
 - 本机 `frontend/node_modules` 里残留了验证用的 `jsdom`（用 `npm install --no-save` 装过）：`package.json` / `package-lock.json` 已从备份还原、**未入库**（`rg jsdom frontend/package-lock.json` 零命中），下次 `npm ci` 会自然清掉。
+
+## 协调者复核
+
+**结论：通过。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 图谱渲染符合风格文档第 8 节扁平配方 | `frontend/src/components/graph/{FlatMermaid,flowchart,RelationLegend}.tsx`；交付记录含 jsdom + 真 mermaid 渲染的逐项核对 | 通过 |
+| 学科/章节过滤后节点与边正确收缩 | 既有 `GET /knowledge/graph` 补可选过滤 + `response_model` | 通过 |
+| 节点详情抽屉（内容/难度/来源引用） | 新增 `GET /knowledge/nodes/{id}` + `KnowledgePointDrawer.tsx` | 通过 |
+| 邻域展开以选中节点为中心取子图 | 新增 `GET /knowledge/nodes/{id}/neighborhood` + HTTP 缝测试 `tests/test_graph_workbench.py` | 通过 |
+| 测试与静态检查 | 协调者亲跑 192 passed、`ruff check .` 干净、前端 `npm run lint` + `npm run build` 绿、工作树干净 | 通过 |
+
+**本轮最有价值的产出（协调者认定）**：worker 用**真 mermaid 渲染**（而非 mock）验出并修掉一个真 bug——mermaid 12 的节点 id 带渲染图 id 前缀，原反解正则会让「点节点看详情」静默无反应。另记录三条 mermaid 12 的坑（`look:classic`、`flowchart.curve` 需渲染后还原直角、不能写 `linkStyle default`）。
+
+**可复用性（为并行票服务）**：本票把渲染做成 `frontend/src/components/graph/` 下的可复用组件，并在交付记录第三节写明复用入口；协调者据此把它写进票 11 的派发约束——**票 11 的结构冲突图示实际复用了 `buildFlowchartSource` + `FlatMermaid` + `RelationLegend`**，复用链条闭合。
+
+- **合并点**：`0e47f98`（`merge(10)`）；合并时只与派生物冲突，按「重生成」处置；协调者代为落地其 pi-lens 格式化提交 `a187558`。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向**：画布无分页/虚拟化、来源引用只到资料粒度（模型无分块级溯源）→ 票 14 收口清单。
