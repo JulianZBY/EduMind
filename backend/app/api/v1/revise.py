@@ -17,8 +17,17 @@ from app.core import artifacts as artifact_service
 from app.db import get_session
 from app.db.artifacts import ArtifactStore
 from app.db.models import ArtifactVersion
+from app.generate.creative import save_html
+from app.generate.exam import render_exam, save_questions_to_bank
+from app.generate.outline import render_outline
 from app.generate.ppt import render_ppt
-from app.generate.revise import revise_ppt, revise_word
+from app.generate.revise import (
+    revise_creative,
+    revise_exam,
+    revise_outline,
+    revise_ppt,
+    revise_word,
+)
 from app.generate.word import render_word
 
 router = APIRouter()
@@ -234,6 +243,307 @@ async def revise_word_endpoint(
     )
     return ReviseWordResponse(
         word=new_word,
+        filename=filename,
+        version_id=row.id,
+        version=row.version,
+        session_id=row.session_id,
+    )
+
+
+# ---- 提纲 / 试卷 / 互动内容：把「修改意见」补齐到五类生成物 ----
+# 与课件 / 教案同模式（票 07/08）：完整内容交模型按意见重排 → 重新渲染为新文件 →
+# 带会话（或带基线版本）时落一条 **新版本**（`origin=修改`、`parent_id`=基线），基线版本保持可取回。
+# 内容快照的键与生成路径一致（提纲 text / 试卷 questions / 互动内容 html），
+# 前端拿 `GET /api/v1/artifacts/{version_id}` 的快照原样回传即可。
+
+
+class ReviseOutlineRequest(BaseModel):
+    """提纲修改请求：待改的提纲正文 + 修改意见 +（可选）以哪一版为基线。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "text": "# 一次函数\n## 概念\n- 形如 y=kx+b（k≠0）",
+                "feedback": "每个小节补一条易错点",
+                "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                "base_version_id": "7a6b5c4d-3e2f-41a0-9b8c-7d6e5f4a3b2c",
+            }
+        }
+    )
+
+    text: str  # 基线的提纲正文（取自版本详情的 content.text）
+    feedback: str  # 修改意见（CONTEXT.md）：只作用于这一份提纲
+    session_id: str | None = None
+    base_version_id: str | None = None
+
+
+class ReviseOutlineResponse(BaseModel):
+    text: str  # 修改后的提纲正文（Markdown）
+    filename: str  # 新落盘文件（.docx），旧文件保留
+    version_id: str | None = None
+    version: int | None = None
+    session_id: str | None = None
+
+
+class ReviseExamRequest(BaseModel):
+    """试卷修改请求：待改的题目集合 + 修改意见 +（可选）题量与基线版本。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "questions": [
+                    {
+                        "type": "选择",
+                        "content": "下列函数中，属于一次函数的是？",
+                        "options": ["A. y=2x+1", "B. y=x²"],
+                        "answer": "A",
+                        "analysis": "一次函数形如 y=kx+b（k≠0）。",
+                        "knowledge_point": "一次函数的定义",
+                    }
+                ],
+                "feedback": "再加一道生活中的应用题，难度不变",
+                "n": 5,
+                "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                "base_version_id": "8b7c6d5e-4f3a-42b1-8c9d-8e7f6a5b4c3d",
+            }
+        }
+    )
+
+    questions: list[dict]  # 基线的题目（取自版本详情的 content.questions）
+    feedback: str
+    n: int | None = None  # 改后题量；不传沿用基线题量
+    session_id: str | None = None
+    base_version_id: str | None = None
+
+
+class ReviseExamResponse(BaseModel):
+    questions: list[dict]
+    filename: str
+    bank_saved: int  # 改后的题目也入题库（来源=自编，带考查知识点）
+    version_id: str | None = None
+    version: int | None = None
+    session_id: str | None = None
+
+
+class ReviseInteractiveRequest(BaseModel):
+    """互动内容修改请求：待改的单文件 HTML + 修改意见 +（可选）以哪一版为基线。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "html": "<!doctype html><html lang=zh><body>…</body></html>",
+                "feedback": "把按钮改成选择判断题，答对给正向反馈",
+                "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+                "base_version_id": "9c8d7e6f-5a4b-43c2-9d0e-9f8a7b6c5d4e",
+            }
+        }
+    )
+
+    html: str  # 基线的互动内容 HTML（取自版本详情的 content.html）
+    feedback: str
+    session_id: str | None = None
+    base_version_id: str | None = None
+
+
+class ReviseInteractiveResponse(BaseModel):
+    html: str
+    filename: str
+    version_id: str | None = None
+    version: int | None = None
+    session_id: str | None = None
+
+
+@router.post(
+    "/revise/outline",
+    response_model=ReviseOutlineResponse,
+    tags=["生成物"],
+    summary="按修改意见重做提纲",
+    description=(
+        "对**所选提纲**提修改意见并重新生成：把待改的提纲正文连同意见交模型重排，"
+        "再渲染为**新文件**（旧文件保留，因此可反复修改互不覆盖）。\n\n"
+        "本接口只作用于传入的这一份提纲，不影响同次备课的课件、教案、试卷与互动内容。\n\n"
+        "**带上 `session_id` 时本次修改落一条新版本**（`origin=修改`）：版本号比基线更高，"
+        "基线版本保持可回看、可下载；`base_version_id` 指定以哪一版为基线（版本 id 取自版本列表），"
+        "不传时以该会话的当前版本为基线。基线或会话不存在返回 `404`，"
+        "`base_version_id` 不是提纲版本返回 `422`。\n\n"
+        "不带 `session_id` / `base_version_id` 时只返回修改后的正文与新文件名，不落版本记录。"
+    ),
+    responses={
+        200: json_response(
+            "修改后的提纲、新文件名与（带会话时的）新版本标识",
+            {
+                "text": "# 一次函数\n## 概念\n- 形如 y=kx+b（k≠0）\n- 易错点：k≠0",
+                "filename": "outline_3b4c5d6e.docx",
+                "version_id": "7a6b5c4d-3e2f-41a0-9b8c-7d6e5f4a3b2c",
+                "version": 2,
+                "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+            },
+        ),
+        404: error_response(
+            "基线版本或备课会话不存在",
+            "生成物版本不存在: 7a6b5c4d-3e2f-41a0-9b8c-7d6e5f4a3b2c",
+        ),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+async def revise_outline_endpoint(
+    req: ReviseOutlineRequest, db: Annotated[Session, Depends(get_session)]
+):
+    """提纲修改：按修改意见重排正文 → 重新渲染为新文件；带会话/基线时入库为新版本。"""
+    baseline: ArtifactVersion | None = None
+    if req.session_id is not None or req.base_version_id is not None:
+        baseline = _resolve_baseline(
+            db, artifact_service.OUTLINE, req.session_id, req.base_version_id
+        )
+
+    text = await revise_outline(req.text, req.feedback)
+    path = render_outline(text)
+    filename = Path(path).name
+    if baseline is None:
+        return ReviseOutlineResponse(text=text, filename=filename)
+
+    row = artifact_service.record_revision(
+        ArtifactStore(db), baseline=baseline, path=path, content={"text": text}
+    )
+    return ReviseOutlineResponse(
+        text=text,
+        filename=filename,
+        version_id=row.id,
+        version=row.version,
+        session_id=row.session_id,
+    )
+
+
+@router.post(
+    "/revise/exam",
+    response_model=ReviseExamResponse,
+    tags=["生成物"],
+    summary="按修改意见重做试卷",
+    description=(
+        "对**所选试卷**提修改意见并重新出题：把待改的题目集合连同意见交模型重排，"
+        "渲染为**新文件**并把改后的题目写入题库（来源=`自编`，按考查知识点关联图谱节点）。\n\n"
+        "本接口只作用于传入的这一份试卷，不影响同次备课的其它生成物；"
+        "`n` 指定改后题量，不传时沿用基线题量。\n\n"
+        "**带上 `session_id` 时本次修改落一条新版本**（`origin=修改`）：版本号比基线更高，"
+        "基线版本保持可回看、可下载；`base_version_id` 指定以哪一版为基线，"
+        "不传时以该会话的当前版本为基线。基线或会话不存在返回 `404`，"
+        "`base_version_id` 不是试卷版本返回 `422`。\n\n"
+        "不带 `session_id` / `base_version_id` 时只返回题目与新文件名，不落版本记录。"
+    ),
+    responses={
+        200: json_response(
+            "修改后的题目、新文件名、入题库题数与（带会话时的）新版本标识",
+            {
+                "questions": [
+                    {
+                        "type": "选择",
+                        "content": "下列函数中，属于一次函数的是？",
+                        "options": ["A. y=2x+1", "B. y=x²"],
+                        "answer": "A",
+                        "analysis": "一次函数形如 y=kx+b（k≠0）。",
+                        "knowledge_point": "一次函数的定义",
+                    }
+                ],
+                "filename": "exam_4c5d6e7f.docx",
+                "bank_saved": 5,
+                "version_id": "8b7c6d5e-4f3a-42b1-8c9d-8e7f6a5b4c3d",
+                "version": 2,
+                "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+            },
+        ),
+        404: error_response(
+            "基线版本或备课会话不存在",
+            "生成物版本不存在: 8b7c6d5e-4f3a-42b1-8c9d-8e7f6a5b4c3d",
+        ),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+async def revise_exam_endpoint(
+    req: ReviseExamRequest, db: Annotated[Session, Depends(get_session)]
+):
+    """试卷修改：按修改意见重做题目 → 重新渲染 + 入库题库；带会话/基线时入库为新版本。"""
+    baseline: ArtifactVersion | None = None
+    if req.session_id is not None or req.base_version_id is not None:
+        baseline = _resolve_baseline(db, artifact_service.EXAM, req.session_id, req.base_version_id)
+
+    questions = await revise_exam(req.questions, req.feedback, req.n)
+    bank_saved = save_questions_to_bank(questions)
+    path = render_exam(questions)
+    filename = Path(path).name
+    if baseline is None:
+        return ReviseExamResponse(questions=questions, filename=filename, bank_saved=bank_saved)
+
+    row = artifact_service.record_revision(
+        ArtifactStore(db), baseline=baseline, path=path, content={"questions": questions}
+    )
+    return ReviseExamResponse(
+        questions=questions,
+        filename=filename,
+        bank_saved=bank_saved,
+        version_id=row.id,
+        version=row.version,
+        session_id=row.session_id,
+    )
+
+
+@router.post(
+    "/revise/interactive",
+    response_model=ReviseInteractiveResponse,
+    tags=["生成物"],
+    summary="按修改意见重做互动内容",
+    description=(
+        "对**所选互动内容**提修改意见并重新生成：把待改的单文件 HTML 连同意见交模型重排，"
+        "落盘为**新文件**。\n\n"
+        "结果不是完整单文件 HTML 时退回基线 HTML（不落半成品）；"
+        "取回该版本请用 `GET /api/v1/artifacts/{version_id}/download?inline=true` 在新标签页打开试用。\n\n"
+        "**带上 `session_id` 时本次修改落一条新版本**（`origin=修改`）：版本号比基线更高，"
+        "基线版本保持可回看、可下载；`base_version_id` 指定以哪一版为基线，"
+        "不传时以该会话的当前版本为基线。基线或会话不存在返回 `404`，"
+        "`base_version_id` 不是互动内容版本返回 `422`。\n\n"
+        "不带 `session_id` / `base_version_id` 时只返回 HTML 与新文件名，不落版本记录。"
+    ),
+    responses={
+        200: json_response(
+            "修改后的互动内容、新文件名与（带会话时的）新版本标识",
+            {
+                "html": "<!doctype html><html lang=zh><body>…</body></html>",
+                "filename": "creative_5d6e7f8a.html",
+                "version_id": "9c8d7e6f-5a4b-43c2-9d0e-9f8a7b6c5d4e",
+                "version": 2,
+                "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
+            },
+        ),
+        404: error_response(
+            "基线版本或备课会话不存在",
+            "生成物版本不存在: 9c8d7e6f-5a4b-43c2-9d0e-9f8a7b6c5d4e",
+        ),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+async def revise_interactive_endpoint(
+    req: ReviseInteractiveRequest, db: Annotated[Session, Depends(get_session)]
+):
+    """互动内容修改：按修改意见重排 HTML → 落盘为新文件；带会话/基线时入库为新版本。"""
+    baseline: ArtifactVersion | None = None
+    if req.session_id is not None or req.base_version_id is not None:
+        baseline = _resolve_baseline(
+            db, artifact_service.CREATIVE, req.session_id, req.base_version_id
+        )
+
+    html = await revise_creative(req.html, req.feedback)
+    path = save_html(html)
+    filename = Path(path).name
+    if baseline is None:
+        return ReviseInteractiveResponse(html=html, filename=filename)
+
+    row = artifact_service.record_revision(
+        ArtifactStore(db), baseline=baseline, path=path, content={"html": html}
+    )
+    return ReviseInteractiveResponse(
+        html=html,
         filename=filename,
         version_id=row.id,
         version=row.version,

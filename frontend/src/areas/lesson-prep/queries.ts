@@ -31,6 +31,7 @@ import type {
 } from '../../api/generated'
 import { readKnowledgeDocument, readKnowledgeDocuments } from './narrowing'
 import type { KnowledgeDocument } from './narrowing'
+import { artifactKeys } from '../artifacts/queries'
 
 /** 会话摘要与消息形状都直接来自生成的 schema（ADR-0005 禁止手抄接口类型）。 */
 export type { SessionSummary }
@@ -325,6 +326,10 @@ export function useSendTurn(sessionId: string) {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: historyKey })
       void queryClient.invalidateQueries({ queryKey: lessonPrepKeys.sessionLists() })
+      // 这一轮可能产出了新的生成物版本：对话旁的并排预览与生成物区用的是同一份版本数据
+      // （`artifactKeys.sessionArtifacts`），一次失效两处一起跟上。
+      void queryClient.invalidateQueries({ queryKey: artifactKeys.sessionArtifacts() })
+      void queryClient.invalidateQueries({ queryKey: artifactKeys.versions() })
     },
   })
 }
