@@ -342,6 +342,107 @@
         "title": "ExamGenerateResponse",
         "type": "object"
       },
+      "GraphEdge": {
+        "description": "图谱里的一条关系（画布连线）。\n\n`from` / `to` 是既有消费者已在用的键名，不改语义。",
+        "properties": {
+          "from": {
+            "title": "From",
+            "type": "string"
+          },
+          "relation_type": {
+            "title": "Relation Type",
+            "type": "string"
+          },
+          "to": {
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "relation_type"
+        ],
+        "title": "GraphEdge",
+        "type": "object"
+      },
+      "GraphNode": {
+        "description": "图谱里的一个知识点（画布节点）。\n\n`subject` / `chapter` 随节点一起返回，前端据此列出过滤选项（学科 / 章节）。",
+        "properties": {
+          "chapter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "GraphNode",
+        "type": "object"
+      },
+      "GraphResponse": {
+        "description": "知识图谱数据：知识点与关系。",
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "GraphResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -410,6 +511,107 @@
           "question_count"
         ],
         "title": "KnowledgePointCount",
+        "type": "object"
+      },
+      "KnowledgePointDetail": {
+        "description": "知识点详情：内容 / 难度 / 来源引用（节点详情抽屉的数据）。",
+        "properties": {
+          "chapter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "importance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Importance"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeSourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "content",
+          "sources"
+        ],
+        "title": "KnowledgePointDetail",
+        "type": "object"
+      },
+      "KnowledgeSourceRef": {
+        "description": "来源引用：这个知识点的正文来自哪份资料（资料已删除时 `filename` 为空）。",
+        "properties": {
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          }
+        },
+        "required": [
+          "doc_id"
+        ],
+        "title": "KnowledgeSourceRef",
         "type": "object"
       },
       "Message": {
@@ -2132,8 +2334,46 @@
     },
     "/api/v1/knowledge/graph": {
       "get": {
-        "description": "返回知识图谱的全部知识点与关系，前端据此自行渲染图谱。\n\n`relation_type` 取值：`前置依赖` / `父子包含` / `推导关系` / `相关关联`。\n节点详情、按学科章节过滤与邻域取子图接口随知识图谱工作台（票 10）交付。",
+        "description": "返回知识点与关系，前端据此自行渲染图谱。\n\n`subject` / `chapter` 为可选过滤：带上则只返回命中的知识点，以及**两端都在结果集里**的关系（连线随节点一同收缩，不留悬空关系）；都不带即全图。\n\n`relation_type` 取值：`前置依赖` / `父子包含` / `推导关系` / `相关关联`。单个知识点的详情见 `GET /knowledge/nodes/{node_id}`，邻域子图见 `GET /knowledge/nodes/{node_id}/neighborhood`。",
         "operationId": "get_graph_api_v1_knowledge_graph_get",
+        "parameters": [
+          {
+            "description": "按学科过滤；不带即不限学科",
+            "in": "query",
+            "name": "subject",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "按学科过滤；不带即不限学科",
+              "title": "Subject"
+            }
+          },
+          {
+            "description": "按章节过滤；不带即不限章节",
+            "in": "query",
+            "name": "chapter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "按章节过滤；不带即不限章节",
+              "title": "Chapter"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -2148,16 +2388,30 @@
                   ],
                   "nodes": [
                     {
+                      "chapter": "一次函数",
                       "difficulty": "基础",
                       "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                      "subject": "数学",
                       "title": "一次函数的定义"
                     }
                   ]
                 },
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResponse"
+                }
               }
             },
-            "description": "知识点与关系"
+            "description": "知识点与关系（带上过滤参数时已收缩）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "500": {
             "content": {
@@ -2171,6 +2425,195 @@
           }
         },
         "summary": "知识图谱数据",
+        "tags": [
+          "知识图谱"
+        ]
+      }
+    },
+    "/api/v1/knowledge/nodes/{node_id}": {
+      "get": {
+        "description": "返回一个知识点的完整内容、学科章节、难度与重要度，以及**来源引用**（这个知识点的正文来自哪几份资料）。\n\n`sources` 按知识点记录的来源资料逐个给出：`doc_id` 为资料 id，`filename` 为资料名（资料已删除时只留 id、名字为空）。",
+        "operationId": "get_knowledge_point_api_v1_knowledge_nodes__node_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "chapter": "一次函数",
+                  "content": "形如 y=kx+b（k≠0）的函数，图象是一条直线。",
+                  "difficulty": "基础",
+                  "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                  "importance": "必修",
+                  "sources": [
+                    {
+                      "doc_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                      "filename": "一次函数讲义.pdf"
+                    }
+                  ],
+                  "subject": "数学",
+                  "title": "一次函数的定义"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgePointDetail"
+                }
+              }
+            },
+            "description": "知识点详情"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "知识点不存在"
+                }
+              }
+            },
+            "description": "知识点不存在：该 id 在知识图谱里没有对应节点（可能已被删除或替换）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "知识点详情",
+        "tags": [
+          "知识图谱"
+        ]
+      }
+    },
+    "/api/v1/knowledge/nodes/{node_id}/neighborhood": {
+      "get": {
+        "description": "以选中知识点为中心、向外 `max_depth` 跳取邻域子图（看清它的上下游）。\n\n返回的 `nodes` 以中心知识点开头，其余按广度优先的访问顺序；`edges` 只包含两端都在子图里的关系，每条关系只出现一次。\n\n中心知识点不存在时返回 `404`；`max_depth` 超出 1–3 返回 `422`。",
+        "operationId": "get_neighborhood_api_v1_knowledge_nodes__node_id__neighborhood_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "向外几跳（1–3），默认 2",
+            "in": "query",
+            "name": "max_depth",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "description": "向外几跳（1–3），默认 2",
+              "maximum": 3,
+              "minimum": 1,
+              "title": "Max Depth",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "edges": [
+                    {
+                      "from": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                      "relation_type": "前置依赖",
+                      "to": "9c8b7a65-4321-4f0e-8d9c-1b2a3c4d5e6f"
+                    }
+                  ],
+                  "nodes": [
+                    {
+                      "chapter": "一次函数",
+                      "difficulty": "基础",
+                      "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                      "subject": "数学",
+                      "title": "一次函数的定义"
+                    },
+                    {
+                      "chapter": "一次函数",
+                      "difficulty": "进阶",
+                      "id": "9c8b7a65-4321-4f0e-8d9c-1b2a3c4d5e6f",
+                      "subject": "数学",
+                      "title": "一次函数的图象"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResponse"
+                }
+              }
+            },
+            "description": "邻域子图（中心知识点在 nodes 首位）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "知识点不存在"
+                }
+              }
+            },
+            "description": "知识点不存在：无法以它为中心取邻域"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "邻域子图",
         "tags": [
           "知识图谱"
         ]

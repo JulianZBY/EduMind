@@ -209,6 +209,74 @@ export type ExamGenerateResponse = {
 };
 
 /**
+ * GraphEdge
+ *
+ * 图谱里的一条关系（画布连线）。
+ *
+ * `from` / `to` 是既有消费者已在用的键名，不改语义。
+ */
+export type GraphEdge = {
+    /**
+     * From
+     */
+    from: string;
+    /**
+     * Relation Type
+     */
+    relation_type: string;
+    /**
+     * To
+     */
+    to: string;
+};
+
+/**
+ * GraphNode
+ *
+ * 图谱里的一个知识点（画布节点）。
+ *
+ * `subject` / `chapter` 随节点一起返回，前端据此列出过滤选项（学科 / 章节）。
+ */
+export type GraphNode = {
+    /**
+     * Chapter
+     */
+    chapter?: string | null;
+    /**
+     * Difficulty
+     */
+    difficulty?: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Subject
+     */
+    subject?: string | null;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
+ * GraphResponse
+ *
+ * 知识图谱数据：知识点与关系。
+ */
+export type GraphResponse = {
+    /**
+     * Edges
+     */
+    edges: Array<GraphEdge>;
+    /**
+     * Nodes
+     */
+    nodes: Array<GraphNode>;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -260,6 +328,62 @@ export type KnowledgePointCount = {
      * Title
      */
     title: string;
+};
+
+/**
+ * KnowledgePointDetail
+ *
+ * 知识点详情：内容 / 难度 / 来源引用（节点详情抽屉的数据）。
+ */
+export type KnowledgePointDetail = {
+    /**
+     * Chapter
+     */
+    chapter?: string | null;
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Difficulty
+     */
+    difficulty?: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Importance
+     */
+    importance?: string | null;
+    /**
+     * Sources
+     */
+    sources: Array<KnowledgeSourceRef>;
+    /**
+     * Subject
+     */
+    subject?: string | null;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
+ * KnowledgeSourceRef
+ *
+ * 来源引用：这个知识点的正文来自哪份资料（资料已删除时 `filename` 为空）。
+ */
+export type KnowledgeSourceRef = {
+    /**
+     * Doc Id
+     */
+    doc_id: string;
+    /**
+     * Filename
+     */
+    filename?: string | null;
 };
 
 /**
@@ -1173,23 +1297,125 @@ export type GenerateInteractiveApiV1InteractiveGeneratePostResponse = GenerateIn
 export type GetGraphApiV1KnowledgeGraphGetData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Subject
+         *
+         * 按学科过滤；不带即不限学科
+         */
+        subject?: string | null;
+        /**
+         * Chapter
+         *
+         * 按章节过滤；不带即不限章节
+         */
+        chapter?: string | null;
+    };
     url: '/api/v1/knowledge/graph';
 };
 
 export type GetGraphApiV1KnowledgeGraphGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
     /**
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
 };
 
+export type GetGraphApiV1KnowledgeGraphGetError = GetGraphApiV1KnowledgeGraphGetErrors[keyof GetGraphApiV1KnowledgeGraphGetErrors];
+
 export type GetGraphApiV1KnowledgeGraphGetResponses = {
     /**
-     * 知识点与关系
+     * 知识点与关系（带上过滤参数时已收缩）
      */
-    200: unknown;
+    200: GraphResponse;
 };
+
+export type GetGraphApiV1KnowledgeGraphGetResponse = GetGraphApiV1KnowledgeGraphGetResponses[keyof GetGraphApiV1KnowledgeGraphGetResponses];
+
+export type GetKnowledgePointApiV1KnowledgeNodesNodeIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Node Id
+         */
+        node_id: string;
+    };
+    query?: never;
+    url: '/api/v1/knowledge/nodes/{node_id}';
+};
+
+export type GetKnowledgePointApiV1KnowledgeNodesNodeIdGetErrors = {
+    /**
+     * 知识点不存在：该 id 在知识图谱里没有对应节点（可能已被删除或替换）
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type GetKnowledgePointApiV1KnowledgeNodesNodeIdGetError = GetKnowledgePointApiV1KnowledgeNodesNodeIdGetErrors[keyof GetKnowledgePointApiV1KnowledgeNodesNodeIdGetErrors];
+
+export type GetKnowledgePointApiV1KnowledgeNodesNodeIdGetResponses = {
+    /**
+     * 知识点详情
+     */
+    200: KnowledgePointDetail;
+};
+
+export type GetKnowledgePointApiV1KnowledgeNodesNodeIdGetResponse = GetKnowledgePointApiV1KnowledgeNodesNodeIdGetResponses[keyof GetKnowledgePointApiV1KnowledgeNodesNodeIdGetResponses];
+
+export type GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetData = {
+    body?: never;
+    path: {
+        /**
+         * Node Id
+         */
+        node_id: string;
+    };
+    query?: {
+        /**
+         * Max Depth
+         *
+         * 向外几跳（1–3），默认 2
+         */
+        max_depth?: number;
+    };
+    url: '/api/v1/knowledge/nodes/{node_id}/neighborhood';
+};
+
+export type GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetErrors = {
+    /**
+     * 知识点不存在：无法以它为中心取邻域
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponses = {
+    /**
+     * 邻域子图（中心知识点在 nodes 首位）
+     */
+    200: GraphResponse;
+};
+
+export type GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponse = GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponses[keyof GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponses];
 
 export type RetrieveApiV1KnowledgeRetrievePostData = {
     body: RetrieveRequest;
