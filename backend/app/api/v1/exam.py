@@ -4,8 +4,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, ValidationError
+from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
     VALIDATION_ERROR,
@@ -13,7 +14,10 @@ from app.api.openapi_examples import (
     internal_error,
     json_response,
 )
+from app.core import artifacts as artifact_service
 from app.core.intent import TeachingIntent
+from app.db import get_session
+from app.db.artifacts import ArtifactStore
 from app.generate.exam import (
     generate_exam,
     query_question,
@@ -41,12 +45,17 @@ class ExamGenerateRequest(BaseModel):
     # 生成物区透传上次备课意图；空意图时仅凭主题生成
     intent: dict = {}
     n: int = 5
+    # 可选：所属备课会话；带上后本张试卷产出**新版本**并入库（不传则保持既有语义）
+    session_id: str | None = None
 
 
 class ExamGenerateResponse(BaseModel):
     questions: list[dict]
     filename: str
     bank_saved: int
+    version_id: str | None = None  # 本次产出的版本 id；不带会话标识时为空
+    version: int | None = None  # 试卷在会话内的版本号：从 1 单调递增
+    session_id: str | None = None  # 版本所属备课会话
 
 
 _EXAM_QUESTION = {
@@ -73,19 +82,26 @@ def _intent_from_topic(intent: dict) -> TeachingIntent:
         "按备课意图出题并同侧入库：生成 `n` 道题（默认 5）→ 题目写入题库（来源=`自编`）"
         "→ 按考查知识点关联知识图谱节点 → 渲染 Word 试卷。\n\n"
         "返回的 `questions` 供生成物区直接预览，`bank_saved` 为实际入题库的题目数，"
-        "`filename` 可用于 `GET /api/v1/files/{filename}` 下载。\n\n"
+        "`filename` 可用于 `GET /api/v1/files/{filename}` 下载，"
+        "也可以按版本下载（见 `download_url` 体系：`GET /api/v1/artifacts/{version_id}/download`）。\n\n"
         "`intent` 可直接透传上次备课的意图对象；结构不完整时退化为仅凭 `topic` 出题，"
-        "不会因为字段缺失卡住一键生成。"
+        "不会因为字段缺失卡住一键生成。\n\n"
+        "**带上 `session_id` 时本张试卷落一条新版本**（版本号在会话内单调递增，"
+        "旧的试卷版本保持可回看、可下载）；会话不存在返回 `404`。"
     ),
     responses={
         200: json_response(
             "试卷已生成，题目已入题库",
             {
                 "questions": [_EXAM_QUESTION],
-                "filename": "exam-8f7e6d5c.docx",
+                "filename": "exam_8f7e6d5c.docx",
                 "bank_saved": 5,
+                "version_id": "7e6d5c4b-3a2f-4190-8b7c-6d5e4f3a2b1c",
+                "version": 1,
+                "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
             },
         ),
+        404: error_response("备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
         422: VALIDATION_ERROR,
         500: internal_error(),
         502: error_response(
@@ -94,7 +110,18 @@ def _intent_from_topic(intent: dict) -> TeachingIntent:
         ),
     },
 )
-async def generate_exam_paper(req: ExamGenerateRequest):
+async def generate_exam_paper(
+    req: ExamGenerateRequest, db: Annotated[Session, Depends(get_session)]
+):
+    """按意图出题并入库落盘；带会话标识时同时落一条试卷版本记录。"""
+    store = ArtifactStore(db)
+    if req.session_id is not None:
+        # 先校验会话：不给不存在的会话留无主版本记录，也不白跑一次生成
+        try:
+            artifact_service.require_session(store, req.session_id)
+        except LookupError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
+
     try:
         intent = TeachingIntent.model_validate(req.intent)
     except ValidationError:
@@ -108,8 +135,25 @@ async def generate_exam_paper(req: ExamGenerateRequest):
 
     bank_saved = save_questions_to_bank(questions)
     path = render_exam(questions)
+    filename = Path(path).name
+    if req.session_id is None:
+        return ExamGenerateResponse(questions=questions, filename=filename, bank_saved=bank_saved)
+
+    row = artifact_service.record_generation(
+        store,
+        session_id=req.session_id,
+        artifact_type=artifact_service.EXAM,
+        path=path,
+        content={"questions": questions},
+        title=intent.topic,
+    )
     return ExamGenerateResponse(
-        questions=questions, filename=Path(path).name, bank_saved=bank_saved
+        questions=questions,
+        filename=filename,
+        bank_saved=bank_saved,
+        version_id=row.id,
+        version=row.version,
+        session_id=row.session_id,
     )
 
 

@@ -8,7 +8,16 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -155,3 +164,39 @@ class Conflict(Base):
     existing_knowledge: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     diff_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="待审")  # 待审/已接受/已拒绝/并存
+
+
+class ArtifactVersion(Base):
+    """生成物版本（CONTEXT.md「版本」）：某一生成物的一次产出记录，一条记录对应一个落盘文件。
+
+    - 同一生成物 + 同一会话内每次产出都形成新版本，版本号从 1 单调递增；
+    - `parent_id` 是「由哪一版衍生而来」（CONTEXT.md「基线」）：修改记传入的基线版本，
+      同一生成物的再次生成记上一次产出——全部版本连同该关系构成版本树；
+    - 「当前版本」= 版本号最高的那一版，只是列表与预览默认打开的一版，没有特殊权威。
+    """
+
+    __tablename__ = "artifact_versions"
+    # 同一会话内「同一生成物 + 同一版本号」只允许一行：版本号单调递增的兜底约束
+    __table_args__ = (
+        UniqueConstraint("session_id", "artifact_type", "version", name="uq_artifact_version"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    session_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("prep_sessions.id"), index=True
+    )  # 所属备课会话
+    artifact_type: Mapped[str] = mapped_column(
+        String(20), index=True
+    )  # 生成物类别：课件/教案/提纲/试卷/互动内容
+    version: Mapped[int] = mapped_column(Integer)  # 同一会话同一生成物的版本号：从 1 单调递增
+    origin: Mapped[str] = mapped_column(String(20), default="生成")  # 产出方式：生成 / 修改
+    parent_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("artifact_versions.id"), nullable=True
+    )  # 基线版本（版本树的父节点）；首次生成为空
+    filename: Mapped[str] = mapped_column(String(255))  # 落盘文件名：一个版本对应一个文件
+    title: Mapped[str] = mapped_column(String(200), default="")  # 生成物标题：教师认这一版是什么
+    # 版本内容快照（课件 slides / 教案结构 / 提纲正文 / 题目 / 互动内容 HTML），
+    # 供版本详情直接回看；落盘文件仍是下载与预览的字节源
+    content: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

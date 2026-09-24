@@ -1,11 +1,14 @@
 """备课会话服务（core 层）：会话生命周期 + 一轮对话的落地。
 
 事实源在服务端（ADR-0002）：会话、消息与累积意图全部落库，前端不再持有备课历史。
-业务判断住本层与 `conversation`（状态机）；全部 ORM 读写委托 `db/sessions.py`。
+业务判断住本层与 `conversation`（状态机）；全部 ORM 读写委托 `db/sessions.py`（会话）与
+`db/artifacts.py`（生成物版本）。
 """
 
+from app.core.artifacts import attach_version_refs, register_generated_artifacts
 from app.core.conversation import TurnOutcome, accumulate_intent, run_turn
 from app.core.intent import TeachingIntent, intent_from_payload
+from app.db.artifacts import ArtifactStore
 from app.db.models import PrepSession, SessionMessage
 from app.db.sessions import ConversationStore
 
@@ -65,6 +68,8 @@ def delete_session(store: ConversationStore, session_id: str) -> str:
     prep = store.get(session_id)
     if prep is None:
         raise LookupError(f"会话不存在: {session_id}")
+    # 生成物版本随会话一起清掉，不留无主版本行（与消息同一口径）；落盘文件不删（见 docs/api/artifacts.md）
+    ArtifactStore(store.db).delete_for_session(session_id)
     store.delete(prep)
     return session_id
 
@@ -102,6 +107,16 @@ async def handle_turn(
         # 会话上的参考资料为准；请求里的显式标识仅在不带会话时生效
         reference_doc_ids=reference_doc_ids or prep.reference_doc_ids,
     )
+
+    # 生成即入库（ADR-0002）：本轮产出逐件落版本记录，并把版本标识回填进产物
+    if outcome.artifacts:
+        recorded = register_generated_artifacts(
+            ArtifactStore(store.db),
+            session_id=prep.id,
+            artifacts=outcome.artifacts,
+            topic=outcome.intent.topic,
+        )
+        attach_version_refs(outcome.artifacts, recorded)
 
     store.append_message(
         prep,

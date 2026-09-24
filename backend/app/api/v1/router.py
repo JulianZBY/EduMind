@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.openapi_examples import internal_error, json_response
+from app.api.v1.artifacts import router as artifacts_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.conflicts import router as conflicts_router
 from app.api.v1.documents import router as documents_router
@@ -14,6 +15,7 @@ from app.api.v1.revise import router as revise_router
 from app.api.v1.sessions import router as sessions_router
 
 router = APIRouter()
+router.include_router(artifacts_router)
 router.include_router(chat_router)
 router.include_router(conflicts_router)
 router.include_router(documents_router)

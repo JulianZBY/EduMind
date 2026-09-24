@@ -6,7 +6,7 @@ from pathlib import Path
 
 from app.core.intent import TeachingIntent, wants_interactive_content
 from app.generate.creative import generate_html_creative, save_html
-from app.generate.outline import generate_outline
+from app.generate.outline import generate_outline, render_outline
 from app.generate.ppt import generate_ppt_structure, render_ppt
 from app.generate.word import generate_word_structure, render_word
 from app.knowledge.retrieval.factory import get_retriever
@@ -54,9 +54,21 @@ async def orchestrate(intent: TeachingIntent, reference_doc_ids: list[str] | Non
     else:
         word = word_data
     word_path = render_word(word, references=references)
+    # 提纲与课件 / 教案同形：正文 + 落盘文件（版本记录与落盘文件一一对应）
+    outline_text: str
     if isinstance(outline, BaseException):
         logger.warning("提纲生成失败: %s", outline)
-        outline = ""
+        outline_text = ""
+    else:
+        outline_text = str(outline or "")
+    outline_artifact: dict | None = None
+    if outline_text.strip():
+        outline_path = render_outline(outline_text)
+        outline_artifact = {
+            "text": outline_text,
+            "path": outline_path,
+            "filename": Path(outline_path).name,
+        }
 
     # 互动内容：单个生成失败不拖垮整体，降级为不附带；产物统一随机命名落盘
     interactive: dict | None = None
@@ -78,6 +90,6 @@ async def orchestrate(intent: TeachingIntent, reference_doc_ids: list[str] | Non
         "ppt": {"slides": slides, "path": ppt_path},
         # data：教案完整结构随产物下发，供预览面板发起教案修改（与 slides 同理）
         "word": {"data": word, "path": word_path},
-        "outline": outline,
+        "outline": outline_artifact,
         "interactive": interactive,
     }
