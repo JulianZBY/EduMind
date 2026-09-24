@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 前端基座
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 上传后解析状态自动跟进到终态（处理中 → 已完成 / 失败），无需手动刷新
 - [x] 参考资料标记切换即时生效
@@ -248,3 +248,22 @@ PATCH false -> {..."is_reference":false}
 7. **文档未同步**：`docs/**` 本票冻结，所以 `docs/architecture.md` 里「知识库…（票 09 补详情与状态跟进）」
    与 `docs/api/` 的端点清单还没有改成「已交付」；本票新增的 2 个端点已进 OpenAPI 快照（`frontend/openapi/openapi.json`），
    收敛时一并更新文档。
+
+## 协调者复核
+
+**结论：通过（含一次生成产物冲突处置）。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 上传后解析状态自动跟进到终态 | 新端点 `GET /documents/{document_id}` + `PATCH /documents/{document_id}/reference` 带 `response_model` / 示例 / 「知识库」tag；`tests/test_documents_workbench.py` 8 例 HTTP 缝测试 | 通过 |
+| 参考资料标记即时切换 | 前端乐观改写 + 失败回滚；HTTP 缝测试覆盖切换与 404 | 通过 |
+| 空状态/错误态密度与风格清单 | `npm run lint`（65 文件零违规）+ 交付记录自检清单 | 通过 |
+| 服务端状态缓存、重复进入不重拉 | 列表/详情走 TanStack Query，状态轮询到终态自动停 | 通过 |
+| 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **193 passed**（真基线 `142b59a` 185 + 8）、`ruff check .` 干净；工作树干净 | 通过 |
+
+**合并冲突处置（协调者）**：本票与并行票 12 都全量重生成过 `frontend/openapi/openapi.json` 与 `src/api/generated/*`，合并时 3 个文件冲突。按「**派生文件任取一侧 + 在合并后的后端上重新生成**」处置：合并 `3c9d5fc`，随后在 main 上 `npm install` + `npm run gen:api` 重生成（`d315e69`），快照同时含 documents 与 questions 两组端点，`npm run build` / `npm run lint` 通过。
+> 附带修掉一处环境问题：main 的 `frontend/node_modules` 是票 04 之前的旧依赖，导致 `gen:api` 与 `build` 报 `openapi-ts` 不存在、`@tailwindcss/vite` 找不到、`src/store/ui.ts` 两个 TS7006 —— 全部是旧依赖所致，`npm install` 后消失。
+
+- **合并点**：`3c9d5fc`（`merge(09)`）+ `d315e69`（派生物重生成）。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向**：① **stub 模式图片/视频必然失败（缺 vision stub）→ 已建票 15 并派 worker**（违反 ADR-0003「必有 stub」，且卡票 14 的多模态冒烟）；② 列表无分页、详情只回前 200 个分块 → 记入票 14 收口清单。

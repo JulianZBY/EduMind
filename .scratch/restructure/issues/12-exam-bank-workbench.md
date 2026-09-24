@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 前端基座
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 题库查询接口支持按考查知识点筛选，经 HTTP 缝测试
 - [x] 生成试卷入库的题目即时出现在列表
@@ -125,3 +125,22 @@
 5. **`openapi.json` 是全量重新生成的**：与并行票 09/10 的快照必然冲突，合并后请重跑 `npm run gen:api` 取并集，不要手工拼 schema。
 6. **题目只读**：题库区只做了查询；题目编辑 / 删除 / 按题型与来源筛选都不在本票范围（`questions` 表也没有 `updated_at`）。
 7. **列表页容量 20、接口上限 100**：一屏工作台密度的取舍，接口层 `limit>100` 直接 422（已有测试固定该行为）。
+
+## 协调者复核
+
+**结论：通过。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 题库查询按考查知识点筛选 | 新端点 `GET /questions`（筛选 + 分页 + `response_model`），`tests/test_question_bank_api.py` 8 例 HTTP 缝测试 | 通过 |
+| 题目详情 | `GET /questions/{question_id}`（含 404 语义、`response_model`） | 通过 |
+| 试卷入库题目即时可查 | 真机 uvicorn（临时库）实测：生成试卷 `bank_saved=3` → 立刻 `GET` 列表 `total=3` | 通过 |
+| 补齐「题库」OpenAPI 分组（票 01 遗留） | 两处新端点 `tags=["题库"]`，`test_openapi_contract.py` 对已声明分组的断言绿 | 通过 |
+| 前端列表与详情密度/风格 | `npm run lint`（59 文件零违规）+ `build` + `check:routes` | 通过 |
+| 测试与静态检查 | 协调者亲跑 `uv run pytest -q` → **193 passed**（真基线 185 + 8）、`ruff check .` 干净 | 通过 |
+
+**发现并处置的状态不一致**：pi-lens 收尾格式化又留下 3 个文件未提交（纯折行），协调者逐处核过后代为提交为 `style(12)`，使「合并的状态 = 复核过的状态」。这是本轮第 **3** 个同类实例。
+
+- **合并点**：`b61468e`（`merge(12)`）；合并后 main 复跑 → 226 passed + ruff 干净。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向**：① `questions` 表缺 `analysis` 字段（详情不展示解析），补列需同时改 `db/engine.py` 的幂等补列 → 记入票 14 收口清单；② 前端 `openapi.json` 与并行票合并后需重跑 `gen:api` → 已在 main 上重生成（`d315e69`）；③ 真浏览器点选 → 票 14。
