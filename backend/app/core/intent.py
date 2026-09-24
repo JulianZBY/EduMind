@@ -1,12 +1,17 @@
 """教学意图分析：从自然语言提取结构化教学要素。"""
 
 import json
+from functools import partial
 
 from pydantic import BaseModel, ValidationError
 
 from app.core.llm.base import ChatMessage
-from app.core.llm.factory import get_llm
 from app.core.llm.parsing import parse_json
+from app.core.llm.task_routing import get_llm_for
+
+# 「意图分析」任务：模型档位在设置页按任务选，未设置回落全局默认（CONTEXT.md「任务级模型」）。
+# 入口仍叫 get_llm：既有测试用它替换对话能力（monkeypatch.setattr(本模块, "get_llm", ...)）。
+get_llm = partial(get_llm_for, "intent")
 
 
 class TeachingIntent(BaseModel):
@@ -80,10 +85,11 @@ MERGE_TEXT_SEPARATOR = "教师本轮新增表述：\n"
 
 def intent_from_payload(payload: dict) -> TeachingIntent:
     """产物区透传的意图结构 → TeachingIntent；结构不完整时退化为仅主题（一键生成不被前端字段变更卡死）。"""
+    topic = payload.get("topic") or ""
     try:
         return TeachingIntent.model_validate(payload)
     except ValidationError:
-        return TeachingIntent(topic=str(payload.get("topic") or ""))
+        return TeachingIntent(topic=str(topic))
 
 
 async def analyze_intent(text: str) -> TeachingIntent:

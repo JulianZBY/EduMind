@@ -1,10 +1,15 @@
 """课件/教案迭代优化：理解修改意见，调整完整结构再渲染。"""
 
 import json
+from functools import partial
 
 from app.core.llm.base import ChatMessage
-from app.core.llm.factory import get_llm
 from app.core.llm.parsing import parse_json
+from app.core.llm.task_routing import get_llm_for
+
+# 「生成」任务：模型档位在设置页按任务选，未设置回落全局默认（CONTEXT.md「任务级模型」）。
+# 入口仍叫 get_llm：既有测试用它替换对话能力（monkeypatch.setattr(本模块, "get_llm", ...)）。
+get_llm = partial(get_llm_for, "generate")
 
 _REVISE_PPT_PROMPT = """你是课件优化助手。根据教师的修改意见，调整已有的 PPT 结构。
 

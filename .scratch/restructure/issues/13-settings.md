@@ -6,9 +6,189 @@
 
 **Status:** ready-for-agent
 
-- [ ] 目录选择 + 填 Key 后无重启即生效（可当场验证 stub → 真实切换）
-- [ ] 任务级模型选择与回落全局默认的行为可见
-- [ ] 自定义 OpenAI 兼容接入（base_url + 模型 ID）可用
-- [ ] Key 全程掩码，任何响应与表单都不回显明文
-- [ ] 无效配置（未知供应商 / 模型）返回明确错误码与信息
-- [ ] 能力切换（语音转写 / PDF 策略 / 搜索）即时生效
+- [x] 目录选择 + 填 Key 后无重启即生效（可当场验证 stub → 真实切换）
+      （`PUT /api/v1/settings` 写穿 = 校验 → 落库 → 同步进程内配置 → `invalidate_capabilities()`；
+      真进程实测：stub → deepseek 后 `GET /settings` 立刻 ready=true / 来源=设置页；
+      检索策略写成 vector 后紧接着 `POST /knowledge/retrieve` 返回 `strategy: vector`）
+- [x] 任务级模型选择与回落全局默认的行为可见
+      （`GET/PUT /settings` 的 `tasks[]` 逐任务给「实际用的模型 + 来源（任务级 / 全局默认）」；
+      `test_task_level_models_reach_each_call_site` 断言三条链各自带上自己的档位）
+- [x] 自定义 OpenAI 兼容接入（base_url + 模型 ID）可用
+      （`llm_provider=custom` + `LLM_BUILDERS` 新增 custom 构造器；模型 ID 不受目录限制）
+- [x] Key 全程掩码，任何响应与表单都不回显明文
+      （读接口只回 `masked`（尾部若干位）+ `configured`；写入响应同样不含明文；
+      `test_key_is_masked_in_every_response` 对 PUT/GET 的原始响应体做 `not in` 断言）
+- [x] 无效配置（未知供应商 / 模型）返回明确错误码与信息
+      （400 + `detail.code`：unknown_provider / unknown_model / unknown_capability_impl /
+      invalid_base_url，`message` 直接给教师看；写入无效时库内一行不动）
+- [x] 能力切换（语音转写 / PDF 策略 / 搜索）即时生效
+      （另有向量化 / 检索 / 分块同口径可切；可选实现直接来自各能力注册表）
+
+## 交付记录
+
+**一句话**：设置页现在能选供应商目录、粘贴 Key、按任务选模型、切六项能力实现——写入走「校验 → 落库
+`app_settings` → 同步进程内配置 → 清能力工厂缓存」这一条写穿链路，**不需要重启**；回读只给掩码；
+未在设置页改过的项一律回落 `.env` 引导默认。
+
+**分支 / commit**：`JulianZBY/issue-13-settings`。代码与测试所在的提交对象 = `be9b145`
+（用 `git show be9b145 --stat` 核对，24 个文件）；其后一个同信息提交只补本交付记录与验收勾选。
+基线 `bb61726`。未 push、未开 PR、未 merge/rebase。
+
+### 新增文件
+
+| 文件 | 职责 |
+| --- | --- |
+| `backend/app/core/catalog.py` | 供应商目录 + 可选能力实现 + 任务清单 + 目录口径校验（字段与取值口径的唯一出处） |
+| `backend/app/core/settings_store.py` | 设置库：读 / 写 / 生效同步；**统一的缓存失效入口** `invalidate_capabilities()` |
+| `backend/app/core/llm/task_routing.py` | 任务级模型：`model_for()`（实际用的模型 + 来源）、`get_llm_for(task)` |
+| `backend/app/api/v1/settings.py` | 三个端点（读取 / 写入 / 可选目录）+ 启动同步钩子 + OpenAPI 注解 |
+| `backend/tests/test_settings_api.py` | 24 个用例（HTTP 缝 + 能力工厂缝） |
+| `frontend/src/areas/settings/OptionPicker.tsx` | 设置页的下拉选择器（Radix DropdownMenu 皮肤，键盘 / Esc 由原语承担） |
+
+### 改动文件（要点）
+
+- `app/db/models.py`：**末尾追加** `AppSetting`（key / value / updated_at，字段带中文语义注释）
+- `app/config.py`：追加 `task_model_intent` / `task_model_generate` / `task_model_conflict`（留空 = 回落全局默认）
+- `app/api/v1/router.py`：**只追加**一行 import + 一行 `include_router`
+- `app/core/llm/factory.py`：新增 `custom` 构造器（自定义 OpenAI 兼容服务：base_url + 模型 ID + Key）
+- 8 个模块按任务取档位（10 处 `get_llm()` 调用共享本模块的档位绑定；见下方「越界披露」第 2 条）
+- `app/main.py`：`TAGS_METADATA` 追加「设置」分组（见下方「越界披露」第 1 条）
+- `frontend/src/areas/settings/{queries.ts,SettingsArea.tsx}`：读写接线 + 四张卡（供应商目录 / 任务级模型 /
+  能力实现 / 自定义 OpenAI 兼容服务）
+- `frontend/openapi/openapi.json`、`frontend/src/api/generated/*`：`npm run gen:api` 重新生成
+- `backend/.env.example`：末尾追加 TASK_MODEL_* 与「设置库优先于本文件」的说明
+
+### 验收证据
+
+#### 证据 1：目录选择 + 填 Key 后无重启即生效（真进程实测）
+
+用例：`test_provider_switch_with_key_becomes_ready_without_restart`（读回来的供应商 / Key 掩码 / ready）、
+`test_capability_switch_takes_effect_without_restart`（写成 `vector` 后既有检索端点当场返回 `strategy=vector`）、
+`test_capability_switch_changes_the_factory_immediately`（PDF / 语音转写 / 搜索三档的工厂当场换实现类）。
+
+实测（`uvicorn` 真进程 + 临时库 `data/tmp-settings-demo.db`，验证完已删）：
+
+```text
+起点供应商 = stub / ready=True / 来源=引导默认
+写后供应商 = deepseek / label=DeepSeek / ready=True / 来源=设置页
+写后 Key 掩码 = ••••1234
+响应里是否含明文 = False
+全局默认模型(生效) = deepseek-chat
+检索策略：起点=vector_graph -> 写后端点返回 strategy=vector
+无效配置 -> HTTP 400: {"detail":{"code":"unknown_capability_impl","field":"asr_provider",
+  "message":"未实现的语音转写：whisper（可选：stub、paraformer）"}}
+```
+
+#### 证据 2：重启后仍是设置库说了算（配置库 > `.env` 引导默认）
+
+用例：`test_stored_settings_survive_a_restart`（进程内配置先回到引导默认，再由启动钩子重放设置库）。
+实测：另起一个 `uvicorn` 进程、连同一个库：
+
+```text
+重启后供应商 = deepseek / ready=True / 来源=设置页
+重启后 Key 掩码 = ••••1234
+重启后检索策略 = vector
+重启后任务级模型: 意图分析=deepseek-chat[全局默认] / 生成=deepseek-reasoner[任务级] / 冲突比对=deepseek-chat[全局默认]
+```
+
+#### 证据 3：任务级模型与回落全局默认的行为可见
+
+- 页面上可见：`tasks[]` 逐任务给 `selected` / `model`（该任务实际用的）/ `source`（任务级 / 全局默认）——
+  用例 `test_task_models_fall_back_to_the_global_default`。
+- 真的进了调用：用例 `test_task_level_models_reach_each_call_site` 把对话能力替身挂进能力注册表，
+  依次跑「意图分析 → 生成 → 冲突比对」三条链，断言每次对话带上的模型依次是
+  `["intent-model", "generate-model", "conflict-model"]`；清空任务档位后变成 `[None]`（由全局默认承担）。
+
+#### 证据 4：Key 全程掩码
+
+用例 `test_key_is_masked_in_every_response`：对 PUT 与 GET 的**原始响应体**断言不含明文
+（`PLAINTEXT not in response.text`），且掩码为 `••••9a41`；库内保存的是原文（要拿去调用）。
+`test_short_key_is_masked_completely`：短 Key 连尾部都不给（`••••`）。
+`.env.example` 与 OpenAPI 示例里的 Key 一律是占位文案或掩码，截图 / 文档不会带出真 Key。
+
+#### 证据 5：无效配置返回明确错误码与信息
+
+用例 `test_invalid_config_returns_explicit_error_code`（参数化 6 组）
++ `test_invalid_write_leaves_earlier_settings_untouched`：
+
+| 输入 | 400 的 `code` | `field` |
+| --- | --- | --- |
+| `llm_provider=openai-x` | `unknown_provider` | `llm_provider` |
+| `llm_provider=dashscope, llm_model=gpt-4o` | `unknown_model` | `llm_model` |
+| `task_model_generate=没有这个模型` | `unknown_model` | `task_model_generate` |
+| `asr_provider=whisper` | `unknown_capability_impl` | `asr_provider` |
+| `llm_base_url=example.com/v1` | `invalid_base_url` | `llm_base_url` |
+| `embedding_base_url=ftp://example.com/v1` | `invalid_base_url` | `embedding_base_url` |
+
+每组都断言「库内一行不动 / 既有设置不变」。`message` 直接给教师看，并指路「目录之外的模型请用
+自定义 OpenAI 兼容服务」。
+
+#### 证据 6：前端过风格文档第 7 节清单（自检结论）
+
+单页表单、编辑密度（`max-w-xl` 单列窄容器，大留白，一次只做一件事）；容器一律 `Card`（`border-2
+border-black` + `rounded-none`）；只有黑 / 白 / `#ff3366`（强调色上只放黑字，标记用直角方块不写文字）；
+无阴影 / 无渐变 / 无灰底 / 无半透明底；悬停黑白反色（输入框按例外走边线加粗）、聚焦 `outline` 可见、
+禁用降级由组件库承担；过渡只 `transition-colors duration-150`；加载态 = 直角方块 `animate-spin` + 文案；
+无 emoji；弹层用 Radix（键盘 / Esc 可关）。禁用 class 扫描：58 个文件、10 条规则零违规。
+
+### 跑过的命令与结果
+
+```text
+cd backend && uv run pytest -q        → 244 passed（既有 220 + 本票 24）
+cd backend && uv run ruff check .     → All checks passed!
+cd frontend && npm run lint           → check:classes 58 文件零违规 + oxlint 无告警
+cd frontend && npm run build          → 禁用 class 扫描 + tsc -b + vite build 通过
+cd frontend && npm run check:routes   → 七条路由可达（含 /settings 渲染出「供应商目录」）
+cd frontend && npm run gen:api        → OpenAPI 快照 + TS 类型重新生成
+```
+
+### 越界披露（三处）
+
+1. **`backend/app/main.py`：`TAGS_METADATA` 追加「设置」分组（7 行）**。已向协调者报备并放行；只有
+   `main.py` 能声明 tag 描述，不追加则 `test_openapi_contract.py` 的「用了未声明的 tag」与「声明的 tag
+   空置」两组断言必红。
+2. **任务级模型的调用点**：`app/core/intent.py`、`app/generate/{outline,word,ppt,exam,revise,creative}.py`、
+   `app/knowledge/conflict.py`。协调者给的形态是「一行 `get_llm()` → `get_llm_for("generate")`」；
+   实际形态是**保留模块内的 `get_llm` 名字、把它绑成任务档位**：
+   `get_llm = partial(get_llm_for, "generate")` + 两行注释（每文件 2 行，`revise.py` 两个调用点共享一个绑定）。
+   理由：既有 8 个测试文件里有 22 处 `monkeypatch.setattr(模块, "get_llm", ...)` 接缝（票 02/03/05/06 留的），
+   改名会把它们一起拖进来改——改动面反而更大，且会与并行票的测试文件相撞。行为与「一行替换」完全一致：
+   这些模块的 `get_llm()` 现在按任务取档位，未设置回落全局默认。
+3. **`backend/.env.example`：末尾追加任务级模型三行 + 设置库优先级说明**（票 03 有同样先例；新增的
+   `TASK_MODEL_*` 需要一处可发现的引导默认说明）。
+
+另外两处不属越界但要说明：
+
+- `app/core/intent.py` 的 `intent_from_payload` 把兜底句式从 `str(payload.get("topic") or "")` 改成
+  先把 `topic` 取出来再 `str(topic)`：pi-lens 的 `ast-grep:no-boolean-in-except` 规则会把 `except` 子句
+  **体**里的 `or` 当违规命中（`stopBy: end`，误报），行为完全等价。
+- `frontend/openapi/openapi.json` 重刷带出 2000+ 行变化：该快照此前已过期（缺票 03 的
+  `/knowledge/retrieve` 与票 05 的 `/sessions` 三个端点），`npm run gen:api` 顺手补回；不重刷则本票的新
+  类型无从生成。
+
+### 两轴自审
+
+- **Standards**：分层——`api/v1/settings.py` 只做装配与 OpenAPI 注解，目录口径与校验住
+  `core/catalog.py`，写穿与缓存失效住 `core/settings_store.py`，新表只追加在 `db/models.py` 末尾；
+  能力选择仍走注册表（可选实现 = 注册表键，注册表加一行设置页就多一个选项）；OpenAPI 纪律——3 个新端点
+  全带 summary / 描述 / 请求与响应示例 / 错误码 / 「设置」tag，且**都带 `response_model`**
+  （另加守卫用例 `test_settings_operations_all_declare_a_response_model` 防回退，正是票 04 指出的坑）；
+  面向教师的文案用 CONTEXT.md 第 8 节术语（供应商目录 / 自定义 OpenAI 兼容服务 / 任务级模型 / 引导默认 /
+  掩码 / stub 模式）；测试只断 HTTP 响应、库内数据变迁与工厂产物，不 mock 被测对象。
+- **Spec**：8 项 What to build 与 6 条验收逐条落地（见上）；「写穿 = 写库 + 清缓存」的**统一失效入口**
+  `invalidate_capabilities()` 是本票对票 03 遗留的收口（调用点不再各自 `cache_clear`）；
+  既有端点路径与既有字段语义未动（`/settings` 是全新路径）。
+
+### 遗留 / 注意事项
+
+1. 设置写穿是「最后一次写入为准」：单用户本地应用不做并发加锁，两个浏览器同时保存同一项会互相覆盖。
+2. Key 以原文存在本地 SQLite（要拿去调用云端），只在回读时掩码；本地库的访问控制不在本票范围（单用户、无登录）。
+3. 模型档位只在「对话供应商目录 + 自定义服务」口径下校验：向量化模型视为自由文本（`EMBEDDING_PROVIDER=openai`
+   本就是任意模型 ID），所以 `unknown_model` 不会拦向量化模型名。
+4. 切换向量化口径后，库里的向量与新口径不一致，需要重建向量库再检索（页面上有一行提示，自动重建不在本票范围）。
+5. `frontend/src/components/ui/index.ts` 未改：`OptionPicker` 是本区文件、按区目录规范直接 import，
+   避免与并行票争同一个导出文件。
+6. stub 模式下没有模型档位（`model` 是空字符串），页面按「尚未确定 / 未设置」显示——不是缺数据，
+   是 stub 本就不区分模型。
+7. 设置接口没有「测试连接」按钮：探测需要真发一次请求，本票只做离线的就绪探针（缺 Key 时读接口直接
+   说明原因）。

@@ -5,20 +5,25 @@
 """
 
 import json
+from functools import partial
 from typing import TYPE_CHECKING
 
 from docx import Document as DocxDocument
 from sqlalchemy import func, select
 
 from app.core.llm.base import ChatMessage
-from app.core.llm.factory import get_llm
 from app.core.llm.parsing import parse_json
+from app.core.llm.task_routing import get_llm_for
 from app.generate import unique_output_path
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.db.models import KnowledgeNode
+
+# 「生成」任务：模型档位在设置页按任务选，未设置回落全局默认（CONTEXT.md「任务级模型」）。
+# 入口仍叫 get_llm：既有测试用它替换对话能力（monkeypatch.setattr(本模块, "get_llm", ...)）。
+get_llm = partial(get_llm_for, "generate")
 
 _EXAM_PROMPT = """你是出题专家。根据教学意图和知识内容，生成试卷。
 

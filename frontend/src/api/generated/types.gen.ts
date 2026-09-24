@@ -165,6 +165,146 @@ export type BodyUploadDocumentApiV1DocumentsUploadPost = {
 };
 
 /**
+ * CapabilityView
+ *
+ * 一项可切换能力：当前实现 + 就绪状态。
+ */
+export type CapabilityView = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Ready
+     */
+    ready: boolean;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Value Label
+     */
+    value_label: string;
+};
+
+/**
+ * CatalogCapability
+ *
+ * 一项可切换能力与它的全部可选实现。
+ */
+export type CatalogCapability = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Note
+     */
+    note: string;
+    /**
+     * Options
+     */
+    options: Array<CatalogOption>;
+};
+
+/**
+ * CatalogOption
+ *
+ * 一项可选实现。
+ */
+export type CatalogOption = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+};
+
+/**
+ * CatalogProvider
+ *
+ * 供应商目录里的一家。
+ */
+export type CatalogProvider = {
+    /**
+     * Accepts Any Model
+     */
+    accepts_any_model: boolean;
+    /**
+     * Base Url
+     */
+    base_url: string;
+    /**
+     * Chat Models
+     */
+    chat_models: Array<string>;
+    /**
+     * Embed Models
+     */
+    embed_models: Array<string>;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Key Field
+     */
+    key_field: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Note
+     */
+    note: string;
+    /**
+     * Vision Models
+     */
+    vision_models: Array<string>;
+};
+
+/**
+ * CatalogTask
+ *
+ * 一个任务级模型档位的定义。
+ */
+export type CatalogTask = {
+    /**
+     * Field
+     */
+    field: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+};
+
+/**
  * ChatRequest
  *
  * 备课对话请求：对话内容 + 追问粒度 + 本次备课的参考资料 +（可选）备课会话 id。
@@ -561,6 +701,34 @@ export type InteractiveGenerateResponse = {
 };
 
 /**
+ * KeyItem
+ *
+ * 一项 Key：只回掩码与是否已配置，明文一个字节都不出现在响应里。
+ */
+export type KeyItem = {
+    /**
+     * Configured
+     */
+    configured: boolean;
+    /**
+     * Field
+     */
+    field: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Masked
+     */
+    masked: string;
+    /**
+     * Source
+     */
+    source: string;
+};
+
+/**
  * KnowledgePointCount
  *
  * 题库筛选项：一个考查知识点及它的题目数。
@@ -702,6 +870,38 @@ export type NewKnowledgeEntry = {
      */
     title?: string;
     [key: string]: unknown;
+};
+
+/**
+ * ProviderView
+ *
+ * 当前对话供应商：id、面向教师的名称、它用哪个字段存 Key，以及「现在能不能用」。
+ */
+export type ProviderView = {
+    /**
+     * Key Field
+     */
+    key_field: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Ready
+     */
+    ready: boolean;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Value
+     */
+    value: string;
 };
 
 /**
@@ -1240,6 +1440,230 @@ export type SessionUpdateRequest = {
 };
 
 /**
+ * SettingItem
+ *
+ * 一项可编辑的非 Key 设置：当前值 + 实际生效值（留空时按供应商预设解析）。
+ */
+export type SettingItem = {
+    /**
+     * Effective
+     */
+    effective: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Value
+     */
+    value: string;
+};
+
+/**
+ * SettingsCatalog
+ *
+ * 可选目录：供应商 + 能力实现 + 任务清单（设置页下拉的唯一出处）。
+ */
+export type SettingsCatalog = {
+    /**
+     * Capabilities
+     */
+    capabilities: Array<CatalogCapability>;
+    /**
+     * Note
+     */
+    note: string;
+    /**
+     * Providers
+     */
+    providers: Array<CatalogProvider>;
+    /**
+     * Tasks
+     */
+    tasks: Array<CatalogTask>;
+};
+
+/**
+ * SettingsUpdate
+ *
+ * 写入设置：**只传要改的项**（界面一次只做一件事）。
+ *
+ * 约定：字段缺省或传 `null` = 该项不动；传空字符串 = **清除该项**（回落 `.env` 引导默认）。
+ * 取值必须落在 `GET /settings/catalog` 给出的目录里，否则 400（带稳定 `code` 与可读 `message`）。
+ */
+export type SettingsUpdate = {
+    /**
+     * Asr Provider
+     *
+     * 语音转写实现：stub / paraformer
+     */
+    asr_provider?: string | null;
+    /**
+     * Bocha Api Key
+     *
+     * 博查网络搜索 Key
+     */
+    bocha_api_key?: string | null;
+    /**
+     * Chunk Strategy
+     *
+     * 分块策略：paragraph
+     */
+    chunk_strategy?: string | null;
+    /**
+     * Dashscope Api Key
+     *
+     * 阿里云百炼 API Key
+     */
+    dashscope_api_key?: string | null;
+    /**
+     * Deepseek Api Key
+     *
+     * DeepSeek API Key
+     */
+    deepseek_api_key?: string | null;
+    /**
+     * Embedding Api Key
+     *
+     * 向量化 API Key
+     */
+    embedding_api_key?: string | null;
+    /**
+     * Embedding Base Url
+     *
+     * 向量化服务地址（base_url）
+     */
+    embedding_base_url?: string | null;
+    /**
+     * Embedding Model
+     *
+     * 向量化模型 ID
+     */
+    embedding_model?: string | null;
+    /**
+     * Embedding Provider
+     *
+     * 向量化实现；留空 = 跟随对话供应商
+     */
+    embedding_provider?: string | null;
+    /**
+     * Llm Api Key
+     *
+     * 自定义服务的 API Key
+     */
+    llm_api_key?: string | null;
+    /**
+     * Llm Base Url
+     *
+     * 服务商地址（base_url）；留空用方言预设，自定义服务必须填
+     */
+    llm_base_url?: string | null;
+    /**
+     * Llm Model
+     *
+     * 全局默认对话模型；未设置的任务回落到它
+     */
+    llm_model?: string | null;
+    /**
+     * Llm Provider
+     *
+     * 供应商目录里的 id（stub / dashscope / deepseek / siliconflow / custom）
+     */
+    llm_provider?: string | null;
+    /**
+     * Llm Vision Model
+     *
+     * 多模态模型（图片/视频理解用）
+     */
+    llm_vision_model?: string | null;
+    /**
+     * Mineru Token
+     *
+     * MinerU 云端 PDF 解析 Token
+     */
+    mineru_token?: string | null;
+    /**
+     * Pdf Strategy
+     *
+     * PDF 解析策略：mineru_then_pypdf / pypdf / mineru
+     */
+    pdf_strategy?: string | null;
+    /**
+     * Retrieval Strategy
+     *
+     * 检索策略：vector_graph / vector
+     */
+    retrieval_strategy?: string | null;
+    /**
+     * Search Provider
+     *
+     * 网络搜索实现：auto / stub / bocha
+     */
+    search_provider?: string | null;
+    /**
+     * Siliconflow Api Key
+     *
+     * 硅基流动 API Key
+     */
+    siliconflow_api_key?: string | null;
+    /**
+     * Task Model Conflict
+     *
+     * 冲突比对用的模型档位
+     */
+    task_model_conflict?: string | null;
+    /**
+     * Task Model Generate
+     *
+     * 生成用的模型档位
+     */
+    task_model_generate?: string | null;
+    /**
+     * Task Model Intent
+     *
+     * 意图分析用的模型档位
+     */
+    task_model_intent?: string | null;
+};
+
+/**
+ * SettingsView
+ *
+ * 当前生效设置：读取与写入共用同一份形状（写完直接用它刷新界面）。
+ */
+export type SettingsView = {
+    /**
+     * Capabilities
+     */
+    capabilities: Array<CapabilityView>;
+    /**
+     * Items
+     */
+    items: Array<SettingItem>;
+    /**
+     * Keys
+     */
+    keys: Array<KeyItem>;
+    /**
+     * Note
+     */
+    note: string;
+    provider: ProviderView;
+    /**
+     * Tasks
+     */
+    tasks: Array<TaskModelView>;
+};
+
+/**
  * StructureEdge
  *
  * 终态图上的一条关系。键名与知识图谱接口一致，前端复用同一套画布。
@@ -1336,6 +1760,38 @@ export type StructurePreview = {
      * Outcomes
      */
     outcomes: Array<StructureOutcome>;
+};
+
+/**
+ * TaskModelView
+ *
+ * 一个任务级模型档位：选了什么、**实际用的是什么**、来源是任务级还是全局默认。
+ */
+export type TaskModelView = {
+    /**
+     * Field
+     */
+    field: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Selected
+     */
+    selected: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Task
+     */
+    task: string;
 };
 
 /**
@@ -2430,6 +2886,83 @@ export type ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponses = {
 };
 
 export type ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponse = ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponses[keyof ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponses];
+
+export type ReadSettingsApiV1SettingsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings';
+};
+
+export type ReadSettingsApiV1SettingsGetErrors = {
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ReadSettingsApiV1SettingsGetResponses = {
+    /**
+     * 当前生效设置（Key 只有掩码）
+     */
+    200: SettingsView;
+};
+
+export type ReadSettingsApiV1SettingsGetResponse = ReadSettingsApiV1SettingsGetResponses[keyof ReadSettingsApiV1SettingsGetResponses];
+
+export type UpdateSettingsApiV1SettingsPutData = {
+    body: SettingsUpdate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings';
+};
+
+export type UpdateSettingsApiV1SettingsPutErrors = {
+    /**
+     * 配置值不在目录里：`code` 是稳定机器码（unknown_provider / unknown_model / unknown_capability_impl / invalid_base_url），`field` 指向出错的设置项，`message` 可直接显示给教师；本次写入未落库
+     */
+    400: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type UpdateSettingsApiV1SettingsPutResponses = {
+    /**
+     * 写入后的当前生效设置（Key 只有掩码）
+     */
+    200: SettingsView;
+};
+
+export type UpdateSettingsApiV1SettingsPutResponse = UpdateSettingsApiV1SettingsPutResponses[keyof UpdateSettingsApiV1SettingsPutResponses];
+
+export type ReadCatalogApiV1SettingsCatalogGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings/catalog';
+};
+
+export type ReadCatalogApiV1SettingsCatalogGetErrors = {
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ReadCatalogApiV1SettingsCatalogGetResponses = {
+    /**
+     * 可选目录
+     */
+    200: SettingsCatalog;
+};
+
+export type ReadCatalogApiV1SettingsCatalogGetResponse = ReadCatalogApiV1SettingsCatalogGetResponses[keyof ReadCatalogApiV1SettingsCatalogGetResponses];
 
 export type HealthHealthGetData = {
     body?: never;

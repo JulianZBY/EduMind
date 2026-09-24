@@ -247,6 +247,188 @@
         "title": "Body_upload_document_api_v1_documents_upload_post",
         "type": "object"
       },
+      "CapabilityView": {
+        "description": "一项可切换能力：当前实现 + 就绪状态。",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "value_label": {
+            "title": "Value Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value",
+          "value_label",
+          "source",
+          "ready",
+          "reason"
+        ],
+        "title": "CapabilityView",
+        "type": "object"
+      },
+      "CatalogCapability": {
+        "description": "一项可切换能力与它的全部可选实现。",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogOption"
+            },
+            "title": "Options",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "options",
+          "note"
+        ],
+        "title": "CatalogCapability",
+        "type": "object"
+      },
+      "CatalogOption": {
+        "description": "一项可选实现。",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "CatalogOption",
+        "type": "object"
+      },
+      "CatalogProvider": {
+        "description": "供应商目录里的一家。",
+        "properties": {
+          "accepts_any_model": {
+            "title": "Accepts Any Model",
+            "type": "boolean"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "chat_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Chat Models",
+            "type": "array"
+          },
+          "embed_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Embed Models",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key_field": {
+            "title": "Key Field",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "vision_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Vision Models",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "base_url",
+          "key_field",
+          "chat_models",
+          "vision_models",
+          "embed_models",
+          "accepts_any_model",
+          "note"
+        ],
+        "title": "CatalogProvider",
+        "type": "object"
+      },
+      "CatalogTask": {
+        "description": "一个任务级模型档位的定义。",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "field"
+        ],
+        "title": "CatalogTask",
+        "type": "object"
+      },
       "ChatRequest": {
         "description": "备课对话请求：对话内容 + 追问粒度 + 本次备课的参考资料 +（可选）备课会话 id。",
         "example": {
@@ -951,6 +1133,40 @@
         "title": "InteractiveGenerateResponse",
         "type": "object"
       },
+      "KeyItem": {
+        "description": "一项 Key：只回掩码与是否已配置，明文一个字节都不出现在响应里。",
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "masked": {
+            "title": "Masked",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "label",
+          "configured",
+          "masked",
+          "source"
+        ],
+        "title": "KeyItem",
+        "type": "object"
+      },
       "KnowledgePointCount": {
         "description": "题库筛选项：一个考查知识点及它的题目数。",
         "properties": {
@@ -1163,6 +1379,45 @@
           }
         },
         "title": "NewKnowledgeEntry",
+        "type": "object"
+      },
+      "ProviderView": {
+        "description": "当前对话供应商：id、面向教师的名称、它用哪个字段存 Key，以及「现在能不能用」。",
+        "properties": {
+          "key_field": {
+            "title": "Key Field",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label",
+          "key_field",
+          "source",
+          "ready",
+          "reason"
+        ],
+        "title": "ProviderView",
         "type": "object"
       },
       "QuestionDetail": {
@@ -2051,6 +2306,404 @@
         "title": "SessionUpdateRequest",
         "type": "object"
       },
+      "SettingItem": {
+        "description": "一项可编辑的非 Key 设置：当前值 + 实际生效值（留空时按供应商预设解析）。",
+        "properties": {
+          "effective": {
+            "title": "Effective",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "value",
+          "effective",
+          "source"
+        ],
+        "title": "SettingItem",
+        "type": "object"
+      },
+      "SettingsCatalog": {
+        "description": "可选目录：供应商 + 能力实现 + 任务清单（设置页下拉的唯一出处）。",
+        "properties": {
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogCapability"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogProvider"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogTask"
+            },
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "providers",
+          "capabilities",
+          "tasks",
+          "note"
+        ],
+        "title": "SettingsCatalog",
+        "type": "object"
+      },
+      "SettingsUpdate": {
+        "description": "写入设置：**只传要改的项**（界面一次只做一件事）。\n\n约定：字段缺省或传 `null` = 该项不动；传空字符串 = **清除该项**（回落 `.env` 引导默认）。\n取值必须落在 `GET /settings/catalog` 给出的目录里，否则 400（带稳定 `code` 与可读 `message`）。",
+        "example": {
+          "deepseek_api_key": "sk-在这里粘贴你自己的 Key",
+          "llm_provider": "deepseek",
+          "task_model_generate": "deepseek-reasoner"
+        },
+        "properties": {
+          "asr_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "语音转写实现：stub / paraformer",
+            "title": "Asr Provider"
+          },
+          "bocha_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "博查网络搜索 Key",
+            "title": "Bocha Api Key"
+          },
+          "chunk_strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分块策略：paragraph",
+            "title": "Chunk Strategy"
+          },
+          "dashscope_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "阿里云百炼 API Key",
+            "title": "Dashscope Api Key"
+          },
+          "deepseek_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "DeepSeek API Key",
+            "title": "Deepseek Api Key"
+          },
+          "embedding_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "向量化 API Key",
+            "title": "Embedding Api Key"
+          },
+          "embedding_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "向量化服务地址（base_url）",
+            "title": "Embedding Base Url"
+          },
+          "embedding_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "向量化模型 ID",
+            "title": "Embedding Model"
+          },
+          "embedding_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "向量化实现；留空 = 跟随对话供应商",
+            "title": "Embedding Provider"
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "自定义服务的 API Key",
+            "title": "Llm Api Key"
+          },
+          "llm_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "服务商地址（base_url）；留空用方言预设，自定义服务必须填",
+            "title": "Llm Base Url"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "全局默认对话模型；未设置的任务回落到它",
+            "title": "Llm Model"
+          },
+          "llm_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "供应商目录里的 id（stub / dashscope / deepseek / siliconflow / custom）",
+            "title": "Llm Provider"
+          },
+          "llm_vision_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "多模态模型（图片/视频理解用）",
+            "title": "Llm Vision Model"
+          },
+          "mineru_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MinerU 云端 PDF 解析 Token",
+            "title": "Mineru Token"
+          },
+          "pdf_strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "PDF 解析策略：mineru_then_pypdf / pypdf / mineru",
+            "title": "Pdf Strategy"
+          },
+          "retrieval_strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "检索策略：vector_graph / vector",
+            "title": "Retrieval Strategy"
+          },
+          "search_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "网络搜索实现：auto / stub / bocha",
+            "title": "Search Provider"
+          },
+          "siliconflow_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "硅基流动 API Key",
+            "title": "Siliconflow Api Key"
+          },
+          "task_model_conflict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "冲突比对用的模型档位",
+            "title": "Task Model Conflict"
+          },
+          "task_model_generate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "生成用的模型档位",
+            "title": "Task Model Generate"
+          },
+          "task_model_intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "意图分析用的模型档位",
+            "title": "Task Model Intent"
+          }
+        },
+        "title": "SettingsUpdate",
+        "type": "object"
+      },
+      "SettingsView": {
+        "description": "当前生效设置：读取与写入共用同一份形状（写完直接用它刷新界面）。",
+        "properties": {
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityView"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SettingItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/KeyItem"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/ProviderView"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskModelView"
+            },
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "provider",
+          "items",
+          "keys",
+          "tasks",
+          "capabilities",
+          "note"
+        ],
+        "title": "SettingsView",
+        "type": "object"
+      },
       "StructureEdge": {
         "description": "终态图上的一条关系。键名与知识图谱接口一致，前端复用同一套画布。",
         "properties": {
@@ -2178,6 +2831,45 @@
           "outcomes"
         ],
         "title": "StructurePreview",
+        "type": "object"
+      },
+      "TaskModelView": {
+        "description": "一个任务级模型档位：选了什么、**实际用的是什么**、来源是任务级还是全局默认。",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "selected": {
+            "title": "Selected",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task",
+          "label",
+          "field",
+          "selected",
+          "model",
+          "source"
+        ],
+        "title": "TaskModelView",
         "type": "object"
       },
       "ValidationError": {
@@ -5003,6 +5695,601 @@
         ]
       }
     },
+    "/api/v1/settings": {
+      "get": {
+        "description": "回读**当前生效**的云端能力与模型档位：每项都带 `source`（`设置页` = 在设置页改过，`引导默认` = 仍按 `.env`）。\n\n- **Key 一律掩码**：只回 `masked`（尾部若干位）与 `configured`，任何响应与表单都不回显明文；\n  「表单也不回显明文」= 设置页拿不到明文，只能由教师重新粘贴；\n- `items` 给「当前值」与「实际生效值」：模型 / 地址留空时按供应商预设解析（如 DeepSeek 的 `deepseek-chat`），这样界面能显示「实际用的是什么」；\n- `tasks` 逐任务给出**该任务实际用的模型**与来源（`任务级` / `全局默认`）；\n- `ready` 用当前配置当场构造一次实现（离线、不联网）来判断「现在能不能用」：缺 Key 时为 `false` 且 `reason` 直接说明缺什么，而不是把错误拖到真正调用时才爆。",
+        "operationId": "read_settings_api_v1_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "capabilities": [
+                    {
+                      "key": "asr_provider",
+                      "label": "语音转写",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "stub",
+                      "value_label": "stub 模式（无 Key 可跑）"
+                    },
+                    {
+                      "key": "pdf_strategy",
+                      "label": "PDF 解析",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "mineru_then_pypdf",
+                      "value_label": "mineru → pypdf 兜底（默认）"
+                    },
+                    {
+                      "key": "search_provider",
+                      "label": "网络搜索",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "auto",
+                      "value_label": "自动（有 Key 走博查，否则 stub 模式）"
+                    },
+                    {
+                      "key": "embedding_provider",
+                      "label": "向量化",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "auto",
+                      "value_label": "自动（跟随对话供应商）"
+                    },
+                    {
+                      "key": "retrieval_strategy",
+                      "label": "检索策略",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "vector_graph",
+                      "value_label": "向量 + 图谱融合（默认）"
+                    },
+                    {
+                      "key": "chunk_strategy",
+                      "label": "分块策略",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "paragraph",
+                      "value_label": "按段落与标题边界（默认）"
+                    }
+                  ],
+                  "items": [
+                    {
+                      "effective": "https://api.deepseek.com",
+                      "label": "服务商地址（base_url）",
+                      "name": "llm_base_url",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "deepseek-chat",
+                      "label": "对话模型",
+                      "name": "llm_model",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "多模态模型",
+                      "name": "llm_vision_model",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "向量化服务地址（base_url）",
+                      "name": "embedding_base_url",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "向量化模型",
+                      "name": "embedding_model",
+                      "source": "引导默认",
+                      "value": ""
+                    }
+                  ],
+                  "keys": [
+                    {
+                      "configured": false,
+                      "field": "llm_api_key",
+                      "label": "自定义服务的 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "dashscope_api_key",
+                      "label": "阿里云百炼 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": true,
+                      "field": "deepseek_api_key",
+                      "label": "DeepSeek API Key",
+                      "masked": "••••9f8a",
+                      "source": "设置页"
+                    },
+                    {
+                      "configured": false,
+                      "field": "siliconflow_api_key",
+                      "label": "硅基流动 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "embedding_api_key",
+                      "label": "向量化 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "mineru_token",
+                      "label": "MinerU Token",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "bocha_api_key",
+                      "label": "博查搜索 Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    }
+                  ],
+                  "note": "改动即时生效、不需要重启；Key 只在写入时接收，回读一律掩码，任何响应与表单都不回显明文。",
+                  "provider": {
+                    "key_field": "deepseek_api_key",
+                    "label": "DeepSeek",
+                    "ready": true,
+                    "reason": "",
+                    "source": "设置页",
+                    "value": "deepseek"
+                  },
+                  "tasks": [
+                    {
+                      "field": "task_model_intent",
+                      "label": "意图分析",
+                      "model": "deepseek-chat",
+                      "selected": "deepseek-chat",
+                      "source": "任务级",
+                      "task": "intent"
+                    },
+                    {
+                      "field": "task_model_generate",
+                      "label": "生成",
+                      "model": "deepseek-chat",
+                      "selected": "",
+                      "source": "全局默认",
+                      "task": "generate"
+                    },
+                    {
+                      "field": "task_model_conflict",
+                      "label": "冲突比对",
+                      "model": "deepseek-chat",
+                      "selected": "",
+                      "source": "全局默认",
+                      "task": "conflict"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsView"
+                }
+              }
+            },
+            "description": "当前生效设置（Key 只有掩码）"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "读取当前生效设置",
+        "tags": [
+          "设置"
+        ]
+      },
+      "put": {
+        "description": "**只传要改的项**（界面一次只做一件事）；字段缺省或传 `null` = 该项不动，传空字符串 = **清除该项**（回落 `.env` 引导默认）。\n\n写穿链路：目录校验 → 落库（`app_settings`）→ 把生效值同步进进程内配置 → 清掉能力工厂缓存。全过程在本次请求内完成，**改完下一次调用就用新配置**：例如把 `retrieval_strategy` 从 `vector_graph` 改成 `vector` 后，紧接着的 `POST /api/v1/knowledge/retrieve` 就返回 `strategy: vector`。\n\n取值必须落在 `GET /api/v1/settings/catalog` 给出的目录里：未知供应商 / 未知模型 / 未实现的能力 / 格式不对的 `base_url` 一律 400（带稳定 `code`），**库内一行不动**；供应商目录之外的模型走「自定义 OpenAI 兼容服务」（`llm_provider=custom` + `llm_base_url` + `llm_model`）。\n\n装配：改供应商与模型时建议一次带上该家的 Key（`dashscope_api_key` / `deepseek_api_key` / `siliconflow_api_key` / 自定义服务的 `llm_api_key`），一次写入即从 stub 模式切到真实服务。",
+        "operationId": "update_settings_api_v1_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "capabilities": [
+                    {
+                      "key": "asr_provider",
+                      "label": "语音转写",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "stub",
+                      "value_label": "stub 模式（无 Key 可跑）"
+                    },
+                    {
+                      "key": "pdf_strategy",
+                      "label": "PDF 解析",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "mineru_then_pypdf",
+                      "value_label": "mineru → pypdf 兜底（默认）"
+                    },
+                    {
+                      "key": "search_provider",
+                      "label": "网络搜索",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "auto",
+                      "value_label": "自动（有 Key 走博查，否则 stub 模式）"
+                    },
+                    {
+                      "key": "embedding_provider",
+                      "label": "向量化",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "auto",
+                      "value_label": "自动（跟随对话供应商）"
+                    },
+                    {
+                      "key": "retrieval_strategy",
+                      "label": "检索策略",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "vector_graph",
+                      "value_label": "向量 + 图谱融合（默认）"
+                    },
+                    {
+                      "key": "chunk_strategy",
+                      "label": "分块策略",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "paragraph",
+                      "value_label": "按段落与标题边界（默认）"
+                    }
+                  ],
+                  "items": [
+                    {
+                      "effective": "https://api.deepseek.com",
+                      "label": "服务商地址（base_url）",
+                      "name": "llm_base_url",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "deepseek-chat",
+                      "label": "对话模型",
+                      "name": "llm_model",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "多模态模型",
+                      "name": "llm_vision_model",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "向量化服务地址（base_url）",
+                      "name": "embedding_base_url",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "向量化模型",
+                      "name": "embedding_model",
+                      "source": "引导默认",
+                      "value": ""
+                    }
+                  ],
+                  "keys": [
+                    {
+                      "configured": false,
+                      "field": "llm_api_key",
+                      "label": "自定义服务的 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "dashscope_api_key",
+                      "label": "阿里云百炼 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": true,
+                      "field": "deepseek_api_key",
+                      "label": "DeepSeek API Key",
+                      "masked": "••••9f8a",
+                      "source": "设置页"
+                    },
+                    {
+                      "configured": false,
+                      "field": "siliconflow_api_key",
+                      "label": "硅基流动 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "embedding_api_key",
+                      "label": "向量化 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "mineru_token",
+                      "label": "MinerU Token",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "bocha_api_key",
+                      "label": "博查搜索 Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    }
+                  ],
+                  "note": "改动即时生效、不需要重启；Key 只在写入时接收，回读一律掩码，任何响应与表单都不回显明文。",
+                  "provider": {
+                    "key_field": "deepseek_api_key",
+                    "label": "DeepSeek",
+                    "ready": true,
+                    "reason": "",
+                    "source": "设置页",
+                    "value": "deepseek"
+                  },
+                  "tasks": [
+                    {
+                      "field": "task_model_intent",
+                      "label": "意图分析",
+                      "model": "deepseek-chat",
+                      "selected": "deepseek-chat",
+                      "source": "任务级",
+                      "task": "intent"
+                    },
+                    {
+                      "field": "task_model_generate",
+                      "label": "生成",
+                      "model": "deepseek-chat",
+                      "selected": "",
+                      "source": "全局默认",
+                      "task": "generate"
+                    },
+                    {
+                      "field": "task_model_conflict",
+                      "label": "冲突比对",
+                      "model": "deepseek-chat",
+                      "selected": "",
+                      "source": "全局默认",
+                      "task": "conflict"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsView"
+                }
+              }
+            },
+            "description": "写入后的当前生效设置（Key 只有掩码）"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "unknown_model",
+                    "field": "task_model_generate",
+                    "message": "未知模型：gpt-4o（「DeepSeek」的生成可选：deepseek-chat、deepseek-reasoner；目录之外的模型请用「自定义 OpenAI 兼容服务」）"
+                  }
+                }
+              }
+            },
+            "description": "配置值不在目录里：`code` 是稳定机器码（unknown_provider / unknown_model / unknown_capability_impl / invalid_base_url），`field` 指向出错的设置项，`message` 可直接显示给教师；本次写入未落库"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "写入设置（即时生效，不需要重启）",
+        "tags": [
+          "设置"
+        ]
+      }
+    },
+    "/api/v1/settings/catalog": {
+      "get": {
+        "description": "设置页下拉的**唯一出处**：供应商目录（含自定义服务）、各能力的可选实现、任务级模型的任务清单。\n\n口径来自能力注册表（ADR-0003）与方言预设：注册表加一行，这里就多一个可选项。写设置时认的取值就是这里的 `id`——目录里没有的值会被 400 挡下（自定义服务那档除外，它 `accepts_any_model=true`，模型 ID 由教师填）。",
+        "operationId": "read_catalog_api_v1_settings_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "capabilities": [
+                    {
+                      "key": "asr_provider",
+                      "label": "语音转写",
+                      "note": "录音资料走哪条转写路径；paraformer 复用阿里云百炼的 Key。",
+                      "options": [
+                        {
+                          "id": "stub",
+                          "label": "stub 模式（无 Key 可跑）"
+                        },
+                        {
+                          "id": "paraformer",
+                          "label": "paraformer（阿里云百炼，复用 DASHSCOPE_API_KEY）"
+                        }
+                      ]
+                    },
+                    {
+                      "key": "search_provider",
+                      "label": "网络搜索",
+                      "note": "题库的「网络」来源用它取题；无 Key 时走 stub 模式占位结果。",
+                      "options": [
+                        {
+                          "id": "auto",
+                          "label": "自动（有 Key 走博查，否则 stub 模式）"
+                        },
+                        {
+                          "id": "stub",
+                          "label": "stub 模式"
+                        },
+                        {
+                          "id": "bocha",
+                          "label": "博查（Bocha）"
+                        }
+                      ]
+                    }
+                  ],
+                  "note": "供应商目录与可选能力实现来自能力注册表：这里列出什么，就能切成什么。",
+                  "providers": [
+                    {
+                      "accepts_any_model": false,
+                      "base_url": "",
+                      "chat_models": [
+                        "stub"
+                      ],
+                      "embed_models": [],
+                      "id": "stub",
+                      "key_field": "",
+                      "label": "stub 模式",
+                      "note": "没有任何云端 Key 时的兜底实现：全链路可跑，结果用于试用与联调，不追求真实质量。",
+                      "vision_models": []
+                    },
+                    {
+                      "accepts_any_model": false,
+                      "base_url": "https://api.deepseek.com",
+                      "chat_models": [
+                        "deepseek-chat",
+                        "deepseek-reasoner"
+                      ],
+                      "embed_models": [],
+                      "id": "deepseek",
+                      "key_field": "deepseek_api_key",
+                      "label": "DeepSeek",
+                      "note": "只提供对话；多模态与向量化不在此目录内。",
+                      "vision_models": []
+                    },
+                    {
+                      "accepts_any_model": true,
+                      "base_url": "",
+                      "chat_models": [],
+                      "embed_models": [],
+                      "id": "custom",
+                      "key_field": "llm_api_key",
+                      "label": "自定义 OpenAI 兼容服务",
+                      "note": "目录之外的接入方式：填 base_url + 模型 ID + Key 即可用。",
+                      "vision_models": []
+                    }
+                  ],
+                  "tasks": [
+                    {
+                      "field": "task_model_intent",
+                      "id": "intent",
+                      "label": "意图分析"
+                    },
+                    {
+                      "field": "task_model_generate",
+                      "id": "generate",
+                      "label": "生成"
+                    },
+                    {
+                      "field": "task_model_conflict",
+                      "id": "conflict",
+                      "label": "冲突比对"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsCatalog"
+                }
+              }
+            },
+            "description": "可选目录"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "可选目录（供应商 / 能力实现 / 任务）",
+        "tags": [
+          "设置"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "description": "返回服务状态、应用名与当前生效的对话模型供应商。前端启动自检与运维探活都读这一条；不访问数据库、不调用外部能力。`llm_provider` 为 `stub` 时表示当前无云端 Key，功能仍可全链路跑通。",
@@ -5067,6 +6354,10 @@
     {
       "description": "可复用的题目资产库：浏览题目、按考查知识点筛选、看题目详情。",
       "name": "题库"
+    },
+    {
+      "description": "云端能力与模型档位的配置页：供应商目录、任务级模型、能力切换；配置库优先于 .env 引导默认，写入即时生效，Key 一律掩码。",
+      "name": "设置"
     }
   ]
 }

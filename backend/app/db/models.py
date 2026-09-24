@@ -112,6 +112,25 @@ class KnowledgeEdge(Base):
     relation_type: Mapped[str] = mapped_column(String(20))
 
 
+class AppSetting(Base):
+    """设置项（CONTEXT.md「设置」）：设置页写入的云端能力与模型档位。
+
+    配置优先级：设置库 > `.env` 引导默认 > 代码默认（ADR-0003）。没写过（或被写空清除）的项
+    回落引导默认；写入后立即生效、不需要重启（见 `app/core/settings_store.py`）。
+    """
+
+    __tablename__ = "app_settings"
+
+    # 设置项名：与 Settings 字段同名，可选范围由 app/core/catalog.py 的 FIELDS 登记决定
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    # 设置项的值：统一存字符串；API Key 项存原文（回读一律掩码，响应与表单都不回显明文）
+    value: Mapped[str] = mapped_column(Text)
+    # 最后一次改动时间：设置页可据此提示「刚刚生效」
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
+
+
 class Question(Base):
     __tablename__ = "questions"
 

@@ -7,17 +7,23 @@
 （审核动作按类别差异化，见 ACTIONS_BY_CATEGORY）。
 """
 
+from functools import partial
+
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.embedding.factory import get_embedder
 from app.core.llm.base import ChatMessage
-from app.core.llm.factory import get_llm
 from app.core.llm.parsing import parse_json
+from app.core.llm.task_routing import get_llm_for
 from app.db import SessionLocal
 from app.db.models import Conflict, KnowledgeEdge, KnowledgeNode
 from app.knowledge.vector_store import VectorStore
+
+# 「冲突比对」任务：模型档位在设置页按任务选，未设置回落全局默认（CONTEXT.md「任务级模型」）。
+# 入口仍叫 get_llm：既有测试用它替换对话能力（monkeypatch.setattr(本模块, "get_llm", ...)）。
+get_llm = partial(get_llm_for, "conflict")
 
 _COMPARE_PROMPT = """判断两段知识描述是否相互矛盾（定义冲突）。
 

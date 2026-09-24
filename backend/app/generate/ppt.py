@@ -1,6 +1,7 @@
 """PPT 课件生成：LLM 生成结构（页面角色标注）+ python-pptx 角色化主题渲染。"""
 
 import json
+from functools import partial
 from typing import cast
 
 import pptx
@@ -11,9 +12,13 @@ from pptx.shapes.autoshape import Shape
 from pptx.util import Emu, Inches, Pt
 
 from app.core.llm.base import ChatMessage
-from app.core.llm.factory import get_llm
 from app.core.llm.parsing import parse_json
+from app.core.llm.task_routing import get_llm_for
 from app.generate import unique_output_path
+
+# 「生成」任务：模型档位在设置页按任务选，未设置回落全局默认（CONTEXT.md「任务级模型」）。
+# 入口仍叫 get_llm：既有测试用它替换对话能力（monkeypatch.setattr(本模块, "get_llm", ...)）。
+get_llm = partial(get_llm_for, "generate")
 
 # 页面角色：生成 prompt 的约定字段，渲染器据此差异化版式（缺失/未知回退默认版式）
 ROLE_COVER = "封面"
