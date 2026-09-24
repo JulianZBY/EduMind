@@ -142,7 +142,9 @@ def test_capability_switch_takes_effect_without_restart():
     assert switched["source"] == "设置页"
 
     # 既有端点当场用新策略：这是「写穿」在 HTTP 上的证据
-    retrieved = client.post("/api/v1/knowledge/retrieve", json={"intent": {"topic": "导数"}, "k": 1})
+    retrieved = client.post(
+        "/api/v1/knowledge/retrieve", json={"intent": {"topic": "导数"}, "k": 1}
+    )
     assert retrieved.status_code == 200, retrieved.text
     assert retrieved.json()["strategy"] == "vector"
 

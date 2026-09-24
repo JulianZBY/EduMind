@@ -116,7 +116,9 @@ def apply_stored_settings() -> None:
         try:
             validate_patch({name: raw}, current_values())
         except SettingsError as error:
-            logger.warning("设置项 %s 的存量值不在目录里（%s），已回落引导默认", name, error.message)
+            logger.warning(
+                "设置项 %s 的存量值不在目录里（%s），已回落引导默认", name, error.message
+            )
             setattr(settings, name, _BOOTSTRAP[name])
             continue
         setattr(settings, name, normalize(name, raw))

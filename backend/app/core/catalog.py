@@ -292,11 +292,11 @@ FIELDS: dict[str, FieldSpec] = {
 MANAGED_FIELDS: tuple[str, ...] = tuple(FIELDS)
 
 # Key 项与可编辑项（非 Key）两份视图：设置页分卡片展示、回读时分两种形状（Key 只给掩码）。
-KEY_FIELDS: tuple[FieldSpec, ...] = tuple(
-    spec for spec in FIELDS.values() if spec.kind == "key"
-)
+KEY_FIELDS: tuple[FieldSpec, ...] = tuple(spec for spec in FIELDS.values() if spec.kind == "key")
 ITEM_FIELDS: tuple[FieldSpec, ...] = tuple(
-    spec for spec in FIELDS.values() if spec.kind in ("url", "chat_model", "vision_model", "embed_model")
+    spec
+    for spec in FIELDS.values()
+    if spec.kind in ("url", "chat_model", "vision_model", "embed_model")
 )
 
 
@@ -360,8 +360,7 @@ def _check_url(spec: FieldSpec, value: str) -> None:
     raise SettingsError(
         "invalid_base_url",
         spec.name,
-        f"{spec.label}必须是 http(s) 开头的完整地址，例如 https://example.com/v1；"
-        f"当前值：{value}",
+        f"{spec.label}必须是 http(s) 开头的完整地址，例如 https://example.com/v1；当前值：{value}",
     )
 
 

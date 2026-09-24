@@ -21,10 +21,8 @@ _OUTLINE_PROMPT = """你是教学设计师。根据教学意图和知识内容�
 
 async def generate_outline(intent: dict, knowledge: str) -> str:
     llm = get_llm()
-    prompt = (
-        _OUTLINE_PROMPT.replace("__INTENT__", json.dumps(intent, ensure_ascii=False)).replace(
-            "__KNOWLEDGE__", knowledge[:6000]
-        )
+    prompt = _OUTLINE_PROMPT.replace("__INTENT__", json.dumps(intent, ensure_ascii=False)).replace(
+        "__KNOWLEDGE__", knowledge[:6000]
     )
     result = await llm.chat([ChatMessage(role="user", content=prompt)])
     return result.content

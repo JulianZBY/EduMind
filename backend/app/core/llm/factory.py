@@ -3,6 +3,7 @@
 新增一家 OpenAI 兼容服务商 = 往 DIALECTS 加一条预设（或直接填 LLM_BASE_URL /
 LLM_MODEL / LLM_API_KEY 覆盖），调用方无需改动。
 """
+
 from collections.abc import Callable
 from functools import lru_cache, partial
 

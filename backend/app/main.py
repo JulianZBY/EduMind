@@ -78,9 +78,7 @@ app.include_router(v1_router, prefix="/api/v1")
     summary="服务信息",
     description="返回应用名与文档、健康检查入口地址，供启动自检与人工排查使用。",
     responses={
-        200: json_response(
-            "服务信息", {"name": "EduMind", "docs": "/docs", "health": "/health"}
-        ),
+        200: json_response("服务信息", {"name": "EduMind", "docs": "/docs", "health": "/health"}),
         500: internal_error(),
     },
 )

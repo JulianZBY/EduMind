@@ -180,12 +180,15 @@ class SettingsUpdate(BaseModel):
 
     # ---- 供应商与全局默认模型 ----
     llm_provider: str | None = Field(
-        default=None, description="供应商目录里的 id（stub / dashscope / deepseek / siliconflow / custom）"
+        default=None,
+        description="供应商目录里的 id（stub / dashscope / deepseek / siliconflow / custom）",
     )
     llm_base_url: str | None = Field(
         default=None, description="服务商地址（base_url）；留空用方言预设，自定义服务必须填"
     )
-    llm_model: str | None = Field(default=None, description="全局默认对话模型；未设置的任务回落到它")
+    llm_model: str | None = Field(
+        default=None, description="全局默认对话模型；未设置的任务回落到它"
+    )
     llm_vision_model: str | None = Field(default=None, description="多模态模型（图片/视频理解用）")
     # ---- 各家的 Key（写入接收，回读只回掩码）----
     llm_api_key: str | None = Field(default=None, description="自定义服务的 API Key")
@@ -193,7 +196,9 @@ class SettingsUpdate(BaseModel):
     deepseek_api_key: str | None = Field(default=None, description="DeepSeek API Key")
     siliconflow_api_key: str | None = Field(default=None, description="硅基流动 API Key")
     # ---- 向量化（独立于对话供应商）----
-    embedding_provider: str | None = Field(default=None, description="向量化实现；留空 = 跟随对话供应商")
+    embedding_provider: str | None = Field(
+        default=None, description="向量化实现；留空 = 跟随对话供应商"
+    )
     embedding_base_url: str | None = Field(default=None, description="向量化服务地址（base_url）")
     embedding_model: str | None = Field(default=None, description="向量化模型 ID")
     embedding_api_key: str | None = Field(default=None, description="向量化 API Key")
@@ -201,9 +206,15 @@ class SettingsUpdate(BaseModel):
     mineru_token: str | None = Field(default=None, description="MinerU 云端 PDF 解析 Token")
     bocha_api_key: str | None = Field(default=None, description="博查网络搜索 Key")
     asr_provider: str | None = Field(default=None, description="语音转写实现：stub / paraformer")
-    pdf_strategy: str | None = Field(default=None, description="PDF 解析策略：mineru_then_pypdf / pypdf / mineru")
-    search_provider: str | None = Field(default=None, description="网络搜索实现：auto / stub / bocha")
-    retrieval_strategy: str | None = Field(default=None, description="检索策略：vector_graph / vector")
+    pdf_strategy: str | None = Field(
+        default=None, description="PDF 解析策略：mineru_then_pypdf / pypdf / mineru"
+    )
+    search_provider: str | None = Field(
+        default=None, description="网络搜索实现：auto / stub / bocha"
+    )
+    retrieval_strategy: str | None = Field(
+        default=None, description="检索策略：vector_graph / vector"
+    )
     chunk_strategy: str | None = Field(default=None, description="分块策略：paragraph")
     # ---- 任务级模型（留空回落全局默认）----
     task_model_intent: str | None = Field(default=None, description="意图分析用的模型档位")
@@ -336,11 +347,7 @@ def _view(db: Session) -> SettingsView:
 
 def _patch_of(req: SettingsUpdate) -> dict[str, str]:
     """请求体 → 设置项补丁：只收显式传了值的字段（缺省 / null = 不动）。"""
-    return {
-        name: value
-        for name in FIELDS
-        if (value := getattr(req, name)) is not None
-    }
+    return {name: value for name in FIELDS if (value := getattr(req, name)) is not None}
 
 
 _ERROR_EXAMPLE = {
@@ -710,7 +717,9 @@ def read_catalog():
             CatalogCapability(
                 key=spec.key,
                 label=spec.label,
-                options=[CatalogOption(id=option.id, label=option.label) for option in spec.options],
+                options=[
+                    CatalogOption(id=option.id, label=option.label) for option in spec.options
+                ],
                 note=spec.note,
             )
             for spec in CAPABILITIES
