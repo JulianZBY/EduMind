@@ -315,7 +315,9 @@ def test_two_strategies_differ_over_http(monkeypatch):
         (get_retriever, "retrieval_strategy", "vector, vector_graph"),
     ],
 )
-def test_unknown_name_reports_available_implementations(factory, setting_name, available, monkeypatch):
+def test_unknown_name_reports_available_implementations(
+    factory, setting_name, available, monkeypatch
+):
     monkeypatch.setattr(settings, setting_name, "nowhere")
 
     with pytest.raises(ValueError) as excinfo:
@@ -331,8 +333,10 @@ def test_registered_retrievers_implement_the_interface(name):
 
 
 def test_registered_chunkers_implement_the_interface():
-    assert all(isinstance(build(CHUNKER_BUILDERS, n, settings, "分块策略"), Chunker)
-               for n in CHUNKER_BUILDERS)
+    assert all(
+        isinstance(build(CHUNKER_BUILDERS, n, settings, "分块策略"), Chunker)
+        for n in CHUNKER_BUILDERS
+    )
 
 
 def test_orchestrator_has_no_retrieval_details():
@@ -360,7 +364,9 @@ def test_callers_only_depend_on_interface_and_factory():
         if rel.startswith(_STRATEGY_PACKAGES):
             continue
         text = path.read_text(encoding="utf-8")
-        offenders += [(rel, impl) for impl in _CONCRETE_STRATEGY_IMPORTS if f"import {impl}" in text]
+        offenders += [
+            (rel, impl) for impl in _CONCRETE_STRATEGY_IMPORTS if f"import {impl}" in text
+        ]
     assert offenders == []
 
 

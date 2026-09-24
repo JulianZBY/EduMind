@@ -26,9 +26,7 @@ router = APIRouter()
 class SearchRequest(BaseModel):
     """检索请求：检索词 + 返回条数。"""
 
-    model_config = ConfigDict(
-        json_schema_extra={"example": {"query": "一次函数的定义", "k": 5}}
-    )
+    model_config = ConfigDict(json_schema_extra={"example": {"query": "一次函数的定义", "k": 5}})
 
     query: str
     k: int = 5
@@ -250,11 +248,8 @@ async def get_graph(db: Annotated[Session, Depends(get_session)]):
     nodes = db.query(KnowledgeNode).all()
     edges = db.query(KnowledgeEdge).all()
     return {
-        "nodes": [
-            {"id": n.id, "title": n.title, "difficulty": n.difficulty} for n in nodes
-        ],
+        "nodes": [{"id": n.id, "title": n.title, "difficulty": n.difficulty} for n in nodes],
         "edges": [
-            {"from": e.from_node, "to": e.to_node, "relation_type": e.relation_type}
-            for e in edges
+            {"from": e.from_node, "to": e.to_node, "relation_type": e.relation_type} for e in edges
         ],
     }

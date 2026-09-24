@@ -28,9 +28,7 @@ async def search_hits(
         from app.knowledge.vector_store import VectorStore
 
         embeddings = await get_embedder().embed([query])
-        rows = VectorStore().search(
-            embeddings[0], k=top_k, boost_doc_ids=reference_doc_ids or None
-        )
+        rows = VectorStore().search(embeddings[0], k=top_k, boost_doc_ids=reference_doc_ids or None)
     except Exception:
         logger.warning("知识检索失败，降级为空上下文", exc_info=True)
         return None
