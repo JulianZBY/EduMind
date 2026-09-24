@@ -94,9 +94,7 @@ def _intent_from_topic(intent: dict) -> TeachingIntent:
                 "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
             },
         ),
-        404: error_response(
-            "备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
-        ),
+        404: error_response("备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
         422: VALIDATION_ERROR,
         500: internal_error(),
         502: error_response(
@@ -132,9 +130,7 @@ async def generate_exam_paper(
     path = render_exam(questions)
     filename = Path(path).name
     if req.session_id is None:
-        return ExamGenerateResponse(
-            questions=questions, filename=filename, bank_saved=bank_saved
-        )
+        return ExamGenerateResponse(questions=questions, filename=filename, bank_saved=bank_saved)
 
     row = artifact_service.record_generation(
         store,

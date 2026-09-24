@@ -380,9 +380,7 @@ def test_revise_rejects_unknown_or_mismatched_baseline():
     assert mismatched.status_code == 422
     assert "教案" in mismatched.json()["detail"] and "课件" in mismatched.json()["detail"]
 
-    unknown_session = client.post(
-        "/api/v1/revise", json={**payload, "session_id": "not-a-session"}
-    )
+    unknown_session = client.post("/api/v1/revise", json={**payload, "session_id": "not-a-session"})
     assert unknown_session.status_code == 404
     assert "会话不存在" in unknown_session.json()["detail"]
 
@@ -452,7 +450,10 @@ def test_exam_and_interactive_generation_record_versions():
     detail = client.get(f"/api/v1/artifacts/{first_exam.json()['version_id']}").json()
     assert detail["content"]["questions"][0]["content"]  # 这一版的题目快照
     assert detail["title"] == "TCP"
-    assert client.get(f"/api/v1/artifacts/{first_exam.json()['version_id']}/download").status_code == 200
+    assert (
+        client.get(f"/api/v1/artifacts/{first_exam.json()['version_id']}/download").status_code
+        == 200
+    )
 
 
 def test_exam_generation_without_session_keeps_existing_behaviour():

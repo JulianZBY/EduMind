@@ -65,7 +65,9 @@ class ArtifactVersionItem(BaseModel):
 
 
 class ArtifactVersionDetail(ArtifactVersionItem):
-    content: dict | None = None  # 这一版的内容快照（课件 slides / 教案结构 / 提纲正文 / 题目 / HTML）
+    content: dict | None = (
+        None  # 这一版的内容快照（课件 slides / 教案结构 / 提纲正文 / 题目 / HTML）
+    )
 
 
 class ArtifactVersionGroup(BaseModel):
@@ -244,7 +246,9 @@ async def list_artifact_versions(
                 },
             },
         ),
-        404: error_response("生成物版本不存在", "生成物版本不存在: 3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b"),
+        404: error_response(
+            "生成物版本不存在", "生成物版本不存在: 3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b"
+        ),
         500: internal_error(),
     },
 )
@@ -284,7 +288,8 @@ async def get_artifact_version(
         },
         400: error_response("文件名非法：含 `..` 或路径分隔符（防止目录穿越）", "非法文件名"),
         404: error_response(
-            "版本不存在，或该版本的文件已被清理", "生成物版本不存在: 3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b"
+            "版本不存在，或该版本的文件已被清理",
+            "生成物版本不存在: 3f2a1b0c-9d8e-4f70-8a1b-2c3d4e5f6a7b",
         ),
         500: internal_error(),
     },

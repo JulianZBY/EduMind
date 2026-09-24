@@ -159,9 +159,7 @@ async def revise(req: ReviseRequest, db: Annotated[Session, Depends(get_session)
     """课件修改：重排结构 → 重新渲染为新文件；带会话标识时产出新版本并入库。"""
     baseline: ArtifactVersion | None = None
     if req.session_id is not None or req.base_version_id is not None:
-        baseline = _resolve_baseline(
-            db, artifact_service.PPT, req.session_id, req.base_version_id
-        )
+        baseline = _resolve_baseline(db, artifact_service.PPT, req.session_id, req.base_version_id)
 
     new_slides = await revise_ppt(req.slides, req.feedback)
     path = render_ppt(new_slides, style=req.style)  # 默认统一随机命名，连续修改互不覆盖
@@ -223,9 +221,7 @@ async def revise_word_endpoint(
     """教案修改：与课件同模式——完整结构交 LLM 重排后重新渲染为新文件，带会话时入库为版本。"""
     baseline: ArtifactVersion | None = None
     if req.session_id is not None or req.base_version_id is not None:
-        baseline = _resolve_baseline(
-            db, artifact_service.WORD, req.session_id, req.base_version_id
-        )
+        baseline = _resolve_baseline(db, artifact_service.WORD, req.session_id, req.base_version_id)
 
     new_word = await revise_word(req.word, req.feedback)
     path = render_word(new_word, references=req.references or None)
