@@ -12,8 +12,8 @@ from app.api.openapi_examples import (
     json_response,
 )
 from app.core.intent import TeachingIntent
-from app.core.orchestrator import retrieve_knowledge
 from app.generate.exam import generate_exam, render_exam, save_questions_to_bank
+from app.knowledge.retrieval.factory import get_retriever
 
 router = APIRouter()
 
@@ -93,7 +93,7 @@ async def generate_exam_paper(req: ExamGenerateRequest):
         # 意图结构不完整时退化为仅主题，一键生成不被前端字段变更卡死
         intent = _intent_from_topic(req.intent)
 
-    retrieval = await retrieve_knowledge(intent)
+    retrieval = await get_retriever().retrieve(intent)
     questions = await generate_exam(intent.model_dump(), retrieval.context, n=req.n)
     if not questions:
         raise HTTPException(status_code=502, detail="试卷生成失败：模型未返回可解析的题目，请重试")

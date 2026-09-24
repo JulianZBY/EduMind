@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     # PDF 解析策略：mineru / pypdf / mineru_then_pypdf（默认 = mineru 失败退 pypdf）
     pdf_strategy: str = "mineru_then_pypdf"
 
+    # ---- RAG 策略（ADR-0003）：分块与检索都是按配置名选择的策略 ----
+    # 分块策略：paragraph（默认，按段落/标题边界合并 + 相邻重叠）
+    chunk_strategy: str = "paragraph"
+    # 检索策略：vector_graph（默认，向量 + 图谱邻接融合）/ vector（纯向量）
+    retrieval_strategy: str = "vector_graph"
+
     # ---- 冲突检测（ADR-0001）：近名预筛的余弦距离阈值，阈值内候选交 LLM 比对 ----
     conflict_distance_threshold: float = 0.3
 

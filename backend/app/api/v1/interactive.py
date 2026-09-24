@@ -15,8 +15,8 @@ from app.api.openapi_examples import (
     json_response,
 )
 from app.core.intent import intent_from_payload
-from app.core.orchestrator import retrieve_knowledge
 from app.generate.creative import generate_html_creative, save_html
+from app.knowledge.retrieval.factory import get_retriever
 
 router = APIRouter()
 
@@ -80,7 +80,7 @@ def _is_single_file_html(html: str) -> bool:
 async def generate_interactive(req: InteractiveGenerateRequest):
     intent = intent_from_payload(req.intent)
 
-    retrieval = await retrieve_knowledge(intent)
+    retrieval = await get_retriever().retrieve(intent)
     html = (await generate_html_creative(retrieval.context or intent.topic)).strip()
     if not _is_single_file_html(html):
         raise HTTPException(

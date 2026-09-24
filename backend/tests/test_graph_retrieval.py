@@ -14,9 +14,9 @@ import app.generate.word as word_module
 import app.knowledge.vector_store as vector_store_module
 from app.core.intent import TeachingIntent
 from app.core.llm.base import ChatResult, LLMProvider
-from app.core.orchestrator import CONTEXT_BUDGET_CHARS
 from app.db import SessionLocal, init_db
 from app.db.models import KnowledgeEdge, KnowledgeNode
+from app.knowledge.retrieval.context import CONTEXT_BUDGET_CHARS
 from app.knowledge.vector_store import VectorStore
 from app.main import app
 
