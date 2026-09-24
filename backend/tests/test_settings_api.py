@@ -9,6 +9,9 @@
 
 隔离：每个用例前后清空设置库并回落引导默认——共享临时库里不留设置行，避免污染其它用例
 （设置项会改进程内配置，漏清就会串到别的用例）。落盘隔离沿用 conftest。
+引导默认另行**控制**成「本机没有 `.env`」的代码默认（`_isolated_bootstrap_defaults`）：
+配置库优先于 `.env` 引导默认，所以有真 Key 的开发机上「设置库为空」并不等于「Key 都没配」，
+凡断言「未配置 / 引导默认」的用例都必须先把引导默认钉住，才与本机环境无关。
 """
 
 import json
@@ -18,15 +21,16 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.config import Settings, settings
+from app.core import settings_store
 from app.core.asr.factory import get_transcriber
-from app.core.catalog import FIELDS
+from app.core.catalog import FIELDS, MANAGED_FIELDS
 from app.core.intent import analyze_intent
 from app.core.llm.base import ChatResult, LLMProvider
 from app.core.llm.factory import LLM_BUILDERS, get_llm
 from app.core.llm.providers.openai_compat import OpenAICompatProvider
 from app.core.parser.factory import get_pdf_parser
 from app.core.search.factory import get_search
-from app.core.settings_store import clear_stored_settings
+from app.core.settings_store import apply_stored_settings, clear_stored_settings
 from app.db import SessionLocal, init_db
 from app.db.models import AppSetting
 from app.generate.outline import generate_outline
@@ -39,10 +43,32 @@ init_db()  # 幂等：设置表在临时库里就位
 PLAINTEXT = "sk-live-2f7d9a41"
 MASKED_TAIL = "9a41"
 
+# 受控的引导默认：`Settings` 的代码默认值（无 `.env`、无环境变量）。
+# `settings_store` 在导入时把本机 `.env` 存成 `_BOOTSTRAP` 快照，那份快照不是本文件要断言的
+# 「引导默认」——有真 Key 的开发机上它带着真 Key（产品行为正确，`test_stored_settings_survive_a_restart`
+# 覆盖了「配置库优先于 `.env`」）。
+_BOOTSTRAP_WITHOUT_DEVELOPER_ENV = {
+    name: str(Settings.model_fields[name].default or "") for name in MANAGED_FIELDS
+}
+
 
 @pytest.fixture(autouse=True)
-def _clean_settings_store():
-    """用例前后都清空设置库并回落引导默认。"""
+def _isolated_bootstrap_defaults(monkeypatch):
+    """把引导默认换成「本机没有 `.env`」的代码默认，用例才对开发者环境密封。
+
+    换掉的是引导快照本身（`apply_stored_settings()` 读它回落未写过的项），进程内配置随之同步；
+    用例结束恢复真值快照并再重放一次，不把受控值留给后面的测试文件。
+    """
+    monkeypatch.setattr(settings_store, "_BOOTSTRAP", dict(_BOOTSTRAP_WITHOUT_DEVELOPER_ENV))
+    apply_stored_settings()
+    yield
+    monkeypatch.undo()  # 恢复本机真值快照
+    apply_stored_settings()  # 让进程内配置也跟着回落
+
+
+@pytest.fixture(autouse=True)
+def _clean_settings_store(_isolated_bootstrap_defaults):
+    """用例前后都清空设置库并回落引导默认（受控的引导默认，见上个夹具）。"""
     clear_stored_settings()
     yield
     clear_stored_settings()
@@ -73,7 +99,7 @@ def _by_name(rows: list[dict], key: str = "name") -> dict[str, dict]:
 
 
 def test_read_starts_from_bootstrap_defaults():
-    """没在设置页改过时，读回来的一切都是 .env 引导默认，Key 一个都没配。"""
+    """没在设置页改过时，读回来的一切都是引导默认（受控为「本机无 `.env`」），Key 一个都没配。"""
     view = _get()
 
     assert view["provider"]["value"] == "stub"
@@ -88,6 +114,7 @@ def test_read_starts_from_bootstrap_defaults():
         "embedding_model",
     }
     assert all(item["source"] == "引导默认" for item in view["items"])
+    # 引导默认已被夹具钉成无 Key 的代码默认：开发者 `.env` 里的真 Key 不该影响这条断言
     assert all(not key["configured"] and key["masked"] == "" for key in view["keys"])
     assert {cap["key"] for cap in view["capabilities"]} == {
         "asr_provider",
@@ -189,7 +216,7 @@ def test_provider_switch_with_key_becomes_ready_without_restart():
 
 
 def test_stored_settings_survive_a_restart():
-    """配置库优先于 .env 引导默认：重启（进程内配置回到引导默认 + 启动钩子重放）后仍然生效。"""
+    """配置库优先于引导默认：重启（进程内配置回到引导默认 + 启动钩子重放）后仍然是设置页的值。"""
     _put({"asr_provider": "paraformer", "dashscope_api_key": "sk-dashscope-9f8a"})
 
     # 模拟新进程：进程内配置回到引导默认，缓存清掉
@@ -407,7 +434,8 @@ def test_short_key_is_masked_completely():
 
 
 def test_empty_value_clears_the_item_back_to_bootstrap():
-    """传空字符串 = 清除该项设置（回落 .env 引导默认），只影响这一项。"""
+    """传空字符串 = 清除该项设置（回落引导默认），只影响这一项。"""
+    # 清除后回落的是受控引导默认（无 `.env`），所以这里能断言「未配置」而非开发者那把 Key
     _put({"deepseek_api_key": PLAINTEXT, "retrieval_strategy": "vector"})
 
     view = _put({"deepseek_api_key": ""})

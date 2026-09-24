@@ -192,3 +192,80 @@ cd frontend && npm run gen:api        → OpenAPI 快照 + TS 类型重新生成
    是 stub 本就不区分模型。
 7. 设置接口没有「测试连接」按钮：探测需要真发一次请求，本票只做离线的就绪探针（缺 Key 时读接口直接
    说明原因）。
+
+### 补丁：用例对开发者 `.env` 的依赖（合入后修复，2026-09-24）
+
+**症状**：在带真 Key 的 `backend/.env` 的仓库里，合入本票后两条用例红——
+`test_read_starts_from_bootstrap_defaults`（`all(not key["configured"] and key["masked"] == "")` 为 False）
+与 `test_empty_value_clears_the_item_back_to_bootstrap`（清空后仍 `configured=true`）。
+
+**根因**：用例假设「设置库为空 ⇒ 所有 Key 都未配置」，但引导默认是 `.env` 的**进程启动快照**
+（`app/core/settings_store.py` 的 `_BOOTSTRAP`），而按设计「配置库优先于 `.env` 引导默认」——
+`.env` 里有真 Key 时那把 Key 本身就是引导默认，读回来自然 `configured=true`。
+**产品行为正确，是用例对环境的假设错了**（本票原工作树没有 `.env`，所以没暴露）。
+
+**复现**（假 Key 写进 `backend/.env`，该文件在 `.gitignore` 内，未入库）：
+
+```text
+backend/.env（gitignored）
+  DASHSCOPE_API_KEY=sk-test-dashscope
+  DEEPSEEK_API_KEY=sk-test-deepseek
+  SILICONFLOW_API_KEY=sk-test-siliconflow
+  MINERU_TOKEN=test-token
+  BOCHA_API_KEY=test-bocha
+
+$ cd backend && uv run pytest -q tests/test_settings_api.py
+FAILED tests/test_settings_api.py::test_read_starts_from_bootstrap_defaults
+FAILED tests/test_settings_api.py::test_empty_value_clears_the_item_back_to_bootstrap
+2 failed, 22 passed
+
+$ uv run pytest -q          # 全量同样只有这两条红
+2 failed, 242 passed
+```
+
+**改动**（只改 `backend/tests/test_settings_api.py`，产品代码一行未动）：
+
+- 新增 autouse 夹具 `_isolated_bootstrap_defaults`：把 `settings_store._BOOTSTRAP` 换成
+  **`Settings` 的代码默认值**（无 `.env`、无环境变量；22 个可改项：`llm_provider=stub`、Key 全空、
+  `pdf_strategy=mineru_then_pypdf`、`retrieval_strategy=vector_graph`、任务级档位全空……），
+  随后 `apply_stored_settings()` 让进程内配置一并回落；用例结束 `monkeypatch.undo()` 把真值快照放回
+  并再重放一次，不把受控值留给后面的测试文件。
+- 既有夹具 `_clean_settings_store` 改为依赖它：清理用的是受控引导默认，且两个夹具按「先建后拆」
+  归还真值。泄漏另用临时探针验证：在本文件之后紧接断言
+  `settings_store.bootstrap_value("dashscope_api_key") == <本机 .env 的值>` 通过（探针跑完即删）。
+- 断言文本一个字未改（「设置库为空 ⇒ Key 未配置」在受控引导默认下成立），只把前提钉住；
+  相关 docstring / 注释说明「引导默认由夹具控制成无 `.env` 的口径」。
+- 为什么控制**全部**可改项而不只 Key：同一类假设还有「默认检索策略 / 默认供应商」（见下方范围外发现），
+  一次封掉整类缺陷。为什么留在本文件而不进 `conftest.py`：目前只有本文件做这类断言，
+  不动全量测试的环境口径（越界成本高于收益）。
+
+**验收（两个方向都过）**：
+
+```text
+方向 A：backend/.env 存在（五条假 Key）
+$ uv run pytest -q tests/test_settings_api.py   → 24 passed
+$ uv run pytest -q                              → 244 passed
+$ uv run ruff check .                           → All checks passed!
+
+方向 B：backend/.env 改名后（等价于删掉）
+$ uv run pytest -q tests/test_settings_api.py   → 24 passed
+$ uv run pytest -q                              → 244 passed
+```
+
+额外一轮：把 `.env` 改写成「偏离代码默认」的口径（`LLM_PROVIDER=deepseek`、`SEARCH_PROVIDER=bocha`、
+`ASR_PROVIDER=paraformer`、`PDF_STRATEGY=pypdf`、`RETRIEVAL_STRATEGY=vector`、`EMBEDDING_PROVIDER=hash`、
+`TASK_MODEL_INTENT=deepseek-reasoner`），本文件仍 24 passed；验证完已把 `.env` 还原成任务给的那五条假 Key。
+
+**范围外发现（未改，供分派）**：
+
+1. 同一类环境依赖还在别的测试文件里：上面那一轮「偏离代码默认的 `.env`」下
+   `tests/test_rag_strategies.py::test_default_retrieval_matches_pre_refactor_golden`（`assert retriever.name == "vector_graph"`）、
+   `tests/test_rag_strategies.py::test_retrieve_endpoint_reports_what_was_hit`、
+   `tests/test_graph_retrieval.py::test_adjacent_node_content_reaches_llm_gateway`、
+   `tests/test_graph_retrieval.py::test_context_respects_budget_chunks_first_nodes_truncated` 红——
+   它们断言「默认档」时同样假设 `.env` 未覆盖 `RETRIEVAL_STRATEGY` 等项。本单边界只到
+   `test_settings_api.py`，故只报告不修。（只带 Key 的真实 `.env` 碰不到它们，所以这次合入只暴露了本票这两条。）
+2. `app/api/v1/settings.py` 里 `_capabilities()` **定义了两次**（287 行与 306 行，函数体一模一样）：
+   产品代码的重复定义（ruff 默认规则不报），行为无影响，但应删一处；不在本单边界内。
+
+本票 `Status` 未动（仍是文件里的原值），验收勾选也未改。
