@@ -4,10 +4,9 @@ import uuid
 
 from fastapi.testclient import TestClient
 
-import app.api.v1.chat as chat_module
+import app.core.conversation as conversation_module
 import app.core.embedding.factory as embedding_factory_module
 import app.core.llm.factory as factory_module
-import app.core.orchestrator as orchestrator_module
 import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
@@ -55,10 +54,8 @@ def _install(monkeypatch, provider: RecordingProvider, store: VectorStore | None
             topic="导数", duration_minutes=45, style="学术", objectives=["a"], key_points=["b"]
         )
 
-    # orchestrate 内部引用自己模块的 analyze_intent（早绑定），必须一并替换，
-    # 否则真实意图分析会穿透到真实 LLM 网关。
-    monkeypatch.setattr(chat_module, "analyze_intent", fake_analyze)
-    monkeypatch.setattr(orchestrator_module, "analyze_intent", fake_analyze)
+    # 意图分析住 core 状态机（票 05 收编）：伪装意图分析；orchestrator 只消费累积意图。
+    monkeypatch.setattr(conversation_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(factory_module, "get_llm", lambda: provider)
     # 检索向量化只依赖 Embedder 接口（orchestrator 晚绑定，替换工厂即可；
     # provider 同时具备 embed，用作假向量化器）

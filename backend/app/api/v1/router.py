@@ -11,6 +11,7 @@ from app.api.v1.files import router as files_router
 from app.api.v1.interactive import router as interactive_router
 from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.revise import router as revise_router
+from app.api.v1.sessions import router as sessions_router
 
 router = APIRouter()
 router.include_router(chat_router)
@@ -21,6 +22,7 @@ router.include_router(files_router)
 router.include_router(interactive_router)
 router.include_router(knowledge_router)
 router.include_router(revise_router)
+router.include_router(sessions_router)
 
 
 @router.get(
@@ -32,9 +34,7 @@ router.include_router(revise_router)
         "适合作为前端连接异常时的最小排查点（若 `/health` 也失败则是进程问题）。"
     ),
     responses={
-        200: json_response(
-            "v1 已就绪", {"status": "ok", "message": "EduMind API v1"}
-        ),
+        200: json_response("v1 已就绪", {"status": "ok", "message": "EduMind API v1"}),
         500: internal_error(),
     },
 )

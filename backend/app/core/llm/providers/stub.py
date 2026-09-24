@@ -163,6 +163,10 @@ class StubProvider(LLMProvider):
                     {"conflict": False, "description": "无矛盾（stub）"}, ensure_ascii=False
                 )
             )
+        # 跳过追问的语义判定（提示词见 core/clarify.py 的 SKIP_JUDGEMENT_MARKER）：
+        # stub 不做语义判断，一律不跳过——追问与否仍由意图完整性决定，不会误跳过追问。
+        if "备课会话的语义判定器" in last:
+            return ChatResult(content=json.dumps({"skip": False}, ensure_ascii=False))
         if "HTML5 互动学习小游戏" in last:
             return ChatResult(content=_STUB_HTML)
         if "你是教学课件设计师" in last:

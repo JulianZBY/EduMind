@@ -1,6 +1,9 @@
-"""需求澄清：按追问粒度主动提问，补齐模糊需求。"""
+"""需求澄清：按追问粒度主动提问，补齐模糊需求；跳过追问为语义判定。"""
 
 from app.core.intent import TeachingIntent
+from app.core.llm.base import ChatMessage
+from app.core.llm.factory import get_llm
+from app.core.llm.parsing import parse_json
 
 # 每个字段对应的追问话术
 FIELD_QUESTIONS = {
@@ -43,3 +46,35 @@ def build_question(missing: list[str]) -> str:
     if not missing:
         return ""
     return FIELD_QUESTIONS.get(missing[0], "请补充更多教学需求信息")
+
+
+# 跳过追问的语义判定提示词：按意思判，不按字面词匹配（CONTEXT.md「跳过追问」）。
+# 提示词首句是判定器标记：网关（含 stub）按它路由，测试也按它认出「这是语义判定」。
+_SKIP_PROMPT = """你是备课会话的语义判定器：判断教师最新这一句话是否表示「信息已经够用，直接给结果」。
+
+判定规则（按意思判断，不要按字面匹配）：
+- 「不用再问了」「需求都清楚了」「直接给结果」这类**不同说法**意思相同即算跳过；
+- 字面出现「生成」但教师在否定、推迟或只是描述（如「先别生成」「生成之前我还想补充」）不算跳过；
+- 还在补充信息、提问、表示不确定或犹豫，都不算跳过。
+
+当前仍缺的要素：__MISSING__
+教师最新表述：__TEXT__
+
+只输出 JSON：{"skip": true 或 false}
+"""
+
+SKIP_JUDGEMENT_MARKER = "备课会话的语义判定器"
+
+
+async def should_skip_clarification(utterance: str, missing: list[str]) -> bool:
+    """语义判定教师最新表述是否表示「信息够了，直接出结果」。
+
+    判定基于语义而非字面：同义改写能命中，字面像但语义相反（否定 / 推迟）的不命中。
+    判定环节本身不打断备课：模型输出不可解析时保守地继续追问。
+    """
+    llm = get_llm()
+    prompt = _SKIP_PROMPT.replace("__MISSING__", "、".join(missing) or "无").replace(
+        "__TEXT__", utterance
+    )
+    result = await llm.chat([ChatMessage(role="user", content=prompt)])
+    return parse_json(result.content).get("skip") is True

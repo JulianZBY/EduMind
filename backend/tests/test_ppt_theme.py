@@ -12,9 +12,8 @@ from pptx.enum.dml import MSO_COLOR_TYPE, MSO_FILL
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.util import Pt
 
-import app.api.v1.chat as chat_module
+import app.core.conversation as conversation_module
 import app.core.embedding.factory as embedding_factory_module
-import app.core.orchestrator as orchestrator_module
 import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
@@ -106,8 +105,8 @@ def test_chat_artifacts_slides_carry_roles_and_keep_typography(monkeypatch, tmp_
         )
 
     stub = StubProvider()
-    monkeypatch.setattr(chat_module, "analyze_intent", fake_analyze)
-    monkeypatch.setattr(orchestrator_module, "analyze_intent", fake_analyze)
+    # 意图分析住 core 状态机（票 05 收编）：伪装意图分析；orchestrator 只消费累积意图
+    monkeypatch.setattr(conversation_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(ppt_module, "get_llm", lambda: stub)
     monkeypatch.setattr(word_module, "get_llm", lambda: stub)
