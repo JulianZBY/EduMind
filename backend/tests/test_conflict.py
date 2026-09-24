@@ -8,10 +8,12 @@ import uuid
 from fastapi.testclient import TestClient
 
 import app.api.v1.documents as documents_module
+import app.core.embedding.factory as embedding_factory_module
 import app.knowledge.conflict as conflict_module
 import app.knowledge.graph as graph_module
 import app.knowledge.parsers as parsers_module
 import app.knowledge.pipeline as pipeline_module
+from app.core.embedding.stub import StubEmbedder
 from app.core.llm.providers.stub import StubProvider
 from app.db import SessionLocal, init_db
 from app.db.models import Document, KnowledgeEdge, KnowledgeNode
@@ -34,9 +36,11 @@ class _FakeParser:
 
 
 def _patch_common(monkeypatch, store: VectorStore) -> None:
-    """stub 网关 + 隔离向量库（标题索引），所有用例共用。"""
+    """stub 网关 + stub 向量化 + 隔离向量库（标题索引），所有用例共用。"""
     monkeypatch.setattr(conflict_module, "get_llm", lambda: StubProvider())
-    monkeypatch.setattr(pipeline_module, "get_llm", lambda: StubProvider())
+    # 向量化只依赖 Embedder 接口：冲突模块早绑定，管道晚绑定（走工厂）
+    monkeypatch.setattr(conflict_module, "get_embedder", lambda: StubEmbedder())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(conflict_module, "VectorStore", lambda: store)
     monkeypatch.setattr(graph_module, "VectorStore", lambda: store)
 
@@ -84,7 +88,7 @@ async def _seed_node(title: str, content: str, store: VectorStore) -> str:
         node_id = node.id
     finally:
         db.close()
-    emb = (await StubProvider().embed([title]))[0]
+    emb = (await StubEmbedder().embed([title]))[0]
     store.add_node_title(node_id, title, emb)
     return node_id
 
@@ -143,6 +147,7 @@ async def test_same_name_contradiction_pends_and_stays_out_of_graph(monkeypatch,
     db = SessionLocal()
     try:
         doc = db.get(Document, doc_id)
+        assert doc is not None
         assert doc.status == "有冲突"
         assert doc.conflict_count == 1
     finally:
@@ -202,7 +207,7 @@ async def test_review_accept_new_replaces_old(monkeypatch, tmp_path):
     finally:
         db.close()
 
-    hits = store.search_node_titles((await StubProvider().embed([title]))[0], k=5)
+    hits = store.search_node_titles((await StubEmbedder().embed([title]))[0], k=5)
     hit_ids = {h["node_id"] for h in hits}
     assert old_id not in hit_ids and new_node.id in hit_ids, "标题索引应同步替换"
 
@@ -302,6 +307,7 @@ async def test_non_conflicting_knowledge_saves_directly(monkeypatch, tmp_path):
     db = SessionLocal()
     try:
         doc = db.get(Document, doc_id)
+        assert doc is not None
         assert doc.status == "已完成"
         assert doc.conflict_count == 0
     finally:

@@ -16,16 +16,15 @@ from docx import Document as DocxDocument
 from fastapi.testclient import TestClient
 
 import app.api.v1.knowledge as knowledge_module
-import app.core.llm.factory as factory_module
+import app.core.embedding.factory as embedding_factory_module
 import app.knowledge.parsers.audio as audio_module
-import app.knowledge.pipeline as pipeline_module
 import app.knowledge.vector_store as vector_store_module
 from app.config import settings
 from app.core.asr.base import Transcriber
 from app.core.asr.factory import get_transcriber
 from app.core.asr.paraformer import ParaformerTranscriber
 from app.core.asr.stub import STUB_TRANSCRIPT, StubTranscriber
-from app.core.llm.providers.stub import StubProvider
+from app.core.embedding.stub import StubEmbedder
 from app.db import init_db
 from app.knowledge.parsers import get_parser
 from app.knowledge.parsers.audio import AudioParser
@@ -103,9 +102,9 @@ def test_upload_audio_completes_and_search_hits_transcript(monkeypatch, tmp_path
     """stub 模式管道：上传录音 → 状态已完成 → 语义检索命中转写内容。"""
     store = VectorStore(str(tmp_path / "vectors.db"))
     monkeypatch.setattr(audio_module, "get_transcriber", lambda: StubTranscriber())
-    monkeypatch.setattr(pipeline_module, "get_llm", lambda: StubProvider())
-    monkeypatch.setattr(factory_module, "get_llm", lambda: StubProvider())
-    monkeypatch.setattr(knowledge_module, "get_llm", lambda: StubProvider())
+    # 向量化只依赖 Embedder 接口：管道（晚绑定）替换工厂，检索端点（早绑定）替换模块引用
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
+    monkeypatch.setattr(knowledge_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(vector_store_module, "VectorStore", lambda: store)
     monkeypatch.setattr(knowledge_module, "VectorStore", lambda: store)
 
@@ -127,8 +126,7 @@ def test_upload_audio_completes_and_search_hits_transcript(monkeypatch, tmp_path
 def test_transcription_failure_marks_failed_without_blocking_others(monkeypatch, tmp_path):
     """转写失败 → 文档状态失败；其他格式（docx 本地解析）不受影响照常完成。"""
     store = VectorStore(str(tmp_path / "vectors.db"))
-    monkeypatch.setattr(pipeline_module, "get_llm", lambda: StubProvider())
-    monkeypatch.setattr(factory_module, "get_llm", lambda: StubProvider())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(vector_store_module, "VectorStore", lambda: store)
 
     monkeypatch.setattr(audio_module, "get_transcriber", lambda: FailingTranscriber())

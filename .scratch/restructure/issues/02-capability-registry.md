@@ -6,8 +6,100 @@
 
 **Status:** ready-for-agent
 
-- [ ] 五项能力（对话 / 向量化 / 语音转写 / PDF 解析 / 网络搜索）都是接口 + 按配置选择的工厂，新增实现无需改动调用方
-- [ ] OpenAI 兼容 provider 经 MockTransport 契约测试覆盖三家方言各一例
-- [ ] 向量化是独立接口，调用方不再依赖对话 provider
-- [ ] PDF 三策略可经配置切换，失败兜底行为有测试
-- [ ] stub 模式全链路可跑（既有底线测试保持绿）
+- [x] 五项能力（对话 / 向量化 / 语音转写 / PDF 解析 / 网络搜索）都是接口 + 按配置选择的工厂，新增实现无需改动调用方
+- [x] OpenAI 兼容 provider 经 MockTransport 契约测试覆盖三家方言各一例
+- [x] 向量化是独立接口，调用方不再依赖对话 provider
+- [x] PDF 三策略可经配置切换，失败兜底行为有测试
+- [x] stub 模式全链路可跑（既有底线测试保持绿）
+
+## 交付记录
+
+**分支**：`JulianZBY/issue-02-capability-registry`
+**commit**：`refactor(02): 能力注册统一`（分支 HEAD）；代码与测试所在的提交对象 = `5f26a10`，用 `git show 5f26a10 --stat` 可核对。未 push、未开 PR、未 merge。
+（说明：交付记录要写「自己的 sha」会自相矛盾——写进去 sha 就变了，所以这里的 sha 指向「代码 + 记录初版」那个提交对象，本行所在的一次同信息提交只做该修正。）
+
+### 设计一句话
+
+五项能力共用一份「配置名 → 构造器」注册表（`app/core/registry.py`）：换实现只改配置名 / Key，
+实现类只在各自能力包内被 import，调用方只依赖接口 + 工厂。
+
+### 新增文件
+
+| 文件 | 作用 |
+| --- | --- |
+| `app/core/registry.py` | 注册表（`build` / `register`），未注册的名字报可选项清单 |
+| `app/core/dialects.py` | OpenAI 兼容方言预设：dashscope / deepseek / siliconflow 的 base_url + 模型名 + Key 字段 |
+| `app/core/llm/providers/openai_compat.py` | 唯一对话/多模态实现，构造参数 = `base_url` + `model` + `api_key`（+ `vision_model`） |
+| `app/core/embedding/{base,stub,hash,openai_compat,factory}.py` | 向量化独立接口 + 工厂（stub 8 维 / hash 64 维 crc32 兜底 / OpenAI 兼容） |
+| `app/core/search/{base,stub,factory}.py` | 网络搜索接口 + 必有 stub（此前只有写死的 bocha 客户端、无兜底） |
+| `app/core/parser/{base,pypdf,fallback,factory}.py` | PDF 接口 + 三策略（mineru / pypdf / mineru_then_pypdf） |
+| `tests/test_openai_compat_contract.py` | 10 例：三家方言各一例（MockTransport）+ 配置切换装配 |
+| `tests/test_embedding_registry.py` | 9 例：stub / hash 确定性 + 工厂跟随方言与显式覆盖 |
+| `tests/test_pdf_strategy.py` | 8 例：三策略各一例 + mineru 失败退 pypdf（云端 failed 与缺 token 两条路径） |
+| `tests/test_capability_registry.py` | 11 例：五项能力各证「新增实现无需改动调用方」+ 不变式（调用方不 import 具体实现） |
+
+### 改动文件
+
+- `app/config.py`：新增 `LLM_BASE_URL/LLM_MODEL/LLM_API_KEY/LLM_VISION_MODEL`、`EMBEDDING_*`（provider/base_url/model/api_key/dimensions）、`SEARCH_PROVIDER`、`PDF_STRATEGY`。两处「留空」语义为**保持既有 .env 行为**：`EMBEDDING_PROVIDER` 留空 = 跟随对话方言（deepseek 无硅基流动 Key 时退本地 hash 64 维）；`SEARCH_PROVIDER` 留空 = 有 `BOCHA_API_KEY` 走 bocha，否则 stub。
+- `app/core/llm/factory.py`、`app/core/asr/factory.py`：换成注册表选实现（`LLM_BUILDERS` / `ASR_BUILDERS`）。
+- `app/core/llm/base.py`：`embed` 从对话接口移出（并入 `Embedder`）；`llm/providers/dashscope.py`、`llm/providers/deepseek.py` 删除（方言差异进 `dialects.py` + `openai_compat.py`）。
+- 调用点最小替换（未重排 import、未动端点路径与响应结构）：`app/core/orchestrator.py`、`app/knowledge/pipeline.py`、`app/knowledge/conflict.py`、`app/knowledge/parsers/pdf.py`，以及 `app/api/v1/knowledge.py`（两行 import + 三处调用，端点与响应模型一字未动）。
+- `app/core/parser/mineru.py`：实现 `PdfParser` 接口、补 transport 测试缝、本地读文件给可读错误。
+- 测试适配：`test_audio` / `test_conflict` / `test_knowledge` / `test_web_search` / `test_graph_retrieval` / `test_llm_stub` 的补丁点从 `get_llm().embed` 迁到 `get_embedder()`；删除 `tests/test_llm_deepseek.py`（该 provider 已并入 openai_compat，用例迁进新契约测试）。
+- `backend/.env.example`：补新配置项说明。**小越界说明**：所有权清单未列此文件，但它是配置的唯一文档面，否则新增配置无处可查；只做追加/改注释，未动键名默认值语义。
+
+### 可观测验收
+
+```text
+$ uv run pytest -q
+128 passed, 2 warnings in 3.15s        # 基线 95 → 净 +33（删 6 条已迁移用例，新增 39 条）
+$ uv run ruff check app tests
+All checks passed!
+```
+
+新增契约测试（`--collect-only` 计数）：`test_openai_compat_contract.py` 10、`test_embedding_registry.py` 9、`test_pdf_strategy.py` 8、`test_capability_registry.py` 11。
+
+#### 「只改配置即可切换」证据（同一份代码，只设环境变量）
+
+```text
+# 1) LLM_PROVIDER=stub（无 Key 底线）
+$ $env:LLM_PROVIDER='stub'; uv run python -c "...get_llm()/get_embedder()"
+llm   = StubProvider
+embed = StubEmbedder
+$ uv run pytest tests/test_llm_stub.py tests/test_chat.py tests/test_capability_registry.py -q
+16 passed
+
+# 2) PDF_STRATEGY=pypdf
+$ $env:PDF_STRATEGY='pypdf'; uv run python -c "..."
+策略实例 = PypdfParser name = pypdf
+调用方解析结果 = TCP three-way handshake curriculum
+$ uv run pytest tests/test_pdf_strategy.py -q
+8 passed
+
+# 3) PDF_STRATEGY=mineru_then_pypdf（无 MINERU_TOKEN → mineru 失败退 pypdf）
+$ $env:PDF_STRATEGY='mineru_then_pypdf'; $env:MINERU_TOKEN=''; uv run python -c "..."
+策略实例 = FallbackPdfParser name = fallback
+PDF 主策略 mineru 失败，退到 pypdf      # logger.warning(exc_info=True) 的预期输出
+调用方解析结果 = TCP three-way handshake curriculum
+$ uv run pytest tests/test_pdf_strategy.py -q
+8 passed
+
+# 4) 附加：同一份代码在方言间切换（仅改环境变量）
+$ LLM_PROVIDER=dashscope  → llm: https://dashscope.aliyuncs.com/compatible-mode/v1 | qwen-plus | vision: qwen-vl-max
+                            embed: .../compatible-mode/v1 | text-embedding-v3 | dim: 1024
+$ LLM_PROVIDER=deepseek（无 SILICONFLOW_API_KEY）→ llm: https://api.deepseek.com | deepseek-chat | vision: (无)
+                            embed: HashEmbedder（本地 crc32 兜底）
+$ LLM_PROVIDER=deepseek + SILICONFLOW_API_KEY → embed: https://api.siliconflow.cn/v1 | BAAI/bge-large-zh-v1.5
+$ EMBEDDING_PROVIDER=openai + EMBEDDING_BASE_URL/MODEL/API_KEY/DIMENSIONS
+                            → embed: https://llm.example.edu/v1 | edu-embed-1024 | dim: 1024
+```
+
+（无 Key 环境：上面 4a–4d 只打印解析出的实例与 base_url，不发真实请求；云端契约全部由 `httpx.MockTransport` 覆盖。）
+
+### 遗留问题
+
+1. **`data/output` 仍是测试共享落盘**（既有遗留，本票未扩大范围）：跑测试会往 `backend/data/output` 写课件/教案文件；`vectors.db` / `uploads` / 主库继续由 `tests/conftest.py` 隔离，本次验证未新建 `vectors.db`、未污染 `uploads`。
+2. **切向量化实现会改变向量维度**：维度冲突仍靠 `VectorStore._dim_mismatch` 报人话提示，需删 `vectors.db` 重建（既有行为）。`EMBEDDING_PROVIDER` 留空的「跟随方言」是隐式规则，已在 `config.py` 注释与 `.env.example` 写明。
+3. **未做真实云端联通性验证**（本工作树无任何 Key）：dashscope / deepseek / siliconflow / mineru / bocha 全部走 stub + MockTransport；也未在浏览器/前端验证。
+4. **`SEARCH_PROVIDER` 默认语义变化**：未配 Key 时从「请求报错」变为「stub 占位结果」（本票要求），占位结果带 `（stub 网络搜索）` 标记与 `https://example.com/stub/*` 假链接，不会冒充真实资料。
+5. 既有未实现、本票未扩大范围：embedding 批量分片（dashscope 单请求 10 条上限）、多模态 embedding、`/embeddings` 失败重试。

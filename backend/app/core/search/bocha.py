@@ -1,19 +1,20 @@
-"""博查网络搜索。"""
+"""博查网络搜索（真实实现）。"""
 
 import httpx
 
 from app.config import settings
+from app.core.search.base import WebSearch
 
 
-class BochaSearchClient:
+class BochaSearch(WebSearch):
+    name = "bocha"
+
     URL = "https://api.bochaai.com/v1/web-search"
 
-    def __init__(self, api_key: str | None = None) -> None:
-        self.api_key = api_key or settings.bocha_api_key
+    def __init__(self, key: str | None = None) -> None:
+        self.api_key = key or settings.bocha_api_key
 
-    async def search(
-        self, query: str, count: int = 5, summary: bool = False
-    ) -> list[dict]:
+    async def search(self, query: str, count: int = 5, summary: bool = False) -> list[dict]:
         if not self.api_key:
             raise ValueError("BOCHA_API_KEY 未配置")
         payload = {

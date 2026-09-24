@@ -5,6 +5,7 @@ import uuid
 from fastapi.testclient import TestClient
 
 import app.api.v1.chat as chat_module
+import app.core.embedding.factory as embedding_factory_module
 import app.core.llm.factory as factory_module
 import app.core.orchestrator as orchestrator_module
 import app.generate.outline as outline_module
@@ -59,6 +60,9 @@ def _install(monkeypatch, provider: RecordingProvider, store: VectorStore | None
     monkeypatch.setattr(chat_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(orchestrator_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(factory_module, "get_llm", lambda: provider)
+    # 检索向量化只依赖 Embedder 接口（orchestrator 晚绑定，替换工厂即可；
+    # provider 同时具备 embed，用作假向量化器）
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: provider)
     monkeypatch.setattr(ppt_module, "get_llm", lambda: provider)
     monkeypatch.setattr(word_module, "get_llm", lambda: provider)
     monkeypatch.setattr(outline_module, "get_llm", lambda: provider)

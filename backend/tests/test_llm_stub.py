@@ -14,14 +14,6 @@ async def test_stub_chat_echoes():
 
 
 @pytest.mark.asyncio
-async def test_stub_embed_shape():
-    p = StubProvider()
-    vecs = await p.embed(["a", "bb", "ccc"])
-    assert len(vecs) == 3
-    assert all(len(v) == 8 for v in vecs)
-
-
-@pytest.mark.asyncio
 async def test_stub_creative_prompt_returns_html():
     """创意内容提示词命中时返回完整单文件 HTML（stub 模式产物可解析的前提）。"""
     p = StubProvider()

@@ -11,13 +11,19 @@ import zipfile
 import httpx
 
 from app.config import settings
+from app.core.parser.base import PdfParser
 
 
-class MinerUParser:
+class MinerUParser(PdfParser):
+    name = "mineru"
+
     BASE = "https://mineru.net/api/v4"
 
-    def __init__(self, token: str | None = None) -> None:
+    def __init__(
+        self, token: str | None = None, transport: httpx.AsyncBaseTransport | None = None
+    ) -> None:
         self.token = token or settings.mineru_token
+        self._transport = transport  # 测试注入 MockTransport；生产为 None（直连）
 
     def _headers(self) -> dict:
         return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
@@ -28,7 +34,7 @@ class MinerUParser:
         if not self.token:
             raise ValueError("MINERU_TOKEN 未配置")
         filename = os.path.basename(pdf_path)
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=120, transport=self._transport) as client:
             # 1. 获取上传地址
             r1 = await client.post(
                 f"{self.BASE}/file-urls/batch",
@@ -41,8 +47,7 @@ class MinerUParser:
             upload_url = d1["file_urls"][0]
 
             # 2. PUT 上传
-            with open(pdf_path, "rb") as f:
-                r2 = await client.put(upload_url, content=f.read())
+            r2 = await client.put(upload_url, content=self._read_bytes(pdf_path))
             r2.raise_for_status()
 
             # 3. 轮询结果
@@ -69,6 +74,15 @@ class MinerUParser:
                 if loop.time() > deadline:
                     raise TimeoutError("MinerU 解析超时")
                 await asyncio.sleep(poll_interval)
+
+    @staticmethod
+    def _read_bytes(path: str) -> bytes:
+        """读本地 PDF；不可读时给出可读错误（避免冒泡成裸 OSError）。"""
+        try:
+            with open(path, "rb") as f:
+                return f.read()
+        except OSError as e:
+            raise FileNotFoundError(f"PDF 不可读: {path}") from e
 
     @staticmethod
     def _extract_markdown(zip_bytes: bytes) -> str:

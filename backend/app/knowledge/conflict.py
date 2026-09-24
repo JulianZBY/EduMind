@@ -7,6 +7,7 @@
 """
 
 from app.config import settings
+from app.core.embedding.factory import get_embedder
 from app.core.llm.base import ChatMessage
 from app.core.llm.factory import get_llm
 from app.core.llm.parsing import parse_json
@@ -48,7 +49,7 @@ async def detect_conflicts(
     """
     db = SessionLocal()
     store = VectorStore()
-    llm = get_llm()
+    embedder = get_embedder()
     try:
         pending: list[dict] = []
         duplicates: list[dict] = []
@@ -68,7 +69,7 @@ async def detect_conflicts(
             if exact:
                 candidates[exact.id] = exact
             # 近名预筛：标题向量阈值内候选（同名已入 candidates，按 id 去重）
-            emb = (await llm.embed([title]))[0]
+            emb = (await embedder.embed([title]))[0]
             for hit in store.search_node_titles(emb, k=5):
                 if hit["distance"] > settings.conflict_distance_threshold:
                     continue
@@ -171,6 +172,6 @@ async def _insert_node(
     )
     db.add(node)
     db.flush()
-    emb = (await get_llm().embed([node.title]))[0]
+    emb = (await get_embedder().embed([node.title]))[0]
     VectorStore().add_node_title(node.id, node.title, emb)
     return node

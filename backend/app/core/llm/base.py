@@ -1,6 +1,7 @@
-"""LLM 网关统一接口（对话 / 多模态 / 向量化）。
+"""LLM 网关统一接口（对话 / 多模态）。
 
-搜索与 PDF 解析归属不同服务商，拆为独立服务：`app.core.search` / `app.core.parser`。
+向量化（Embedder）见 `app.core.embedding`，搜索与 PDF 解析归属不同服务商，
+见 `app.core.search` / `app.core.parser`——调用方只依赖各自接口，不依赖 provider 实现。
 """
 
 from abc import ABC, abstractmethod
@@ -20,7 +21,9 @@ class ChatResult:
 
 
 class LLMProvider(ABC):
-    """对话 / 多模态 / 向量化 统一抽象。"""
+    """对话 / 多模态 统一抽象。"""
+
+    name: str = "base"
 
     @abstractmethod
     async def chat(self, messages: list[ChatMessage], **kwargs) -> ChatResult:
@@ -28,8 +31,4 @@ class LLMProvider(ABC):
 
     async def vision(self, image_path: str, prompt: str) -> str:
         """多模态：图片 / 视频帧理解。"""
-        raise NotImplementedError
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        """文本向量化。"""
         raise NotImplementedError

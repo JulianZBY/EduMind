@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.llm.factory import get_llm
-from app.core.search.bocha import BochaSearchClient
+from app.core.embedding.factory import get_embedder
+from app.core.search.factory import get_search
 from app.db import get_session
 from app.db.models import KnowledgeEdge, KnowledgeNode
 from app.knowledge.vector_store import VectorStore
@@ -33,15 +33,14 @@ class SearchResponse(BaseModel):
 
 @router.post("/knowledge/search", response_model=SearchResponse)
 async def search(req: SearchRequest):
-    llm = get_llm()
-    emb = await llm.embed([req.query])
+    emb = await get_embedder().embed([req.query])
     results = VectorStore().search(emb[0], k=req.k)
     return SearchResponse(hits=[SearchHit(**r) for r in results])
 
 
 @router.post("/knowledge/web-search")
 async def web_search(req: SearchRequest):
-    results = await BochaSearchClient().search(req.query, count=req.k)
+    results = await get_search().search(req.query, count=req.k)
     return {"results": results}
 
 
