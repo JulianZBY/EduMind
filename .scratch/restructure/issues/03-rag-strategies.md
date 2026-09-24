@@ -25,8 +25,9 @@
 图谱邻接融合、来源溯源、上下文预算内组装）全部搬进 `app/knowledge/retrieval/` 的策略实现，
 后续加重排只需在 `RETRIEVER_BUILDERS` 注册新实现。
 
-**分支 / commit**：`JulianZBY/issue-03-rag-strategies`；代码与测试所在的提交对象 = `98597c2`
-（用 `git show 98597c2 --stat` 核对）；本次收尾的同信息提交只改本交付记录。未 push、未开 PR、未 merge/rebase。
+**分支 / commit**：`JulianZBY/issue-03-rag-strategies`。代码与测试所在的提交对象 = `98597c2`
+（用 `git show 98597c2 --stat` 核对，19 个文件）；其后还有两个同信息提交，
+只补本交付记录与 `backend/.env.example` 的新配置样例，不动代码。未 push、未开 PR、未 merge/rebase。
 基线 `ab39adf`。
 
 **新增文件**
@@ -43,7 +44,7 @@
 | `backend/app/knowledge/retrieval/vector.py` | `vector` 实现（纯向量） |
 | `backend/app/knowledge/retrieval/vector_graph.py` | `vector_graph` 实现（默认档，向量 + 图谱邻接融合） |
 | `backend/app/knowledge/retrieval/factory.py` | `RETRIEVER_BUILDERS` + `get_retriever()` |
-| `backend/tests/test_rag_strategies.py` | 本票测试（15 例，含黄金比对与两档 HTTP 差异） |
+| `backend/tests/test_rag_strategies.py` | 本票测试（13 个用例函数 → 15 个 test item，含黄金比对与两档 HTTP 差异） |
 
 **改动 / 删除**
 
@@ -63,7 +64,8 @@
 ```text
 cd backend
 uv sync                                              # 全新工作树，无 setup 钩子
-uv run pytest -q                                     # 181 passed（收编前基线 164）
+uv run pytest -q                                     # 181 passed（收编前基线 164：+15 本票用例，
+                                                     #   +2 新端点自动进入 OpenAPI 契约用例）
 uv run ruff check .                                  # All checks passed!
 uv run pytest tests/test_graph_retrieval.py tests/test_reference.py \
   tests/test_exam_api.py tests/test_interactive_api.py tests/test_chunking.py -q
@@ -107,6 +109,24 @@ vector      : {"strategy": "vector",
 ```
 
 差异只在图谱融合：`graph_nodes` 有/无、`context` 带不带图谱段；命中分块与来源溯源两档一致（各自正确）。
+
+**证据 2b：走真实配置（环境变量，两个独立进程）的同一差异**
+
+```powershell
+cd backend
+$env:RETRIEVAL_STRATEGY='vector_graph'; uv run python <同一段种子数据 + POST /api/v1/knowledge/retrieve 脚本>
+$env:RETRIEVAL_STRATEGY='vector';       uv run python <同上>
+```
+
+```text
+RETRIEVAL_STRATEGY=vector_graph
+strategy=vector_graph context='=== 知识片段 ===\n导数讲义片段\n\n=== 图谱关联知识点（按知识递进） ===\n【求导法则】邻接内容' \
+  sources=['导数讲义.pdf'] graph_nodes=['求导法则']
+RETRIEVAL_STRATEGY=vector
+strategy=vector context='导数讲义片段' sources=['导数讲义.pdf'] graph_nodes=[]
+CHUNK_STRATEGY=nowhere
+ValueError: 未实现的分块策略: nowhere（可选：paragraph）
+```
 
 **两轴自审**
 
