@@ -1167,6 +1167,168 @@ export type ReviewResult = {
 };
 
 /**
+ * ReviseExamRequest
+ *
+ * 试卷修改请求：待改的题目集合 + 修改意见 +（可选）题量与基线版本。
+ */
+export type ReviseExamRequest = {
+    /**
+     * Base Version Id
+     */
+    base_version_id?: string | null;
+    /**
+     * Feedback
+     */
+    feedback: string;
+    /**
+     * N
+     */
+    n?: number | null;
+    /**
+     * Questions
+     */
+    questions: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+};
+
+/**
+ * ReviseExamResponse
+ */
+export type ReviseExamResponse = {
+    /**
+     * Bank Saved
+     */
+    bank_saved: number;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Questions
+     */
+    questions: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+    /**
+     * Version
+     */
+    version?: number | null;
+    /**
+     * Version Id
+     */
+    version_id?: string | null;
+};
+
+/**
+ * ReviseInteractiveRequest
+ *
+ * 互动内容修改请求：待改的单文件 HTML + 修改意见 +（可选）以哪一版为基线。
+ */
+export type ReviseInteractiveRequest = {
+    /**
+     * Base Version Id
+     */
+    base_version_id?: string | null;
+    /**
+     * Feedback
+     */
+    feedback: string;
+    /**
+     * Html
+     */
+    html: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+};
+
+/**
+ * ReviseInteractiveResponse
+ */
+export type ReviseInteractiveResponse = {
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Html
+     */
+    html: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+    /**
+     * Version
+     */
+    version?: number | null;
+    /**
+     * Version Id
+     */
+    version_id?: string | null;
+};
+
+/**
+ * ReviseOutlineRequest
+ *
+ * 提纲修改请求：待改的提纲正文 + 修改意见 +（可选）以哪一版为基线。
+ */
+export type ReviseOutlineRequest = {
+    /**
+     * Base Version Id
+     */
+    base_version_id?: string | null;
+    /**
+     * Feedback
+     */
+    feedback: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
+ * ReviseOutlineResponse
+ */
+export type ReviseOutlineResponse = {
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Version
+     */
+    version?: number | null;
+    /**
+     * Version Id
+     */
+    version_id?: string | null;
+};
+
+/**
  * ReviseRequest
  *
  * 课件修改请求：待改的课件结构 + 修改意见 + 原风格偏好 +（可选）以哪一版为基线。
@@ -2629,6 +2791,99 @@ export type ReviseApiV1RevisePostResponses = {
 };
 
 export type ReviseApiV1RevisePostResponse = ReviseApiV1RevisePostResponses[keyof ReviseApiV1RevisePostResponses];
+
+export type ReviseExamEndpointApiV1ReviseExamPostData = {
+    body: ReviseExamRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/revise/exam';
+};
+
+export type ReviseExamEndpointApiV1ReviseExamPostErrors = {
+    /**
+     * 基线版本或备课会话不存在
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ReviseExamEndpointApiV1ReviseExamPostResponses = {
+    /**
+     * 修改后的题目、新文件名、入题库题数与（带会话时的）新版本标识
+     */
+    200: ReviseExamResponse;
+};
+
+export type ReviseExamEndpointApiV1ReviseExamPostResponse = ReviseExamEndpointApiV1ReviseExamPostResponses[keyof ReviseExamEndpointApiV1ReviseExamPostResponses];
+
+export type ReviseInteractiveEndpointApiV1ReviseInteractivePostData = {
+    body: ReviseInteractiveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/revise/interactive';
+};
+
+export type ReviseInteractiveEndpointApiV1ReviseInteractivePostErrors = {
+    /**
+     * 基线版本或备课会话不存在
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ReviseInteractiveEndpointApiV1ReviseInteractivePostResponses = {
+    /**
+     * 修改后的互动内容、新文件名与（带会话时的）新版本标识
+     */
+    200: ReviseInteractiveResponse;
+};
+
+export type ReviseInteractiveEndpointApiV1ReviseInteractivePostResponse = ReviseInteractiveEndpointApiV1ReviseInteractivePostResponses[keyof ReviseInteractiveEndpointApiV1ReviseInteractivePostResponses];
+
+export type ReviseOutlineEndpointApiV1ReviseOutlinePostData = {
+    body: ReviseOutlineRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/revise/outline';
+};
+
+export type ReviseOutlineEndpointApiV1ReviseOutlinePostErrors = {
+    /**
+     * 基线版本或备课会话不存在
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ReviseOutlineEndpointApiV1ReviseOutlinePostResponses = {
+    /**
+     * 修改后的提纲、新文件名与（带会话时的）新版本标识
+     */
+    200: ReviseOutlineResponse;
+};
+
+export type ReviseOutlineEndpointApiV1ReviseOutlinePostResponse = ReviseOutlineEndpointApiV1ReviseOutlinePostResponses[keyof ReviseOutlineEndpointApiV1ReviseOutlinePostResponses];
 
 export type ReviseWordEndpointApiV1ReviseWordPostData = {
     body: ReviseWordRequest;

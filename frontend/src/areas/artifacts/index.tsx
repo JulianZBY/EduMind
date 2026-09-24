@@ -1,7 +1,7 @@
 import { ArtifactsArea, ArtifactsDetail, ArtifactsIndex } from './ArtifactsArea'
 import type { AreaModule } from '../types'
 
-/** 生成物区注册（区名与文案照 CONTEXT.md：这个区的产物一律写「生成物」）。 */
+/** 生成物区注册（区名与文案照 CONTEXT.md：这个区的产出一律写「生成物」）。 */
 export const artifactsArea: AreaModule = {
   id: 'artifacts',
   label: '生成物',
@@ -15,7 +15,8 @@ export const artifactsArea: AreaModule = {
       element: <ArtifactsArea />,
       children: [
         { index: true, element: <ArtifactsIndex /> },
-        { path: ':artifactId', element: <ArtifactsDetail /> },
+        // URL 即状态：选中哪一次备课在地址上（`?v=` 再选中回看的那一版）
+        { path: ':sessionId', element: <ArtifactsDetail /> },
       ],
     },
   ],
