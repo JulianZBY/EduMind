@@ -209,9 +209,7 @@ def test_question_bank_group_is_declared_and_used():
         for method, operation in item.items()
         if "题库" in (operation.get("tags") or [])
     ]
-    assert {"/api/v1/questions", "/api/v1/questions/{question_id}"} <= {
-        path for path, _ in tagged
-    }
+    assert {"/api/v1/questions", "/api/v1/questions/{question_id}"} <= {path for path, _ in tagged}
     for path, item in schema["paths"].items():
         for operation in item.values():
             if "题库" in (operation.get("tags") or []):

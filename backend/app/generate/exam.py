@@ -212,7 +212,9 @@ def _knowledge_point_facets(db, user_id: str) -> list[dict]:
         .join(Question, Question.id == QuestionKnowledge.question_id)
         .where(Question.user_id == user_id)
         .group_by(KnowledgeNode.title)
-        .order_by(func.count(func.distinct(QuestionKnowledge.question_id)).desc(), KnowledgeNode.title)
+        .order_by(
+            func.count(func.distinct(QuestionKnowledge.question_id)).desc(), KnowledgeNode.title
+        )
     ).all()
     return [{"title": title, "question_count": count} for title, count in rows]
 
