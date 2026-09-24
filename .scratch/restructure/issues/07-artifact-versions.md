@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 会话持久层 + 状态机收编
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 生成即入库，同一会话内版本号单调递增
       （新表 `artifact_versions`；`test_each_generation_records_a_version_with_monotonic_numbers`、
@@ -155,3 +155,24 @@ uv run pytest tests/test_openapi_contract.py -q    # 54 passed（3 个新端点 
 4. `artifacts.outline` 由字符串变为对象（`{text, path, filename}`），票 06/08 的前端消费点需按此取值
    （已有 `docs/api` 与 `chat.py` 响应示例此前就按对象形态写的）。
 5. 版本号并发同号由唯一约束兜底（拒绝写入），没有重试；单用户本地场景可接受，多进程部署前需要重看。
+
+## 协调者复核
+
+**结论：通过（含一次真实冲突解析与一次「假失败」甄别）。** 复核人 = 协调者（主代理），2026-09-24。
+
+| 验收项 | 复验方式 | 结果 |
+| --- | --- | --- |
+| 生成即入库、版本号单调递增 | `tests/test_artifact_versions.py` 经 HTTP 缝断言；版本表 `artifact_versions` + `parent_id` 版本树 | 通过 |
+| 版本列表 / 详情 / 下载 API | `GET /sessions/{session_id}/artifacts`（带 `response_model`）、`GET /artifacts/{id}`（带 `response_model`）、`GET /artifacts/{id}/download` | 通过 |
+| 以历史版本为基线修改产出新版本、原版本可取 | `test_revise_from_a_historical_version_creates_a_new_version_and_keeps_the_old_one` 等 5 例 | 通过 |
+| 落盘文件与版本记录一一对应 | `test_versions_and_files_are_one_to_one` + `test_version_detail_and_download_return_that_versions_own_file` | 通过 |
+| **协调者指派的文档回校** | `docs/api/artifacts.md` 改为已交付 + 三端点用途表 + `parent_id` 口径；`docs/architecture.md` 落差节把 05/07 移入「已实现」并顺带修正过期的 02/03 | 通过 |
+| 测试与静态检查 | 协调者亲跑（stub 钉住）`uv run pytest -q` → **274 passed / 13 秒**、`ruff check .` 干净 | 通过 |
+
+**合并冲突（协调者手工解析）**：票 12 在本票之前已合入，两票同时改了 `backend/app/api/v1/exam.py`，冲突落在 import 块两处。解析口径 = 并集：`from fastapi import APIRouter, Depends, HTTPException, Query`（12 要 `Query`、07 要 `Depends`）+ 同时保留 12 的题库查询函数与 07 的 `get_session` / `ArtifactStore`。
+
+**「假失败」甄别（本票最值得记的一件事）**：合并后全量测试出现 3 条红（`test_download_supports_inline_for_interactive_content`、`test_revise_from_a_historical_version_...`、`test_exam_generation_without_session_keeps_existing_behaviour`），且整轮耗时 13.5 分钟。排查结论：**不是集成缺陷，而是测试套件不密封** —— main 工作树存在 `backend/.env`（`LLM_PROVIDER=dashscope` + 真实 Key，新工作树都没有该文件），于是这三条断言 stub 固定产出的用例跑在真实 provider 上。钉住 `LLM_PROVIDER=stub` 后同样代码 **274 passed / 13 秒**。该缺陷已登记进票 14 的验收项（要求 `conftest.py` 用 `os.environ.setdefault` 钉住 stub 类配置，并以「`.env` 写真实 provider 仍全绿」为验收方式）。
+
+- **合并点**：`045f9ef`（`merge(07)`）；合并后 main（stub 钉住）复跑 → 274 passed + ruff 干净。
+- **状态迁移**：`ready-for-agent` → `done`。
+- **遗留去向**：删会话不回收 `data/output` 文件、`artifacts.outline` 形态变化（已由协调者转达给在跑的票 06）、并发同版本号靠唯一约束拒绝无重试 → 记入票 14 收口清单。
