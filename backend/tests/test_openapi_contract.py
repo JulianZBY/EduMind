@@ -133,9 +133,7 @@ def test_declared_tags_have_descriptions():
 
 def test_no_route_is_hidden_from_the_schema():
     """无端点被静默排除:应用里的 APIRoute 必须都在 schema 中。"""
-    documented = {
-        (path, method.upper()) for path, method, _ in OPERATIONS
-    }
+    documented = {(path, method.upper()) for path, method, _ in OPERATIONS}
     actual = {
         (route.path, method.upper())
         for route in app.routes
@@ -143,9 +141,7 @@ def test_no_route_is_hidden_from_the_schema():
         for method in route.methods or set()
         if method.lower() in HTTP_METHODS
     }
-    assert actual - documented == set(), (
-        f"以下端点未出现在 OpenAPI: {sorted(actual - documented)}"
-    )
+    assert actual - documented == set(), f"以下端点未出现在 OpenAPI: {sorted(actual - documented)}"
 
 
 def test_json_endpoints_declare_a_response_model():

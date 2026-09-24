@@ -80,9 +80,7 @@ class RootResponse(BaseModel):
     """服务信息：应用名与两个运维入口（接口文档 / 健康检查）的地址。"""
 
     model_config = ConfigDict(
-        json_schema_extra={
-            "example": {"name": "EduMind", "docs": "/docs", "health": "/health"}
-        }
+        json_schema_extra={"example": {"name": "EduMind", "docs": "/docs", "health": "/health"}}
     )
 
     name: str  # 应用名
