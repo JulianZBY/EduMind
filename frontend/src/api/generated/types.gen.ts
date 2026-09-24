@@ -139,6 +139,22 @@ export type InteractiveGenerateResponse = {
 };
 
 /**
+ * KnowledgePointCount
+ *
+ * 题库筛选项：一个考查知识点及它的题目数。
+ */
+export type KnowledgePointCount = {
+    /**
+     * Question Count
+     */
+    question_count: number;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
  * Message
  *
  * 一轮对话：role 为 user / assistant，content 为教师或助手的原话。
@@ -152,6 +168,212 @@ export type Message = {
      * Role
      */
     role: string;
+};
+
+/**
+ * QuestionDetail
+ *
+ * 题目详情：题型 / 答案 / 来源 / 考查知识点齐备。
+ */
+export type QuestionDetail = {
+    /**
+     * Answer
+     */
+    answer: string;
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Knowledge Points
+     */
+    knowledge_points: Array<QuestionKnowledgeRef>;
+    /**
+     * Source Type
+     */
+    source_type: string;
+    /**
+     * Source Url
+     */
+    source_url: string | null;
+    /**
+     * Type
+     */
+    type: string;
+};
+
+/**
+ * QuestionKnowledgeRef
+ *
+ * 题目的一道考查知识点：标题 + 权重（主考 / 涉及）。
+ */
+export type QuestionKnowledgeRef = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Weight
+     */
+    weight: string;
+};
+
+/**
+ * QuestionListResponse
+ */
+export type QuestionListResponse = {
+    /**
+     * Items
+     */
+    items: Array<QuestionSummary>;
+    /**
+     * Knowledge Points
+     */
+    knowledge_points: Array<KnowledgePointCount>;
+    /**
+     * Limit
+     */
+    limit: number;
+    /**
+     * Offset
+     */
+    offset: number;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * QuestionSummary
+ *
+ * 列表行：题干 / 题型 / 来源 / 考查知识点（答案在详情里，列表不带）。
+ */
+export type QuestionSummary = {
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Knowledge Points
+     */
+    knowledge_points: Array<QuestionKnowledgeRef>;
+    /**
+     * Source Type
+     */
+    source_type: string;
+    /**
+     * Type
+     */
+    type: string;
+};
+
+/**
+ * RetrieveRequest
+ *
+ * 检索观察请求：备课意图 + 返回条数 + 本次备课的参考资料。
+ */
+export type RetrieveRequest = {
+    /**
+     * Intent
+     */
+    intent?: {
+        [key: string]: unknown;
+    };
+    /**
+     * K
+     */
+    k?: number;
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids?: Array<string>;
+};
+
+/**
+ * RetrieveResponse
+ */
+export type RetrieveResponse = {
+    /**
+     * Context
+     */
+    context: string;
+    /**
+     * Graph Nodes
+     */
+    graph_nodes: Array<RetrievedNode>;
+    /**
+     * Hits
+     */
+    hits: Array<RetrievedChunk>;
+    /**
+     * Sources
+     */
+    sources: Array<string>;
+    /**
+     * Strategy
+     */
+    strategy: string;
+};
+
+/**
+ * RetrievedChunk
+ */
+export type RetrievedChunk = {
+    /**
+     * Chunk Id
+     */
+    chunk_id: number;
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Distance
+     */
+    distance: number;
+    /**
+     * Doc Id
+     */
+    doc_id: string;
+};
+
+/**
+ * RetrievedNode
+ */
+export type RetrievedNode = {
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Title
+     */
+    title: string;
 };
 
 /**
@@ -618,6 +840,33 @@ export type GetGraphApiV1KnowledgeGraphGetResponses = {
     200: unknown;
 };
 
+export type RetrieveApiV1KnowledgeRetrievePostData = {
+    body: RetrieveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/knowledge/retrieve';
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostErrors = {
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostResponses = {
+    /**
+     * 本次检索命中的分块、来源与图谱知识点
+     */
+    200: RetrieveResponse;
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostResponse = RetrieveApiV1KnowledgeRetrievePostResponses[keyof RetrieveApiV1KnowledgeRetrievePostResponses];
+
 export type SearchApiV1KnowledgeSearchPostData = {
     body: SearchRequest;
     path?: never;
@@ -690,6 +939,88 @@ export type PingApiV1PingGetResponses = {
      */
     200: unknown;
 };
+
+export type ListQuestionsApiV1QuestionsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Knowledge Point
+         *
+         * 按考查知识点筛选：填图谱节点标题（见 GET /api/v1/knowledge/graph 的 title）；不传返回全部题目
+         */
+        knowledge_point?: string | null;
+        /**
+         * Limit
+         *
+         * 本页最多返回多少道题（1–100，默认 20）
+         */
+        limit?: number;
+        /**
+         * Offset
+         *
+         * 跳过前多少道题，用于翻页
+         */
+        offset?: number;
+    };
+    url: '/api/v1/questions';
+};
+
+export type ListQuestionsApiV1QuestionsGetErrors = {
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ListQuestionsApiV1QuestionsGetResponses = {
+    /**
+     * 题目列表（含全部筛选项）
+     */
+    200: QuestionListResponse;
+};
+
+export type ListQuestionsApiV1QuestionsGetResponse = ListQuestionsApiV1QuestionsGetResponses[keyof ListQuestionsApiV1QuestionsGetResponses];
+
+export type GetQuestionApiV1QuestionsQuestionIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Question Id
+         */
+        question_id: string;
+    };
+    query?: never;
+    url: '/api/v1/questions/{question_id}';
+};
+
+export type GetQuestionApiV1QuestionsQuestionIdGetErrors = {
+    /**
+     * 题目不存在：id 写错或题目已删除
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type GetQuestionApiV1QuestionsQuestionIdGetResponses = {
+    /**
+     * 题目详情
+     */
+    200: QuestionDetail;
+};
+
+export type GetQuestionApiV1QuestionsQuestionIdGetResponse = GetQuestionApiV1QuestionsQuestionIdGetResponses[keyof GetQuestionApiV1QuestionsQuestionIdGetResponses];
 
 export type ReviseApiV1RevisePostData = {
     body: ReviseRequest;

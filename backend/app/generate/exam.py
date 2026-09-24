@@ -1,13 +1,14 @@
 """试卷生成：LLM 自编出题 + 题库入库 + python-docx 渲染。
 
 按需生成入口（产物区一键生成）；组题模式与网络搜题仅预留（DESIGN.md §5.4）。
+题库查询（按考查知识点筛选 / 分页）也住本文件：查询与入库同源，入库的题目立即可查。
 """
 
 import json
 from typing import TYPE_CHECKING
 
 from docx import Document as DocxDocument
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.llm.base import ChatMessage
 from app.core.llm.factory import get_llm
@@ -98,6 +99,122 @@ def _match_nodes(nodes: "Sequence[KnowledgeNode]", knowledge_point: str) -> list
     return [
         n for n in nodes if n.title and (n.title in knowledge_point or knowledge_point in n.title)
     ]
+
+
+def query_questions(
+    knowledge_point: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+    user_id: str = "default",
+) -> dict:
+    """题库查询：按考查知识点筛选 + 分页，并回带全部筛选项（列表与详情同一份出参形状）。
+
+    筛选项 `knowledge_points` 是**全量**的：它不随当前筛选收窄，否则教师筛过一次之后
+    就再也换不回别的知识点。题目按入库时间倒序，试卷刚入库的题目在第一页。
+    """
+    from app.db import SessionLocal
+    from app.db.models import KnowledgeNode, Question, QuestionKnowledge
+
+    db = SessionLocal()
+    try:
+        filters = [Question.user_id == user_id]
+        if knowledge_point:
+            # 按图谱节点标题匹配（教师看到的就是这个标题）；子查询避免一题多链时出重复行
+            linked = (
+                select(QuestionKnowledge.question_id)
+                .join(KnowledgeNode, KnowledgeNode.id == QuestionKnowledge.knowledge_id)
+                .where(KnowledgeNode.title == knowledge_point)
+            )
+            filters.append(Question.id.in_(linked))
+        total = db.scalar(select(func.count(Question.id)).where(*filters)) or 0
+        rows = (
+            db.execute(
+                select(Question)
+                .where(*filters)
+                .order_by(Question.created_at.desc(), Question.id.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+            .scalars()
+            .all()
+        )
+        return {
+            "items": _serialize_questions(db, list(rows)),
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "knowledge_points": _knowledge_point_facets(db, user_id),
+        }
+    finally:
+        db.close()
+
+
+def query_question(question_id: str, user_id: str = "default") -> dict | None:
+    """按 id 取一道题（含考查知识点）；题目不存在时返回 None，由接口层转 404。"""
+    from app.db import SessionLocal
+    from app.db.models import Question
+
+    db = SessionLocal()
+    try:
+        row = db.execute(
+            select(Question).where(Question.id == question_id, Question.user_id == user_id)
+        ).scalar_one_or_none()
+        if row is None:
+            return None
+        return _serialize_questions(db, [row])[0]
+    finally:
+        db.close()
+
+
+def _serialize_questions(db, rows: list) -> list[dict]:
+    """题目行 → 出参：考查知识点一并取出，权重「主考」排在「涉及」前。
+
+    出参含答案，列表接口由响应模型裁掉（详情才外露答案），避免两处各写一份形状。
+    """
+    from app.db.models import KnowledgeNode, QuestionKnowledge
+
+    if not rows:
+        return []
+    links = db.execute(
+        select(QuestionKnowledge, KnowledgeNode)
+        .join(KnowledgeNode, KnowledgeNode.id == QuestionKnowledge.knowledge_id)
+        .where(QuestionKnowledge.question_id.in_([row.id for row in rows]))
+    ).all()
+    by_question: dict[str, list[dict]] = {}
+    for link, node in links:
+        by_question.setdefault(link.question_id, []).append(
+            {"id": node.id, "title": node.title, "weight": link.weight}
+        )
+    for points in by_question.values():
+        points.sort(key=lambda point: (point["weight"] != "主考", point["title"]))
+    return [
+        {
+            "id": row.id,
+            "type": row.type,
+            "content": row.content,
+            "answer": row.answer,
+            "source_type": row.source_type,
+            "source_url": row.source_url,
+            "created_at": row.created_at,
+            "knowledge_points": by_question.get(row.id, []),
+        }
+        for row in rows
+    ]
+
+
+def _knowledge_point_facets(db, user_id: str) -> list[dict]:
+    """考查知识点 → 题目数：题库筛选项的来源，按题目数倒序（同数按标题）。"""
+    from app.db.models import KnowledgeNode, Question, QuestionKnowledge
+
+    rows = db.execute(
+        select(KnowledgeNode.title, func.count(func.distinct(QuestionKnowledge.question_id)))
+        .join(QuestionKnowledge, QuestionKnowledge.knowledge_id == KnowledgeNode.id)
+        .join(Question, Question.id == QuestionKnowledge.question_id)
+        .where(Question.user_id == user_id)
+        .group_by(KnowledgeNode.title)
+        .order_by(func.count(func.distinct(QuestionKnowledge.question_id)).desc(), KnowledgeNode.title)
+    ).all()
+    return [{"title": title, "question_count": count} for title, count in rows]
 
 
 def render_exam(questions: list[dict], output_path: str | None = None) -> str:

@@ -11,7 +11,6 @@ from app.config import settings
 from app.db import init_db
 
 # 端点分组：面向教师的术语与 CONTEXT.md 一致，Swagger / ReDoc 按此导航。
-# 题库区的查询接口尚未落地（票 12 交付），故此处暂无该分组。
 TAGS_METADATA = [
     {"name": "系统", "description": "存活检查与服务信息；不含备课语义。"},
     {
@@ -31,6 +30,10 @@ TAGS_METADATA = [
         "description": "课件、教案、提纲、试卷、互动内容的生成、修改与文件下载。",
     },
     {"name": "冲突审核", "description": "待审冲突队列与教师的裁决动作。"},
+    {
+        "name": "题库",
+        "description": "可复用的题目资产库：浏览题目、按考查知识点筛选、看题目详情。",
+    },
 ]
 
 DESCRIPTION = """多模态 AI 备课智能体后端。
@@ -39,7 +42,7 @@ OpenAPI 是本服务接口文档的**唯一事实源**：每个端点都带 `sum
 请求/响应示例、错误码与分组 tag；前端 TypeScript 类型由本 schema 生成，禁止手抄。
 
 * **界面**：Swagger UI `/docs`，ReDoc `/redoc`。
-* **分组**：系统 / 备课会话 / 知识库 / 知识图谱 / 生成物 / 冲突审核。
+* **分组**：系统 / 备课会话 / 知识库 / 知识图谱 / 生成物 / 冲突审核 / 题库。
 * **单用户**：固定 `user_id="default"`，本服务不含登录与多租户。
 * **能力切换**：对话模型、向量化、语音转写、PDF 解析、网络搜索均按配置选择，
   无 Key 时回落 stub，全链路仍可跑（协议语义见 `docs/api/`）。
