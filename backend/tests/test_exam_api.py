@@ -148,6 +148,9 @@ def test_generate_returns_502_when_llm_output_unparseable(monkeypatch, tmp_path)
         async def embed(self, texts):
             return [[0.0] * 8 for _ in texts]
 
+    # exam.py 顶层早绑定 get_llm，需逐模块替换（与 _install_stub 同理），
+    # 否则试卷生成仍走真实工厂返回的 StubProvider，拿不到不可解析输出。
+    monkeypatch.setattr(exam_module, "get_llm", lambda: BadProvider())
     monkeypatch.setattr(factory_module, "get_llm", lambda: BadProvider())
     monkeypatch.setattr(
         vector_store_module, "VectorStore", lambda: VectorStore(str(tmp_path / "v.db"))

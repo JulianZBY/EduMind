@@ -11,14 +11,25 @@ from pathlib import Path
 
 import sqlite_vec
 
+from app.config import settings
+
 # 参考文档片段的距离折扣：等效排名加权（0.5 = 同距离下优先参考文档，可反超近一倍的非参考片段）
 REFERENCE_DISTANCE_FACTOR = 0.5
 
 
+def _dim_mismatch(path: str, exc: sqlite3.OperationalError) -> None:
+    """维度冲突转译为人话：切换 embedding provider 后新旧向量维度不一致。"""
+    raise RuntimeError(
+        f"向量维度与已有索引不一致（{exc}）：疑似切换过 embedding provider，"
+        f"删除 {path} 重建索引即可"
+    ) from exc
+
+
 class VectorStore:
-    def __init__(self, db_path: str = "data/vectors.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str | None = None):
+        # 未显式指定时读配置：测试通过 VECTORS_DB_PATH 环境变量隔离，不污染开发库
+        self.db_path = db_path or settings.vectors_db_path
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -55,6 +66,10 @@ class VectorStore:
                 )
             conn.commit()
             return len(chunks)
+        except sqlite3.OperationalError as e:
+            if "Dimension mismatch" in str(e):
+                _dim_mismatch(self.db_path, e)
+            raise
         finally:
             conn.close()
 
@@ -96,6 +111,10 @@ class VectorStore:
                     )
                 )
             return hits[:k]
+        except sqlite3.OperationalError as e:
+            if "Dimension mismatch" in str(e):
+                _dim_mismatch(self.db_path, e)
+            raise
         finally:
             conn.close()
 
@@ -127,6 +146,10 @@ class VectorStore:
                 (cur.lastrowid, json.dumps(embedding)),
             )
             conn.commit()
+        except sqlite3.OperationalError as e:
+            if "Dimension mismatch" in str(e):
+                _dim_mismatch(self.db_path, e)
+            raise
         finally:
             conn.close()
 
@@ -146,6 +169,10 @@ class VectorStore:
                 (json.dumps(embedding), k),
             ).fetchall()
             return [{"node_id": r[0], "title": r[1], "distance": r[2]} for r in rows]
+        except sqlite3.OperationalError as e:
+            if "Dimension mismatch" in str(e):
+                _dim_mismatch(self.db_path, e)
+            raise
         finally:
             conn.close()
 

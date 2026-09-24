@@ -80,16 +80,17 @@ cd frontend && npm run dev
 | 变量 | 用途 |
 | --- | --- |
 | `DASHSCOPE_API_KEY` | 阿里云百炼：qwen LLM / 多模态 / Embedding / paraformer 录音转写 |
-| `DEEPSEEK_API_KEY` | DeepSeek（LLM 备选） |
-| `SILICONFLOW_API_KEY` | SiliconFlow（Embedding 备选） |
+| `DEEPSEEK_API_KEY` | DeepSeek（LLM 备选；不支持图片/视频理解，embedding 走 SiliconFlow，缺省时本地兜底向量） |
+| `SILICONFLOW_API_KEY` | SiliconFlow（Embedding 备选，托管 bge-large-zh；`LLM_PROVIDER=deepseek` 时生效） |
 | `MINERU_TOKEN` | MinerU 云端 PDF 解析 |
 | `BOCHA_API_KEY` | 博查网络搜索 |
 
 各 provider 由 `LLM_PROVIDER` / `ASR_PROVIDER` 切换，默认 `stub`（固定内容网关），保证无 Key 环境可跑通全部流程与测试。
+
+> ⚠️ **stub 模式的演示内容与你的输入无关**：知识图谱提取只回显文档前几行作演示节点（带「[stub 演示提取]」标记）；意图分析 / PPT / 教案 / 试卷 / HTML5 为固定 TCP 演示数据。看到 TCP 主题内容不代表资料被真实解析，接入真实模型后才会基于实际上传内容生成。
 
 ## 运行测试
 
 ```bash
 cd backend && uv run pytest
 ```
-

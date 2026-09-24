@@ -1,5 +1,7 @@
 """向量存储测试（假 embedding，不依赖真实 LLM）。"""
 
+import pytest
+
 from app.knowledge.vector_store import VectorStore
 
 
@@ -25,7 +27,25 @@ def test_search_returns_k_results(tmp_path):
     assert len(results) == 4
 
 
-# ---- 知识点标题索引（冲突检测近名预筛用，余弦距离）----
+# ---- 维度冲突（切换 embedding provider 后）人话报错 ----
+
+
+def test_add_dimension_mismatch_friendly_error(tmp_path):
+    store = VectorStore(str(tmp_path / "mix.db"))
+    store.add("doc1", ["甲"], [[1.0, 0.0]])
+    with pytest.raises(RuntimeError, match="维度"):
+        store.add("doc2", ["乙"], [[1.0, 0.0, 0.0]])
+    with pytest.raises(RuntimeError, match="维度"):
+        store.search([1.0, 0.0, 0.0])
+
+
+def test_node_title_dimension_mismatch_friendly_error(tmp_path):
+    store = VectorStore(str(tmp_path / "t.db"))
+    store.add_node_title("n1", "甲", [1.0, 0.0])
+    with pytest.raises(RuntimeError, match="维度"):
+        store.add_node_title("n2", "乙", [1.0, 0.0, 0.0])
+    with pytest.raises(RuntimeError, match="维度"):
+        store.search_node_titles([1.0, 0.0, 0.0, 0.0])
 
 
 def test_node_title_search_ranks_by_cosine_distance(tmp_path):
