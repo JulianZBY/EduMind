@@ -4,9 +4,11 @@
 """
 
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
     VALIDATION_ERROR,
@@ -14,7 +16,10 @@ from app.api.openapi_examples import (
     internal_error,
     json_response,
 )
+from app.core import artifacts as artifact_service
 from app.core.intent import intent_from_payload
+from app.db import get_session
+from app.db.artifacts import ArtifactStore
 from app.generate.creative import generate_html_creative, save_html
 from app.knowledge.retrieval.factory import get_retriever
 
@@ -38,11 +43,16 @@ class InteractiveGenerateRequest(BaseModel):
 
     # 生成物区透传上次备课意图；空意图时仅凭主题生成
     intent: dict = {}
+    # 可选：所属备课会话；带上后本份互动内容产出**新版本**并入库（不传则保持既有语义）
+    session_id: str | None = None
 
 
 class InteractiveGenerateResponse(BaseModel):
     html: str
     filename: str
+    version_id: str | None = None  # 本次产出的版本 id；不带会话标识时为空
+    version: int | None = None  # 互动内容在会话内的版本号：从 1 单调递增
+    session_id: str | None = None  # 版本所属备课会话
 
 
 def _is_single_file_html(html: str) -> bool:
@@ -59,15 +69,24 @@ def _is_single_file_html(html: str) -> bool:
     description=(
         "按意图生成一份**单文件 HTML5** 互动内容（小游戏 / 知识点动画），落盘后返回 HTML 正文与文件名。\n\n"
         "前端可用 `GET /api/v1/files/{filename}?inline=true` 在新标签页直接打开试用。\n"
-        "模型返回的不是完整单文件 HTML 时，本接口以 502 报错而不落盘半成品。"
+        "模型返回的不是完整单文件 HTML 时，本接口以 502 报错而不落盘半成品。\n\n"
+        "**带上 `session_id` 时本份互动内容落一条新版本**（版本号在会话内单调递增，"
+        "旧的互动内容版本保持可回看、可下载，也可用版本下载端点直内联打开）；"
+        "会话不存在返回 `404`。"
     ),
     responses={
         200: json_response(
             "互动内容已生成并落盘",
             {
                 "html": "<!doctype html><html lang=zh><body>…</body></html>",
-                "filename": "creative-3c2b1a09.html",
+                "filename": "creative_3c2b1a09.html",
+                "version_id": "8f7e6d5c-4b3a-4291-9c8d-7e6f5a4b3c2d",
+                "version": 1,
+                "session_id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
             },
+        ),
+        404: error_response(
+            "备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"
         ),
         422: VALIDATION_ERROR,
         500: internal_error(),
@@ -77,7 +96,18 @@ def _is_single_file_html(html: str) -> bool:
         ),
     },
 )
-async def generate_interactive(req: InteractiveGenerateRequest):
+async def generate_interactive(
+    req: InteractiveGenerateRequest, db: Annotated[Session, Depends(get_session)]
+):
+    """按意图生成单文件 HTML 互动内容；带会话标识时同时落一条版本记录。"""
+    store = ArtifactStore(db)
+    if req.session_id is not None:
+        # 先校验会话：不给不存在的会话留无主版本记录，也不白跑一次生成
+        try:
+            artifact_service.require_session(store, req.session_id)
+        except LookupError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
+
     intent = intent_from_payload(req.intent)
 
     retrieval = await get_retriever().retrieve(intent)
@@ -88,4 +118,22 @@ async def generate_interactive(req: InteractiveGenerateRequest):
         )
 
     path = save_html(html)
-    return InteractiveGenerateResponse(html=html, filename=Path(path).name)
+    filename = Path(path).name
+    if req.session_id is None:
+        return InteractiveGenerateResponse(html=html, filename=filename)
+
+    row = artifact_service.record_generation(
+        store,
+        session_id=req.session_id,
+        artifact_type=artifact_service.CREATIVE,
+        path=path,
+        content={"html": html},
+        title=intent.topic,
+    )
+    return InteractiveGenerateResponse(
+        html=html,
+        filename=filename,
+        version_id=row.id,
+        version=row.version,
+        session_id=row.session_id,
+    )
