@@ -3,10 +3,11 @@
 from collections import deque
 
 from sqlalchemy import or_, select
+from sqlalchemy.orm import Session
 
 from app.core.llm.parsing import parse_json
 from app.db import SessionLocal
-from app.db.models import KnowledgeEdge, KnowledgeNode
+from app.db.models import Document, KnowledgeEdge, KnowledgeNode
 from app.knowledge.vector_store import VectorStore
 
 RELATION_TYPES = ("前置依赖", "父子包含", "推导关系", "相关关联")
@@ -154,6 +155,118 @@ def neighborhood(seed_ids: list[str], max_depth: int = 2) -> list[dict]:
         return ordered
     finally:
         db.close()
+
+
+def node_summary(node: KnowledgeNode) -> dict:
+    """画布节点：图谱渲染、邻域子图与过滤选项共用同一形状。"""
+    return {
+        "id": node.id,
+        "title": node.title,
+        "difficulty": node.difficulty,
+        "subject": node.subject,
+        "chapter": node.chapter,
+    }
+
+
+def edge_ref(edge: KnowledgeEdge) -> dict:
+    """画布连线：`from` / `to` 是既有消费者已在用的键名，不改语义。"""
+    return {"from": edge.from_node, "to": edge.to_node, "relation_type": edge.relation_type}
+
+
+def filter_graph(db: Session, subject: str | None = None, chapter: str | None = None) -> dict:
+    """按学科 / 章节取图：只留命中的知识点，以及**两端都在结果集里**的关系。
+
+    过滤后连线随之收缩——否则会留下指向已过滤节点的悬空关系。
+    """
+    conditions = []
+    if subject:
+        conditions.append(KnowledgeNode.subject == subject)
+    if chapter:
+        conditions.append(KnowledgeNode.chapter == chapter)
+    nodes = list(db.execute(select(KnowledgeNode).where(*conditions)).scalars().all())
+    ids = {n.id for n in nodes}
+    if not ids:
+        return {"nodes": [], "edges": []}
+    edges = (
+        db.execute(
+            select(KnowledgeEdge).where(
+                KnowledgeEdge.from_node.in_(ids), KnowledgeEdge.to_node.in_(ids)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return {"nodes": [node_summary(n) for n in nodes], "edges": [edge_ref(e) for e in edges]}
+
+
+def source_refs(db: Session, doc_ids: list) -> list[dict]:
+    """来源引用：把 `source_docs` 里的资料 id 翻成资料名（资料已删除时只留 id）。"""
+    refs = []
+    for doc_id in doc_ids:
+        doc = db.get(Document, doc_id)
+        refs.append({"doc_id": doc_id, "filename": doc.filename if doc else None})
+    return refs
+
+
+def node_detail(db: Session, node_id: str) -> dict | None:
+    """单个知识点的详情（节点详情抽屉）：内容 / 难度 / 来源引用；不存在时返回 None。"""
+    node = db.get(KnowledgeNode, node_id)
+    if node is None:
+        return None
+    return {
+        "id": node.id,
+        "title": node.title,
+        "content": node.content or "",
+        "subject": node.subject,
+        "chapter": node.chapter,
+        "difficulty": node.difficulty,
+        "importance": node.importance,
+        "sources": source_refs(db, node.source_docs or []),
+    }
+
+
+def subgraph(db: Session, node_id: str, max_depth: int = 2) -> dict | None:
+    """以选中知识点为中心、向外 max_depth 跳取子图；中心不存在时返回 None。
+
+    返回顺序确定：`nodes` 以中心知识点开头、其余按 BFS 访问序；
+    `edges` 每条关系只出现一次（按边 id 去重，避免两端各展开一次时重复）。
+    """
+    center = db.get(KnowledgeNode, node_id)
+    if center is None:
+        return None
+    visited = {node_id}
+    order = [node_id]
+    edges_out: list[dict] = []
+    seen_edges: set[str] = set()
+    queue: deque[tuple[str, int]] = deque([(node_id, 0)])
+    while queue:
+        cur, depth = queue.popleft()
+        if depth >= max_depth:
+            continue
+        rows = (
+            db.execute(
+                select(KnowledgeEdge).where(
+                    or_(KnowledgeEdge.from_node == cur, KnowledgeEdge.to_node == cur)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for e in rows:
+            if e.id not in seen_edges:
+                seen_edges.add(e.id)
+                edges_out.append(edge_ref(e))
+            nxt = e.to_node if e.from_node == cur else e.from_node
+            if nxt not in visited:
+                visited.add(nxt)
+                order.append(nxt)
+                queue.append((nxt, depth + 1))
+    nodes = []
+    for nid in order:
+        node = db.get(KnowledgeNode, nid)
+        if node:
+            nodes.append(node_summary(node))
+    return {"nodes": nodes, "edges": edges_out}
 
 
 def traverse(node_id: str, max_depth: int = 2) -> dict:

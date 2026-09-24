@@ -2,12 +2,13 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
     VALIDATION_ERROR,
+    error_response,
     internal_error,
     json_response,
     unconfigured,
@@ -16,7 +17,7 @@ from app.core.embedding.factory import get_embedder
 from app.core.intent import intent_from_payload
 from app.core.search.factory import get_search
 from app.db import get_session
-from app.db.models import KnowledgeEdge, KnowledgeNode
+from app.knowledge.graph import filter_graph, node_detail, subgraph
 from app.knowledge.retrieval.factory import get_retriever
 from app.knowledge.vector_store import VectorStore
 
@@ -212,24 +213,83 @@ async def web_search(req: SearchRequest):
     return {"results": results}
 
 
+class GraphNode(BaseModel):
+    """图谱里的一个知识点（画布节点）。
+
+    `subject` / `chapter` 随节点一起返回，前端据此列出过滤选项（学科 / 章节）。
+    """
+
+    id: str
+    title: str
+    difficulty: str | None = None
+    subject: str | None = None
+    chapter: str | None = None
+
+
+class GraphEdge(BaseModel):
+    """图谱里的一条关系（画布连线）。
+
+    `from` / `to` 是既有消费者已在用的键名，不改语义。
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_node: str = Field(alias="from")
+    to_node: str = Field(alias="to")
+    relation_type: str
+
+
+class GraphResponse(BaseModel):
+    """知识图谱数据：知识点与关系。"""
+
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+
+
+class KnowledgeSourceRef(BaseModel):
+    """来源引用：这个知识点的正文来自哪份资料（资料已删除时 `filename` 为空）。"""
+
+    doc_id: str
+    filename: str | None = None
+
+
+class KnowledgePointDetail(BaseModel):
+    """知识点详情：内容 / 难度 / 来源引用（节点详情抽屉的数据）。"""
+
+    id: str
+    title: str
+    content: str
+    subject: str | None = None
+    chapter: str | None = None
+    difficulty: str | None = None
+    importance: str | None = None
+    sources: list[KnowledgeSourceRef]
+
+
 @router.get(
     "/knowledge/graph",
+    response_model=GraphResponse,
     tags=["知识图谱"],
     summary="知识图谱数据",
     description=(
-        "返回知识图谱的全部知识点与关系，前端据此自行渲染图谱。\n\n"
-        "`relation_type` 取值：`前置依赖` / `父子包含` / `推导关系` / `相关关联`。\n"
-        "节点详情、按学科章节过滤与邻域取子图接口随知识图谱工作台（票 10）交付。"
+        "返回知识点与关系，前端据此自行渲染图谱。\n\n"
+        "`subject` / `chapter` 为可选过滤：带上则只返回命中的知识点，"
+        "以及**两端都在结果集里**的关系（连线随节点一同收缩，不留悬空关系）；都不带即全图。\n\n"
+        "`relation_type` 取值：`前置依赖` / `父子包含` / `推导关系` / `相关关联`。"
+        "单个知识点的详情见 `GET /knowledge/nodes/{node_id}`，邻域子图见 "
+        "`GET /knowledge/nodes/{node_id}/neighborhood`。"
     ),
     responses={
         200: json_response(
-            "知识点与关系",
+            "知识点与关系（带上过滤参数时已收缩）",
             {
                 "nodes": [
                     {
                         "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
                         "title": "一次函数的定义",
                         "difficulty": "基础",
+                        "subject": "数学",
+                        "chapter": "一次函数",
                     }
                 ],
                 "edges": [
@@ -244,12 +304,109 @@ async def web_search(req: SearchRequest):
         500: internal_error(),
     },
 )
-async def get_graph(db: Annotated[Session, Depends(get_session)]):
-    nodes = db.query(KnowledgeNode).all()
-    edges = db.query(KnowledgeEdge).all()
-    return {
-        "nodes": [{"id": n.id, "title": n.title, "difficulty": n.difficulty} for n in nodes],
-        "edges": [
-            {"from": e.from_node, "to": e.to_node, "relation_type": e.relation_type} for e in edges
-        ],
-    }
+async def get_graph(
+    db: Annotated[Session, Depends(get_session)],
+    subject: Annotated[str | None, Query(description="按学科过滤；不带即不限学科")] = None,
+    chapter: Annotated[str | None, Query(description="按章节过滤；不带即不限章节")] = None,
+):
+    return filter_graph(db, subject=subject, chapter=chapter)
+
+
+@router.get(
+    "/knowledge/nodes/{node_id}",
+    response_model=KnowledgePointDetail,
+    tags=["知识图谱"],
+    summary="知识点详情",
+    description=(
+        "返回一个知识点的完整内容、学科章节、难度与重要度，以及**来源引用**"
+        "（这个知识点的正文来自哪几份资料）。\n\n"
+        "`sources` 按知识点记录的来源资料逐个给出：`doc_id` 为资料 id，"
+        "`filename` 为资料名（资料已删除时只留 id、名字为空）。"
+    ),
+    responses={
+        200: json_response(
+            "知识点详情",
+            {
+                "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                "title": "一次函数的定义",
+                "content": "形如 y=kx+b（k≠0）的函数，图象是一条直线。",
+                "subject": "数学",
+                "chapter": "一次函数",
+                "difficulty": "基础",
+                "importance": "必修",
+                "sources": [
+                    {
+                        "doc_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                        "filename": "一次函数讲义.pdf",
+                    }
+                ],
+            },
+        ),
+        404: error_response(
+            "知识点不存在：该 id 在知识图谱里没有对应节点（可能已被删除或替换）",
+            "知识点不存在",
+        ),
+        500: internal_error(),
+    },
+)
+async def get_knowledge_point(node_id: str, db: Annotated[Session, Depends(get_session)]):
+    detail = node_detail(db, node_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="知识点不存在")
+    return detail
+
+
+@router.get(
+    "/knowledge/nodes/{node_id}/neighborhood",
+    response_model=GraphResponse,
+    tags=["知识图谱"],
+    summary="邻域子图",
+    description=(
+        "以选中知识点为中心、向外 `max_depth` 跳取邻域子图（看清它的上下游）。\n\n"
+        "返回的 `nodes` 以中心知识点开头，其余按广度优先的访问顺序；"
+        "`edges` 只包含两端都在子图里的关系，每条关系只出现一次。\n\n"
+        "中心知识点不存在时返回 `404`；`max_depth` 超出 1–3 返回 `422`。"
+    ),
+    responses={
+        200: json_response(
+            "邻域子图（中心知识点在 nodes 首位）",
+            {
+                "nodes": [
+                    {
+                        "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                        "title": "一次函数的定义",
+                        "difficulty": "基础",
+                        "subject": "数学",
+                        "chapter": "一次函数",
+                    },
+                    {
+                        "id": "9c8b7a65-4321-4f0e-8d9c-1b2a3c4d5e6f",
+                        "title": "一次函数的图象",
+                        "difficulty": "进阶",
+                        "subject": "数学",
+                        "chapter": "一次函数",
+                    },
+                ],
+                "edges": [
+                    {
+                        "from": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                        "to": "9c8b7a65-4321-4f0e-8d9c-1b2a3c4d5e6f",
+                        "relation_type": "前置依赖",
+                    }
+                ],
+            },
+        ),
+        404: error_response("知识点不存在：无法以它为中心取邻域", "知识点不存在"),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+async def get_neighborhood(
+    node_id: str,
+    db: Annotated[Session, Depends(get_session)],
+    max_depth: Annotated[int, Query(ge=1, le=3, description="向外几跳（1–3），默认 2")] = 2,
+):
+    data = subgraph(db, node_id, max_depth=max_depth)
+    if data is None:
+        raise HTTPException(status_code=404, detail="知识点不存在")
+    return data
