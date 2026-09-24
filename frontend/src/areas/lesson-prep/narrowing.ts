@@ -105,8 +105,17 @@ function fileEntry(value: unknown, label: string, openInTab: boolean): Generatio
 function outlineEntry(value: unknown): GenerationEntry | null {
   const text = asText(value)
   if (text) return { form: 'text', label: '提纲', text }
-  // 兼容旧记录里「提纲也是文件」的写法；读不出来就当没有
-  return fileEntry(value, '提纲', false)
+  const record = asRecord(value)
+  if (!record) return null
+  // 提纲的两种形态都在：正文（早期版本只有文本）与「正文 + 落盘文件」（票 07 起与课件/教案同形）。
+  // 有可下载文件就给下载入口，只有正文时退回可展开的文本。
+  return fileEntry(record, '提纲', false) ?? textEntry(record.text, '提纲')
+}
+
+/** 只有正文、没有落盘文件的生成物（如仍未落盘的提纲）。 */
+function textEntry(value: unknown, label: string): GenerationEntry | null {
+  const text = asText(value)
+  return text ? { form: 'text', label, text } : null
 }
 
 /**
