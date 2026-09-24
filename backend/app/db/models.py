@@ -1,10 +1,15 @@
-"""ORM 模型：对应 DESIGN.md §3.3 ER 图。"""
+"""ORM 模型：全部持久化表（备课会话 / 消息 / 文档 / 知识点 / 关系 / 冲突 / 题库）。
+
+字段语义写在每个模型与列的中文注释里：新表进本文件是分层铁律（见 `backend/AGENTS.md`）。
+持久化决策与分层见 `docs/architecture.md`（一页图与分层表）与
+`docs/adr/0002-backend-source-of-truth.md`（后端是备课会话与生成物的唯一事实源）。
+"""
 
 import uuid
 from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def _uuid() -> str:
@@ -21,6 +26,52 @@ class User(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class PrepSession(Base):
+    """备课会话（CONTEXT.md「备课会话」）：围绕一节课的一次完整备课过程，跨设备回看。"""
+
+    __tablename__ = "prep_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200))  # 会话标题：默认「新的备课会话」，首轮需求自动充当标题
+    granularity: Mapped[str] = mapped_column(String(20), default="标准")  # 追问粒度：快速/标准/精细
+    # 累积意图：上一轮意图 + 本轮新增（避免每轮把全部对话重析一遍）
+    intent: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # 本次备课勾选的参考资料（文档 id）：检索加权并在生成物中溯源
+    reference_doc_ids: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
+
+    # 消息随会话级联删除：会话没了，其历史不再留孤儿行
+    messages: Mapped[list["SessionMessage"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
+
+
+class SessionMessage(Base):
+    """会话消息（CONTEXT.md「消息」）：一条对话内容，分教师说的与助手说的。"""
+
+    __tablename__ = "session_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    session_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("prep_sessions.id"), index=True
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    seq: Mapped[int] = mapped_column(Integer)  # 会话内消息序号：从 1 单调递增，历史按此排序
+    role: Mapped[str] = mapped_column(String(20))  # user = 教师说的 / assistant = 助手说的
+    content: Mapped[str] = mapped_column(Text)  # 消息原话
+    # 回复形态：澄清回复 / 生成回复（CONTEXT.md）；教师消息没有形态，为空
+    kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # 生成回复携带的生成物与命中来源；澄清回复为空
+    artifacts: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    session: Mapped["PrepSession"] = relationship(back_populates="messages")
 
 
 class KnowledgeNode(Base):

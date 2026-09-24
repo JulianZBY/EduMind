@@ -13,10 +13,9 @@ import uuid
 from docx import Document as DocxDocument
 from fastapi.testclient import TestClient
 
-import app.api.v1.chat as chat_module
 import app.api.v1.documents as documents_module
+import app.core.conversation as conversation_module
 import app.core.embedding.factory as embedding_factory_module
-import app.core.orchestrator as orchestrator_module
 import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
@@ -62,9 +61,9 @@ def _install(monkeypatch, provider: RecordingProvider, store: VectorStore | None
             topic="导数", duration_minutes=45, style="学术", objectives=["a"], key_points=["b"]
         )
 
-    # orchestrate 内部引用自己模块的 analyze_intent（早绑定），必须一并替换
-    monkeypatch.setattr(chat_module, "analyze_intent", fake_analyze)
-    monkeypatch.setattr(orchestrator_module, "analyze_intent", fake_analyze)
+    # 意图分析住 core 状态机（票 05 收编）：伪装意图分析 + 全部 get_llm 引用 + 向量库。
+    # orchestrator 只消费累积意图，不再自带一次分析。
+    monkeypatch.setattr(conversation_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
     monkeypatch.setattr(ppt_module, "get_llm", lambda: provider)
     monkeypatch.setattr(word_module, "get_llm", lambda: provider)

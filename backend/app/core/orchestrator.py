@@ -1,10 +1,10 @@
-"""教学智能体编排器：对话 → 意图 → 检索 → 生成。检索细节住在 knowledge/retrieval 的策略里。"""
+"""教学智能体编排器：意图 → 检索 → 生成。检索细节住在 knowledge/retrieval 的策略里。"""
 
 import asyncio
 import logging
 from pathlib import Path
 
-from app.core.intent import analyze_intent, wants_interactive_content
+from app.core.intent import TeachingIntent, wants_interactive_content
 from app.generate.creative import generate_html_creative, save_html
 from app.generate.outline import generate_outline
 from app.generate.ppt import generate_ppt_structure, render_ppt
@@ -14,9 +14,14 @@ from app.knowledge.retrieval.factory import get_retriever
 logger = logging.getLogger(__name__)
 
 
-async def orchestrate(message: str, reference_doc_ids: list[str] | None = None) -> dict:
-    """一次备课请求的完整编排：意图 → 检索（按配置的检索策略）→ 生成 PPT/Word/提纲。"""
-    intent = await analyze_intent(message)
+async def orchestrate(
+    intent: TeachingIntent, reference_doc_ids: list[str] | None = None
+) -> dict:
+    """一次备课的编排：检索（按配置的检索策略）→ 生成 PPT/Word/提纲 + 互动内容。
+
+    意图由调用方（core 状态机：按会话累积或全量分析）传入：本轮不再重析一次意图，
+    一次生成只花一次意图分析调用。
+    """
     intent_dict = intent.model_dump()
     retrieval = await get_retriever().retrieve(intent, reference_doc_ids=reference_doc_ids)
     knowledge = retrieval.context
