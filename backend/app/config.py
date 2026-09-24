@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     # 检索策略：vector_graph（默认，向量 + 图谱邻接融合）/ vector（纯向量）
     retrieval_strategy: str = "vector_graph"
 
+    # ---- 任务级模型（CONTEXT.md「任务级模型」）----
+    # 按任务分别选模型档位：留空 = 回落全局默认（LLM_MODEL，或当前方言预设的对话模型）。
+    # 取值由设置页写入（见 app/core/catalog.py 的 TASKS），也可用 .env 作引导默认。
+    task_model_intent: str = ""
+    task_model_generate: str = ""
+    task_model_conflict: str = ""
+
     # ---- 冲突检测（ADR-0001）：近名预筛的余弦距离阈值，阈值内候选交 LLM 比对 ----
     conflict_distance_threshold: float = 0.3
 

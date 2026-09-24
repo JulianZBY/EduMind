@@ -12,6 +12,7 @@ from app.api.v1.interactive import router as interactive_router
 from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.revise import router as revise_router
 from app.api.v1.sessions import router as sessions_router
+from app.api.v1.settings import router as settings_router
 
 router = APIRouter()
 router.include_router(chat_router)
@@ -23,6 +24,7 @@ router.include_router(interactive_router)
 router.include_router(knowledge_router)
 router.include_router(revise_router)
 router.include_router(sessions_router)
+router.include_router(settings_router)
 
 
 @router.get(

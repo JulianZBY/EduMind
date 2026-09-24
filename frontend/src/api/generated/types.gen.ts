@@ -23,9 +23,149 @@ export type BodyUploadDocumentApiV1DocumentsUploadPost = {
 };
 
 /**
+ * CapabilityView
+ *
+ * 一项可切换能力：当前实现 + 就绪状态。
+ */
+export type CapabilityView = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Ready
+     */
+    ready: boolean;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Value Label
+     */
+    value_label: string;
+};
+
+/**
+ * CatalogCapability
+ *
+ * 一项可切换能力与它的全部可选实现。
+ */
+export type CatalogCapability = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Note
+     */
+    note: string;
+    /**
+     * Options
+     */
+    options: Array<CatalogOption>;
+};
+
+/**
+ * CatalogOption
+ *
+ * 一项可选实现。
+ */
+export type CatalogOption = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+};
+
+/**
+ * CatalogProvider
+ *
+ * 供应商目录里的一家。
+ */
+export type CatalogProvider = {
+    /**
+     * Accepts Any Model
+     */
+    accepts_any_model: boolean;
+    /**
+     * Base Url
+     */
+    base_url: string;
+    /**
+     * Chat Models
+     */
+    chat_models: Array<string>;
+    /**
+     * Embed Models
+     */
+    embed_models: Array<string>;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Key Field
+     */
+    key_field: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Note
+     */
+    note: string;
+    /**
+     * Vision Models
+     */
+    vision_models: Array<string>;
+};
+
+/**
+ * CatalogTask
+ *
+ * 一个任务级模型档位的定义。
+ */
+export type CatalogTask = {
+    /**
+     * Field
+     */
+    field: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+};
+
+/**
  * ChatRequest
  *
- * 备课对话请求：整段对话历史 + 追问粒度 + 本次备课的参考资料。
+ * 备课对话请求：对话内容 + 追问粒度 + 本次备课的参考资料 +（可选）备课会话 id。
  */
 export type ChatRequest = {
     /**
@@ -40,6 +180,10 @@ export type ChatRequest = {
      * Reference Doc Ids
      */
     reference_doc_ids?: Array<string>;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
 };
 
 /**
@@ -60,6 +204,10 @@ export type ChatResponse = {
      * Content
      */
     content: string;
+    /**
+     * Session Id
+     */
+    session_id?: string | null;
 };
 
 /**
@@ -139,6 +287,34 @@ export type InteractiveGenerateResponse = {
 };
 
 /**
+ * KeyItem
+ *
+ * 一项 Key：只回掩码与是否已配置，明文一个字节都不出现在响应里。
+ */
+export type KeyItem = {
+    /**
+     * Configured
+     */
+    configured: boolean;
+    /**
+     * Field
+     */
+    field: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Masked
+     */
+    masked: string;
+    /**
+     * Source
+     */
+    source: string;
+};
+
+/**
  * Message
  *
  * 一轮对话：role 为 user / assistant，content 为教师或助手的原话。
@@ -152,6 +328,162 @@ export type Message = {
      * Role
      */
     role: string;
+};
+
+/**
+ * MessageItem
+ */
+export type MessageItem = {
+    /**
+     * Artifacts
+     */
+    artifacts?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind?: string | null;
+    /**
+     * Role
+     */
+    role: string;
+    /**
+     * Seq
+     */
+    seq: number;
+};
+
+/**
+ * ProviderView
+ *
+ * 当前对话供应商：id、面向教师的名称、它用哪个字段存 Key，以及「现在能不能用」。
+ */
+export type ProviderView = {
+    /**
+     * Key Field
+     */
+    key_field: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Ready
+     */
+    ready: boolean;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Value
+     */
+    value: string;
+};
+
+/**
+ * RetrieveRequest
+ *
+ * 检索观察请求：备课意图 + 返回条数 + 本次备课的参考资料。
+ */
+export type RetrieveRequest = {
+    /**
+     * Intent
+     */
+    intent?: {
+        [key: string]: unknown;
+    };
+    /**
+     * K
+     */
+    k?: number;
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids?: Array<string>;
+};
+
+/**
+ * RetrieveResponse
+ */
+export type RetrieveResponse = {
+    /**
+     * Context
+     */
+    context: string;
+    /**
+     * Graph Nodes
+     */
+    graph_nodes: Array<RetrievedNode>;
+    /**
+     * Hits
+     */
+    hits: Array<RetrievedChunk>;
+    /**
+     * Sources
+     */
+    sources: Array<string>;
+    /**
+     * Strategy
+     */
+    strategy: string;
+};
+
+/**
+ * RetrievedChunk
+ */
+export type RetrievedChunk = {
+    /**
+     * Chunk Id
+     */
+    chunk_id: number;
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Distance
+     */
+    distance: number;
+    /**
+     * Doc Id
+     */
+    doc_id: string;
+};
+
+/**
+ * RetrievedNode
+ */
+export type RetrievedNode = {
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Title
+     */
+    title: string;
 };
 
 /**
@@ -291,6 +623,371 @@ export type SearchResponse = {
 };
 
 /**
+ * SessionCreateRequest
+ *
+ * 新建备课会话：标题可留空（首轮需求自动充当标题），并带上本次备课的参考资料。
+ */
+export type SessionCreateRequest = {
+    /**
+     * Granularity
+     */
+    granularity?: '快速' | '标准' | '精细';
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids?: Array<string>;
+    /**
+     * Title
+     */
+    title?: string;
+};
+
+/**
+ * SessionDeleteResponse
+ */
+export type SessionDeleteResponse = {
+    /**
+     * Deleted
+     */
+    deleted: boolean;
+    /**
+     * Id
+     */
+    id: string;
+};
+
+/**
+ * SessionHistoryResponse
+ */
+export type SessionHistoryResponse = {
+    /**
+     * Messages
+     */
+    messages: Array<MessageItem>;
+    session: SessionSummary;
+};
+
+/**
+ * SessionListResponse
+ */
+export type SessionListResponse = {
+    /**
+     * Sessions
+     */
+    sessions: Array<SessionSummary>;
+};
+
+/**
+ * SessionSummary
+ */
+export type SessionSummary = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Granularity
+     */
+    granularity: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Message Count
+     */
+    message_count: number;
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids: Array<string>;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * SessionUpdateRequest
+ *
+ * 重命名会话 / 改会话设置：只改传入的字段，未传的字段保持原值。
+ */
+export type SessionUpdateRequest = {
+    /**
+     * Granularity
+     */
+    granularity?: '快速' | '标准' | '精细' | null;
+    /**
+     * Reference Doc Ids
+     */
+    reference_doc_ids?: Array<string> | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+};
+
+/**
+ * SettingItem
+ *
+ * 一项可编辑的非 Key 设置：当前值 + 实际生效值（留空时按供应商预设解析）。
+ */
+export type SettingItem = {
+    /**
+     * Effective
+     */
+    effective: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Value
+     */
+    value: string;
+};
+
+/**
+ * SettingsCatalog
+ *
+ * 可选目录：供应商 + 能力实现 + 任务清单（设置页下拉的唯一出处）。
+ */
+export type SettingsCatalog = {
+    /**
+     * Capabilities
+     */
+    capabilities: Array<CatalogCapability>;
+    /**
+     * Note
+     */
+    note: string;
+    /**
+     * Providers
+     */
+    providers: Array<CatalogProvider>;
+    /**
+     * Tasks
+     */
+    tasks: Array<CatalogTask>;
+};
+
+/**
+ * SettingsUpdate
+ *
+ * 写入设置：**只传要改的项**（界面一次只做一件事）。
+ *
+ * 约定：字段缺省或传 `null` = 该项不动；传空字符串 = **清除该项**（回落 `.env` 引导默认）。
+ * 取值必须落在 `GET /settings/catalog` 给出的目录里，否则 400（带稳定 `code` 与可读 `message`）。
+ */
+export type SettingsUpdate = {
+    /**
+     * Asr Provider
+     *
+     * 语音转写实现：stub / paraformer
+     */
+    asr_provider?: string | null;
+    /**
+     * Bocha Api Key
+     *
+     * 博查网络搜索 Key
+     */
+    bocha_api_key?: string | null;
+    /**
+     * Chunk Strategy
+     *
+     * 分块策略：paragraph
+     */
+    chunk_strategy?: string | null;
+    /**
+     * Dashscope Api Key
+     *
+     * 阿里云百炼 API Key
+     */
+    dashscope_api_key?: string | null;
+    /**
+     * Deepseek Api Key
+     *
+     * DeepSeek API Key
+     */
+    deepseek_api_key?: string | null;
+    /**
+     * Embedding Api Key
+     *
+     * 向量化 API Key
+     */
+    embedding_api_key?: string | null;
+    /**
+     * Embedding Base Url
+     *
+     * 向量化服务地址（base_url）
+     */
+    embedding_base_url?: string | null;
+    /**
+     * Embedding Model
+     *
+     * 向量化模型 ID
+     */
+    embedding_model?: string | null;
+    /**
+     * Embedding Provider
+     *
+     * 向量化实现；留空 = 跟随对话供应商
+     */
+    embedding_provider?: string | null;
+    /**
+     * Llm Api Key
+     *
+     * 自定义服务的 API Key
+     */
+    llm_api_key?: string | null;
+    /**
+     * Llm Base Url
+     *
+     * 服务商地址（base_url）；留空用方言预设，自定义服务必须填
+     */
+    llm_base_url?: string | null;
+    /**
+     * Llm Model
+     *
+     * 全局默认对话模型；未设置的任务回落到它
+     */
+    llm_model?: string | null;
+    /**
+     * Llm Provider
+     *
+     * 供应商目录里的 id（stub / dashscope / deepseek / siliconflow / custom）
+     */
+    llm_provider?: string | null;
+    /**
+     * Llm Vision Model
+     *
+     * 多模态模型（图片/视频理解用）
+     */
+    llm_vision_model?: string | null;
+    /**
+     * Mineru Token
+     *
+     * MinerU 云端 PDF 解析 Token
+     */
+    mineru_token?: string | null;
+    /**
+     * Pdf Strategy
+     *
+     * PDF 解析策略：mineru_then_pypdf / pypdf / mineru
+     */
+    pdf_strategy?: string | null;
+    /**
+     * Retrieval Strategy
+     *
+     * 检索策略：vector_graph / vector
+     */
+    retrieval_strategy?: string | null;
+    /**
+     * Search Provider
+     *
+     * 网络搜索实现：auto / stub / bocha
+     */
+    search_provider?: string | null;
+    /**
+     * Siliconflow Api Key
+     *
+     * 硅基流动 API Key
+     */
+    siliconflow_api_key?: string | null;
+    /**
+     * Task Model Conflict
+     *
+     * 冲突比对用的模型档位
+     */
+    task_model_conflict?: string | null;
+    /**
+     * Task Model Generate
+     *
+     * 生成用的模型档位
+     */
+    task_model_generate?: string | null;
+    /**
+     * Task Model Intent
+     *
+     * 意图分析用的模型档位
+     */
+    task_model_intent?: string | null;
+};
+
+/**
+ * SettingsView
+ *
+ * 当前生效设置：读取与写入共用同一份形状（写完直接用它刷新界面）。
+ */
+export type SettingsView = {
+    /**
+     * Capabilities
+     */
+    capabilities: Array<CapabilityView>;
+    /**
+     * Items
+     */
+    items: Array<SettingItem>;
+    /**
+     * Keys
+     */
+    keys: Array<KeyItem>;
+    /**
+     * Note
+     */
+    note: string;
+    provider: ProviderView;
+    /**
+     * Tasks
+     */
+    tasks: Array<TaskModelView>;
+};
+
+/**
+ * TaskModelView
+ *
+ * 一个任务级模型档位：选了什么、**实际用的是什么**、来源是任务级还是全局默认。
+ */
+export type TaskModelView = {
+    /**
+     * Field
+     */
+    field: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Selected
+     */
+    selected: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Task
+     */
+    task: string;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -347,6 +1044,10 @@ export type ChatApiV1ChatPostData = {
 };
 
 export type ChatApiV1ChatPostErrors = {
+    /**
+     * 备课会话不存在
+     */
+    404: unknown;
     /**
      * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
@@ -618,6 +1319,33 @@ export type GetGraphApiV1KnowledgeGraphGetResponses = {
     200: unknown;
 };
 
+export type RetrieveApiV1KnowledgeRetrievePostData = {
+    body: RetrieveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/knowledge/retrieve';
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostErrors = {
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostResponses = {
+    /**
+     * 本次检索命中的分块、来源与图谱知识点
+     */
+    200: RetrieveResponse;
+};
+
+export type RetrieveApiV1KnowledgeRetrievePostResponse = RetrieveApiV1KnowledgeRetrievePostResponses[keyof RetrieveApiV1KnowledgeRetrievePostResponses];
+
 export type SearchApiV1KnowledgeSearchPostData = {
     body: SearchRequest;
     path?: never;
@@ -744,6 +1472,264 @@ export type ReviseWordEndpointApiV1ReviseWordPostResponses = {
 };
 
 export type ReviseWordEndpointApiV1ReviseWordPostResponse = ReviseWordEndpointApiV1ReviseWordPostResponses[keyof ReviseWordEndpointApiV1ReviseWordPostResponses];
+
+export type ListSessionsApiV1SessionsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         *
+         * 按标题过滤会话；不传返回全部会话
+         */
+        q?: string | null;
+    };
+    url: '/api/v1/sessions';
+};
+
+export type ListSessionsApiV1SessionsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ListSessionsApiV1SessionsGetError = ListSessionsApiV1SessionsGetErrors[keyof ListSessionsApiV1SessionsGetErrors];
+
+export type ListSessionsApiV1SessionsGetResponses = {
+    /**
+     * 会话列表（最近使用在前）
+     */
+    200: SessionListResponse;
+};
+
+export type ListSessionsApiV1SessionsGetResponse = ListSessionsApiV1SessionsGetResponses[keyof ListSessionsApiV1SessionsGetResponses];
+
+export type CreateSessionApiV1SessionsPostData = {
+    body: SessionCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/sessions';
+};
+
+export type CreateSessionApiV1SessionsPostErrors = {
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type CreateSessionApiV1SessionsPostResponses = {
+    /**
+     * 新建成功，返回落库后的会话
+     */
+    200: SessionSummary;
+};
+
+export type CreateSessionApiV1SessionsPostResponse = CreateSessionApiV1SessionsPostResponses[keyof CreateSessionApiV1SessionsPostResponses];
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Session Id
+         *
+         * 备课会话 id，取自会话列表
+         */
+        session_id: string;
+    };
+    query?: never;
+    url: '/api/v1/sessions/{session_id}';
+};
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteErrors = {
+    /**
+     * 会话不存在
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteError = DeleteSessionApiV1SessionsSessionIdDeleteErrors[keyof DeleteSessionApiV1SessionsSessionIdDeleteErrors];
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteResponses = {
+    /**
+     * 删除成功
+     */
+    200: SessionDeleteResponse;
+};
+
+export type DeleteSessionApiV1SessionsSessionIdDeleteResponse = DeleteSessionApiV1SessionsSessionIdDeleteResponses[keyof DeleteSessionApiV1SessionsSessionIdDeleteResponses];
+
+export type SessionHistoryApiV1SessionsSessionIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Session Id
+         *
+         * 备课会话 id，取自会话列表
+         */
+        session_id: string;
+    };
+    query?: never;
+    url: '/api/v1/sessions/{session_id}';
+};
+
+export type SessionHistoryApiV1SessionsSessionIdGetErrors = {
+    /**
+     * 会话不存在
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type SessionHistoryApiV1SessionsSessionIdGetError = SessionHistoryApiV1SessionsSessionIdGetErrors[keyof SessionHistoryApiV1SessionsSessionIdGetErrors];
+
+export type SessionHistoryApiV1SessionsSessionIdGetResponses = {
+    /**
+     * 会话与按序号排好的消息历史
+     */
+    200: SessionHistoryResponse;
+};
+
+export type SessionHistoryApiV1SessionsSessionIdGetResponse = SessionHistoryApiV1SessionsSessionIdGetResponses[keyof SessionHistoryApiV1SessionsSessionIdGetResponses];
+
+export type RenameSessionApiV1SessionsSessionIdPatchData = {
+    body: SessionUpdateRequest;
+    path: {
+        /**
+         * Session Id
+         *
+         * 备课会话 id，取自会话列表
+         */
+        session_id: string;
+    };
+    query?: never;
+    url: '/api/v1/sessions/{session_id}';
+};
+
+export type RenameSessionApiV1SessionsSessionIdPatchErrors = {
+    /**
+     * 会话不存在
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type RenameSessionApiV1SessionsSessionIdPatchResponses = {
+    /**
+     * 修改成功，返回更新后的会话
+     */
+    200: SessionSummary;
+};
+
+export type RenameSessionApiV1SessionsSessionIdPatchResponse = RenameSessionApiV1SessionsSessionIdPatchResponses[keyof RenameSessionApiV1SessionsSessionIdPatchResponses];
+
+export type ReadSettingsApiV1SettingsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings';
+};
+
+export type ReadSettingsApiV1SettingsGetErrors = {
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ReadSettingsApiV1SettingsGetResponses = {
+    /**
+     * 当前生效设置（Key 只有掩码）
+     */
+    200: SettingsView;
+};
+
+export type ReadSettingsApiV1SettingsGetResponse = ReadSettingsApiV1SettingsGetResponses[keyof ReadSettingsApiV1SettingsGetResponses];
+
+export type UpdateSettingsApiV1SettingsPutData = {
+    body: SettingsUpdate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings';
+};
+
+export type UpdateSettingsApiV1SettingsPutErrors = {
+    /**
+     * 配置值不在目录里：`code` 是稳定机器码（unknown_provider / unknown_model / unknown_capability_impl / invalid_base_url），`field` 指向出错的设置项，`message` 可直接显示给教师；本次写入未落库
+     */
+    400: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type UpdateSettingsApiV1SettingsPutResponses = {
+    /**
+     * 写入后的当前生效设置（Key 只有掩码）
+     */
+    200: SettingsView;
+};
+
+export type UpdateSettingsApiV1SettingsPutResponse = UpdateSettingsApiV1SettingsPutResponses[keyof UpdateSettingsApiV1SettingsPutResponses];
+
+export type ReadCatalogApiV1SettingsCatalogGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings/catalog';
+};
+
+export type ReadCatalogApiV1SettingsCatalogGetErrors = {
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ReadCatalogApiV1SettingsCatalogGetResponses = {
+    /**
+     * 可选目录
+     */
+    200: SettingsCatalog;
+};
+
+export type ReadCatalogApiV1SettingsCatalogGetResponse = ReadCatalogApiV1SettingsCatalogGetResponses[keyof ReadCatalogApiV1SettingsCatalogGetResponses];
 
 export type HealthHealthGetData = {
     body?: never;
