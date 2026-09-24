@@ -71,6 +71,57 @@ export type ChatResponse = {
 };
 
 /**
+ * ConflictItem
+ *
+ * 一条冲突：类别 + 新旧知识对照 + 差异说明 + 状态。
+ */
+export type ConflictItem = {
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Diff Description
+     */
+    diff_description?: string | null;
+    /**
+     * Doc Id
+     */
+    doc_id?: string | null;
+    existing_knowledge?: ExistingKnowledgeEntry | null;
+    /**
+     * Id
+     */
+    id: string;
+    new_knowledge?: NewKnowledgeEntry | null;
+    /**
+     * Review Action
+     */
+    review_action?: string | null;
+    /**
+     * Revised Content
+     */
+    revised_content?: string | null;
+    /**
+     * Status
+     */
+    status: string;
+    structure_preview?: StructurePreview | null;
+};
+
+/**
+ * ConflictList
+ *
+ * 冲突列表。
+ */
+export type ConflictList = {
+    /**
+     * Conflicts
+     */
+    conflicts: Array<ConflictItem>;
+};
+
+/**
  * DocumentChunk
  *
  * 一个分块：`chunk_id` 全局唯一，`chunk_index` 是它在原文中的次序。
@@ -206,6 +257,27 @@ export type ExamGenerateResponse = {
     questions: Array<{
         [key: string]: unknown;
     }>;
+};
+
+/**
+ * ExistingKnowledgeEntry
+ *
+ * 库里的旧知识点：比新知多一个图谱节点 id。
+ */
+export type ExistingKnowledgeEntry = {
+    /**
+     * Content
+     */
+    content?: string;
+    /**
+     * Id
+     */
+    id?: string | null;
+    /**
+     * Title
+     */
+    title?: string;
+    [key: string]: unknown;
 };
 
 /**
@@ -439,6 +511,26 @@ export type MessageItem = {
 };
 
 /**
+ * NewKnowledgeEntry
+ *
+ * 待审的新知：标题 + 正文（结构冲突还带 `relations`）。
+ *
+ * 已知字段给出类型（前端对照卡片直接用），其余键原样保留——冲突记录里的知识点字典是
+ * 检测阶段存下的，不因本接口丢字段，也不凭空多出键。
+ */
+export type NewKnowledgeEntry = {
+    /**
+     * Content
+     */
+    content?: string;
+    /**
+     * Title
+     */
+    title?: string;
+    [key: string]: unknown;
+};
+
+/**
  * QuestionDetail
  *
  * 题目详情：题型 / 答案 / 来源 / 考查知识点齐备。
@@ -659,13 +751,45 @@ export type RetrievedNode = {
 /**
  * ReviewRequest
  *
- * 裁决动作：三选一，与冲突终态一一对应。
+ * 裁决动作；「编辑修正后入库」另需带修正后的内容。
  */
 export type ReviewRequest = {
     /**
      * Action
+     *
+     * 裁决动作。定义冲突与结构冲突用 接受新 / 保留旧 / 并存；常识存疑用 照常入库 / 拒绝 / 编辑修正后入库。
      */
-    action: '接受新' | '保留旧' | '并存';
+    action: '接受新' | '保留旧' | '并存' | '照常入库' | '拒绝' | '编辑修正后入库';
+    /**
+     * Revised Content
+     *
+     * 仅「编辑修正后入库」需要：教师改对后的正文。落库的是这份内容，原文留在冲突记录里（两条都可追溯）。
+     */
+    revised_content?: string | null;
+};
+
+/**
+ * ReviewResult
+ *
+ * 裁决结果：冲突 id、类别、终态与教师选的动作。
+ */
+export type ReviewResult = {
+    /**
+     * Action
+     */
+    action: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Status
+     */
+    status: string;
 };
 
 /**
@@ -902,6 +1026,105 @@ export type SessionUpdateRequest = {
 };
 
 /**
+ * StructureEdge
+ *
+ * 终态图上的一条关系。键名与知识图谱接口一致，前端复用同一套画布。
+ */
+export type StructureEdge = {
+    /**
+     * From
+     */
+    from: string;
+    /**
+     * Relation Type
+     */
+    relation_type: string;
+    /**
+     * To
+     */
+    to: string;
+};
+
+/**
+ * StructureGraph
+ *
+ * 一张小图：节点 + 关系。
+ */
+export type StructureGraph = {
+    /**
+     * Edges
+     */
+    edges: Array<StructureEdge>;
+    /**
+     * Nodes
+     */
+    nodes: Array<StructureNode>;
+};
+
+/**
+ * StructureNode
+ *
+ * 终态图上的一个节点。
+ *
+ * 新知用占位 id `__new__`（真实 id 要等裁决入库后才生成）；`is_new` 让前端把新知
+ * 画成强调色描边（CONTEXT.md 的「接受新」语义：旧知识点的位置换成新知）。
+ */
+export type StructureNode = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Is New
+     */
+    is_new?: boolean;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
+ * StructureOutcome
+ *
+ * 一种裁决终态的图示 + 它对应的冲突终态。
+ */
+export type StructureOutcome = {
+    /**
+     * Action
+     */
+    action: string;
+    /**
+     * Edges
+     */
+    edges: Array<StructureEdge>;
+    /**
+     * Nodes
+     */
+    nodes: Array<StructureNode>;
+    /**
+     * Status
+     */
+    status: string;
+};
+
+/**
+ * StructurePreview
+ *
+ * 「图谱现状 vs 三种裁决终态」（仅待审的结构冲突带它）。
+ *
+ * 以冲突知识点为中心的一跳邻域子图；终态图与实际裁决走的是一套语义，
+ * 因此图上画的终态就是裁决后图谱的样子。
+ */
+export type StructurePreview = {
+    current: StructureGraph;
+    /**
+     * Outcomes
+     */
+    outcomes: Array<StructureOutcome>;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -991,6 +1214,12 @@ export type ListConflictsApiV1ConflictsGetData = {
          * 按状态过滤：待审 / 已接受 / 已拒绝 / 并存；不传返回全部
          */
         status?: string | null;
+        /**
+         * Category
+         *
+         * 按类别过滤：定义冲突 / 结构冲突 / 常识存疑；不传返回全部
+         */
+        category?: string | null;
     };
     url: '/api/v1/conflicts';
 };
@@ -1010,10 +1239,12 @@ export type ListConflictsApiV1ConflictsGetError = ListConflictsApiV1ConflictsGet
 
 export type ListConflictsApiV1ConflictsGetResponses = {
     /**
-     * 冲突列表（不传 status 时返回全部）
+     * 冲突列表（不传 status / category 时返回全部）
      */
-    200: unknown;
+    200: ConflictList;
 };
+
+export type ListConflictsApiV1ConflictsGetResponse = ListConflictsApiV1ConflictsGetResponses[keyof ListConflictsApiV1ConflictsGetResponses];
 
 export type ReviewConflictApiV1ConflictsConflictIdReviewPostData = {
     body: ReviewRequest;
@@ -1039,7 +1270,7 @@ export type ReviewConflictApiV1ConflictsConflictIdReviewPostErrors = {
      */
     409: unknown;
     /**
-     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     * 动作不属于该冲突类别的动作集合，或请求体校验失败（未知动作 / 「编辑修正后入库」缺修正后的内容）
      */
     422: unknown;
     /**
@@ -1050,10 +1281,12 @@ export type ReviewConflictApiV1ConflictsConflictIdReviewPostErrors = {
 
 export type ReviewConflictApiV1ConflictsConflictIdReviewPostResponses = {
     /**
-     * 裁决成功，返回冲突 id 与终态
+     * 裁决成功，返回冲突 id、类别与终态
      */
-    200: unknown;
+    200: ReviewResult;
 };
+
+export type ReviewConflictApiV1ConflictsConflictIdReviewPostResponse = ReviewConflictApiV1ConflictsConflictIdReviewPostResponses[keyof ReviewConflictApiV1ConflictsConflictIdReviewPostResponses];
 
 export type ListDocumentsApiV1DocumentsGetData = {
     body?: never;

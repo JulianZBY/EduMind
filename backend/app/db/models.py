@@ -155,3 +155,15 @@ class Conflict(Base):
     existing_knowledge: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     diff_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="待审")  # 待审/已接受/已拒绝/并存
+    # 冲突类别（CONTEXT.md 第 6 节）：定义冲突 / 结构冲突 / 常识存疑。
+    # 类别是「检测来源」的标记，不能靠裁决动作反推——同一动作在不同类别下含义不同
+    # （例如「并存」对常识错误没有意义）。默认与回填口径见 ADR-0006。
+    category: Mapped[str] = mapped_column(
+        String(20), default="定义冲突", server_default="定义冲突"
+    )
+    # 常识存疑「编辑修正后入库」实际入库的正文；原文留在 new_knowledge 里，两条都留痕，
+    # 教师日后能看出「原来的说法」与「最终入库的说法」的差别（ADR-0004）。
+    revised_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 教师最终选的动作（审核痕迹）：常识存疑的「照常入库」与「编辑修正后入库」终态同为
+    # 已接受，只靠 status 分不出教师走的是哪条出路。
+    review_action: Mapped[str | None] = mapped_column(String(20), nullable=True)

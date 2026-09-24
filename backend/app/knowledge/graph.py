@@ -55,7 +55,7 @@ def save_knowledge(
     """存节点 + 边（title 映射到节点 id），返回节点数。
 
     title_embeddings：title → 向量。提供时同步写入向量库标题索引，
-    供冲突检测的近名预筛使用（ADR-0001）。
+    供冲突检测的近名预筛使用（ADR-0006）。
     """
     db = SessionLocal()
     try:

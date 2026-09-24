@@ -14,12 +14,45 @@ engine = create_engine(
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
-def _ensure_sqlite_columns() -> None:
-    """轻量幂等迁移：create_all 不会修改已有表，新增列用 ALTER TABLE 补齐（SQLite）。"""
-    with engine.connect() as conn:
-        cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(documents)")}
-        if cols and "is_reference" not in cols:
-            conn.exec_driver_sql("ALTER TABLE documents ADD COLUMN is_reference BOOLEAN DEFAULT 0")
+# 轻量幂等迁移用的补列清单：(表, 列, 列定义)。create_all 不会修改已有表，故新增列在这里补齐。
+_LEGACY_COLUMNS: tuple[tuple[str, str, str], ...] = (
+    ("documents", "is_reference", "BOOLEAN DEFAULT 0"),
+    ("conflicts", "category", "VARCHAR(20) DEFAULT '定义冲突'"),
+    ("conflicts", "revised_content", "TEXT"),
+    ("conflicts", "review_action", "VARCHAR(20)"),
+)
+
+
+def _ensure_sqlite_columns(bind=None) -> None:
+    """轻量幂等迁移：补列 + 回填（默认库为 SQLite）。
+
+    - 补列：create_all 不会修改已有表，新增列用 `ALTER TABLE` 补齐（SQLite）；
+    - 回填：`conflicts.category` 落地前只有定义冲突这一类检测在产出冲突，
+      故存量冲突一律回填为「定义冲突」，老库与新库的队列呈现一致（见 ADR-0006）；
+    - 幂等：列已存在、行已有类别时都是空操作，可重复调用。
+
+    参数 `bind` 只给测试用（拿临时库验迁移）；生产走模块级 `engine`。
+    """
+    target = bind if bind is not None else engine
+    with target.connect() as conn:
+        tables = {
+            row[0]
+            for row in conn.exec_driver_sql(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        for table, column, ddl in _LEGACY_COLUMNS:
+            if table not in tables:
+                continue
+            cols = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
+            if column not in cols:
+                conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+                conn.commit()
+        if "conflicts" in tables:
+            conn.exec_driver_sql(
+                "UPDATE conflicts SET category = '定义冲突'"
+                " WHERE category IS NULL OR category = ''"
+            )
             conn.commit()
 
 

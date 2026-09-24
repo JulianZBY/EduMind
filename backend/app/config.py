@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # 检索策略：vector_graph（默认，向量 + 图谱邻接融合）/ vector（纯向量）
     retrieval_strategy: str = "vector_graph"
 
-    # ---- 冲突检测（ADR-0001）：近名预筛的余弦距离阈值，阈值内候选交 LLM 比对 ----
+    # ---- 冲突检测（ADR-0006）：近名预筛的余弦距离阈值，阈值内候选交 LLM 比对 ----
     conflict_distance_threshold: float = 0.3
 
 

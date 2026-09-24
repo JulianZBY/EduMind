@@ -54,7 +54,7 @@ async def index_chunks(doc_id: str, chunks: list[str]) -> None:
 async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
     """提取知识图谱 + 冲突检测（尽力而为，失败不阻断主流程），返回待审冲突数。
 
-    冲突节点与同名重复节点不入图谱（ADR-0001：审核前新节点不入知识图谱）；
+    冲突节点与同名重复节点不入图谱（ADR-0006：审核前新节点不入知识图谱）；
     其余节点连同标题向量索引直接入库（既有行为）。
     """
     from app.core.embedding.factory import get_embedder
