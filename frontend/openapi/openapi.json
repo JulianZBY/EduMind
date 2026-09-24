@@ -1,0 +1,1605 @@
+{
+  "components": {
+    "schemas": {
+      "Body_upload_document_api_v1_documents_upload_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "教学资料文件：PDF / Word / PPT / 图片 / 视频 / 录音",
+            "title": "File",
+            "type": "string"
+          },
+          "is_reference": {
+            "default": false,
+            "description": "是否标记为参考资料：影响备课检索加权与生成物溯源",
+            "title": "Is Reference",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_document_api_v1_documents_upload_post",
+        "type": "object"
+      },
+      "ChatRequest": {
+        "description": "备课对话请求：整段对话历史 + 追问粒度 + 本次备课的参考资料。",
+        "example": {
+          "granularity": "标准",
+          "messages": [
+            {
+              "content": "给初二讲一次函数，40 分钟",
+              "role": "user"
+            },
+            {
+              "content": "还差一点信息：想用什么教学风格？",
+              "role": "assistant"
+            },
+            {
+              "content": "情境导入为主，开始生成",
+              "role": "user"
+            }
+          ],
+          "reference_doc_ids": [
+            "5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"
+          ]
+        },
+        "properties": {
+          "granularity": {
+            "default": "标准",
+            "title": "Granularity",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "reference_doc_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Reference Doc Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "messages"
+        ],
+        "title": "ChatRequest",
+        "type": "object"
+      },
+      "ChatResponse": {
+        "properties": {
+          "artifacts": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts"
+          },
+          "clarifying": {
+            "default": false,
+            "title": "Clarifying",
+            "type": "boolean"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "ChatResponse",
+        "type": "object"
+      },
+      "ExamGenerateRequest": {
+        "description": "一键生成试卷的请求：备课意图 + 题目数量。",
+        "example": {
+          "intent": {
+            "duration": "40 分钟",
+            "grade": "初二",
+            "topic": "一次函数"
+          },
+          "n": 5
+        },
+        "properties": {
+          "intent": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Intent",
+            "type": "object"
+          },
+          "n": {
+            "default": 5,
+            "title": "N",
+            "type": "integer"
+          }
+        },
+        "title": "ExamGenerateRequest",
+        "type": "object"
+      },
+      "ExamGenerateResponse": {
+        "properties": {
+          "bank_saved": {
+            "title": "Bank Saved",
+            "type": "integer"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "questions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Questions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "questions",
+          "filename",
+          "bank_saved"
+        ],
+        "title": "ExamGenerateResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "InteractiveGenerateRequest": {
+        "description": "互动内容生成请求：备课意图（可透传上次备课的意图对象）。",
+        "example": {
+          "intent": {
+            "grade": "初二",
+            "interactive": "课堂小游戏：判断哪些是一次函数",
+            "topic": "一次函数"
+          }
+        },
+        "properties": {
+          "intent": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Intent",
+            "type": "object"
+          }
+        },
+        "title": "InteractiveGenerateRequest",
+        "type": "object"
+      },
+      "InteractiveGenerateResponse": {
+        "properties": {
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "html": {
+            "title": "Html",
+            "type": "string"
+          }
+        },
+        "required": [
+          "html",
+          "filename"
+        ],
+        "title": "InteractiveGenerateResponse",
+        "type": "object"
+      },
+      "Message": {
+        "description": "一轮对话：role 为 user / assistant，content 为教师或助手的原话。",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "Message",
+        "type": "object"
+      },
+      "ReviewRequest": {
+        "description": "裁决动作：三选一，与冲突终态一一对应。",
+        "example": {
+          "action": "接受新"
+        },
+        "properties": {
+          "action": {
+            "enum": [
+              "接受新",
+              "保留旧",
+              "并存"
+            ],
+            "title": "Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "ReviewRequest",
+        "type": "object"
+      },
+      "ReviseRequest": {
+        "description": "课件修改请求：待改的课件结构 + 修改意见 + 原风格偏好。",
+        "example": {
+          "feedback": "把第二页的例子换成生活情境，语言再简洁些",
+          "slides": [
+            {
+              "bullets": [
+                "形如 y=kx+b（k≠0）",
+                "图象是一条直线"
+              ],
+              "title": "一次函数"
+            }
+          ],
+          "style": "情境导入"
+        },
+        "properties": {
+          "feedback": {
+            "title": "Feedback",
+            "type": "string"
+          },
+          "slides": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Slides",
+            "type": "array"
+          },
+          "style": {
+            "default": "",
+            "title": "Style",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slides",
+          "feedback"
+        ],
+        "title": "ReviseRequest",
+        "type": "object"
+      },
+      "ReviseResponse": {
+        "properties": {
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "slides": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Slides",
+            "type": "array"
+          }
+        },
+        "required": [
+          "slides",
+          "filename"
+        ],
+        "title": "ReviseResponse",
+        "type": "object"
+      },
+      "ReviseWordRequest": {
+        "description": "教案修改请求：待改的教案结构 + 修改意见 + 参考资料（再渲染时保留溯源一节）。",
+        "example": {
+          "feedback": "教学目标再具体一点，写出可观察的行为动词",
+          "references": [
+            "一次函数讲义.pdf"
+          ],
+          "word": {
+            "objectives": {
+              "knowledge": [
+                "理解一次函数的定义"
+              ]
+            },
+            "process": [
+              {
+                "content": "…",
+                "minutes": 5,
+                "stage": "情境导入"
+              }
+            ]
+          }
+        },
+        "properties": {
+          "feedback": {
+            "title": "Feedback",
+            "type": "string"
+          },
+          "references": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "word": {
+            "additionalProperties": true,
+            "title": "Word",
+            "type": "object"
+          }
+        },
+        "required": [
+          "word",
+          "feedback"
+        ],
+        "title": "ReviseWordRequest",
+        "type": "object"
+      },
+      "ReviseWordResponse": {
+        "properties": {
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "word": {
+            "additionalProperties": true,
+            "title": "Word",
+            "type": "object"
+          }
+        },
+        "required": [
+          "word",
+          "filename"
+        ],
+        "title": "ReviseWordResponse",
+        "type": "object"
+      },
+      "SearchHit": {
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "distance": {
+            "title": "Distance",
+            "type": "number"
+          },
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "distance",
+          "doc_id",
+          "content"
+        ],
+        "title": "SearchHit",
+        "type": "object"
+      },
+      "SearchRequest": {
+        "description": "检索请求：检索词 + 返回条数。",
+        "example": {
+          "k": 5,
+          "query": "一次函数的定义"
+        },
+        "properties": {
+          "k": {
+            "default": 5,
+            "title": "K",
+            "type": "integer"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchRequest",
+        "type": "object"
+      },
+      "SearchResponse": {
+        "properties": {
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "title": "Hits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "hits"
+        ],
+        "title": "SearchResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "多模态 AI 备课智能体后端。\n\nOpenAPI 是本服务接口文档的**唯一事实源**：每个端点都带 `summary`、描述、\n请求/响应示例、错误码与分组 tag；前端 TypeScript 类型由本 schema 生成，禁止手抄。\n\n* **界面**：Swagger UI `/docs`，ReDoc `/redoc`。\n* **分组**：系统 / 备课会话 / 知识库 / 知识图谱 / 生成物 / 冲突审核。\n* **单用户**：固定 `user_id=\"default\"`，本服务不含登录与多租户。\n* **能力切换**：对话模型、向量化、语音转写、PDF 解析、网络搜索均按配置选择，\n  无 Key 时回落 stub，全链路仍可跑（协议语义见 `docs/api/`）。\n* **版本策略**：只有破坏性变更才升 `/api/v2`。\n",
+    "title": "EduMind API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "description": "返回应用名与文档、健康检查入口地址，供启动自检与人工排查使用。",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "docs": "/docs",
+                  "health": "/health",
+                  "name": "EduMind"
+                },
+                "schema": {}
+              }
+            },
+            "description": "服务信息"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "服务信息",
+        "tags": [
+          "系统"
+        ]
+      }
+    },
+    "/api/v1/chat": {
+      "post": {
+        "description": "备课对话主入口，后端按**累积需求**分析意图后二选一：\n\n1. **澄清回复**：`clarifying=true`、`artifacts=null`，内容是下一个追问；追问粒度分快速 / 标准 / 精细三档，粒度越高追问越细。\n2. **生成回复**：`clarifying=false`，`artifacts` 携带本次的课件、教案、提纲，以及命中的参考资料来源。\n\n最后一轮命中「开始生成」一类的跳过表达时不再追问，直接出生成物。`reference_doc_ids` 为发起备课勾选的参考资料，命中后在 `artifacts.references` 溯源。\n\n对话历史由调用方整段带上（本轮无状态）；会话持久化与状态机收编见票 05。",
+        "operationId": "chat_api_v1_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "澄清回复": {
+                    "summary": "信息不足，继续追问",
+                    "value": {
+                      "clarifying": true,
+                      "content": "还差一点信息：这节课的重点难点是什么？（也可以回复「开始生成」跳过追问）"
+                    }
+                  },
+                  "生成回复": {
+                    "summary": "信息够用，直出生成物",
+                    "value": {
+                      "artifacts": {
+                        "intent": {
+                          "grade": "初二",
+                          "topic": "一次函数"
+                        },
+                        "knowledge_hits": 3,
+                        "outline": {
+                          "path": "data/output/outline-7g8h9i.docx"
+                        },
+                        "ppt": {
+                          "filename": "ppt-1a2b3c.pptx",
+                          "path": "data/output/ppt-1a2b3c.pptx",
+                          "slides": []
+                        },
+                        "references": [
+                          "一次函数讲义.pdf"
+                        ],
+                        "word": {
+                          "filename": "word-4d5e6f.docx",
+                          "path": "data/output/word-4d5e6f.docx"
+                        }
+                      },
+                      "clarifying": false,
+                      "content": "已完成备课「一次函数」：生成 PPT 12 页、Word 教案、教学提纲。（已融合本地知识库） 本次命中的来源文档：一次函数讲义.pdf。"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "澄清回复或生成回复，由 `clarifying` 区分"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "备课对话",
+        "tags": [
+          "备课会话"
+        ]
+      }
+    },
+    "/api/v1/conflicts": {
+      "get": {
+        "description": "返回待审及已裁决的冲突。每条包含新旧知识对照（`new_knowledge` / `existing_knowledge`）与差异说明，供教师判断谁对。\n\n当前唯一类别是**定义冲突**（同一知识点两段矛盾描述）；结构冲突与常识存疑两种类别的数据模型见 ADR-0004，检测逻辑尚未实现，因此不会出现在本列表。",
+        "operationId": "list_conflicts_api_v1_conflicts_get",
+        "parameters": [
+          {
+            "description": "按状态过滤：待审 / 已接受 / 已拒绝 / 并存；不传返回全部",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "按状态过滤：待审 / 已接受 / 已拒绝 / 并存；不传返回全部",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "conflicts": [
+                    {
+                      "diff_description": "新知识多了常数项 b，旧知识把正比例函数当成一次函数全集。",
+                      "doc_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                      "existing_knowledge": {
+                        "content": "形如 y=kx（k≠0）的函数叫一次函数。",
+                        "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                        "title": "一次函数的定义"
+                      },
+                      "id": "c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                      "new_knowledge": {
+                        "content": "形如 y=kx+b（k≠0）的函数叫一次函数。",
+                        "title": "一次函数的定义"
+                      },
+                      "status": "待审"
+                    }
+                  ]
+                },
+                "schema": {}
+              }
+            },
+            "description": "冲突列表（不传 status 时返回全部）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "冲突列表",
+        "tags": [
+          "冲突审核"
+        ]
+      }
+    },
+    "/api/v1/conflicts/{conflict_id}/review": {
+      "post": {
+        "description": "教师三选一处置待审冲突，每条冲突只能裁决一次：\n\n* `接受新`：新知识点替换旧知识点，旧知识点上的关系边重挂到新知识点，终态 `已接受`；\n* `保留旧`：丢弃新知，图谱不动，终态 `已拒绝`；\n* `并存`：新旧双知识点保留，差异说明留在冲突记录中，终态 `并存`。\n\n裁决后该知识点才进入知识图谱（审核前新知不入图）。",
+        "operationId": "review_conflict_api_v1_conflicts__conflict_id__review_post",
+        "parameters": [
+          {
+            "description": "待审冲突 id，取自冲突列表",
+            "in": "path",
+            "name": "conflict_id",
+            "required": true,
+            "schema": {
+              "description": "待审冲突 id，取自冲突列表",
+              "title": "Conflict Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                  "status": "已接受"
+                },
+                "schema": {}
+              }
+            },
+            "description": "裁决成功，返回冲突 id 与终态"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "冲突不存在: c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
+                }
+              }
+            },
+            "description": "冲突不存在"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "该冲突已审核: 已接受"
+                }
+              }
+            },
+            "description": "该冲突已被裁决过，不能重复提交"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "裁决冲突",
+        "tags": [
+          "冲突审核"
+        ]
+      }
+    },
+    "/api/v1/documents": {
+      "get": {
+        "description": "返回全部教学资料及其解析状态，供知识库工作台轮询进度。\n\n`status` 取值：`处理中` → 后台解析尚未结束；`已完成` → 已入库可检索；`有冲突` → 已入库但检测到待裁决的定义冲突（见冲突审核区）；`失败` → 解析失败，可按原文重新上传。`is_reference` 为参考资料标记。",
+        "operationId": "list_documents_api_v1_documents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "documents": [
+                    {
+                      "file_type": "pdf",
+                      "filename": "一次函数讲义.pdf",
+                      "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                      "is_reference": true,
+                      "status": "已完成"
+                    },
+                    {
+                      "file_type": "mp3",
+                      "filename": "课堂录音.mp3",
+                      "id": "1a2b3c4d-5e6f-4071-8293-a4b5c6d7e8f9",
+                      "is_reference": false,
+                      "status": "处理中"
+                    }
+                  ]
+                },
+                "schema": {}
+              }
+            },
+            "description": "资料列表"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "教学资料列表",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/documents/upload": {
+      "post": {
+        "description": "上传一份教学资料并**立即返回**：文件落盘 + 建文档记录 + 交后台解析（解析完成前`status` 为 `处理中`）。\n\n上传后请轮询 `GET /api/v1/documents` 直到状态从 `处理中` 变为 `已完成`（或 `有冲突` / `失败`），不要靠等待本请求变慢来判断进度。\n\n`is_reference=true` 把文档标记为参考资料：发起备课时勾选其 id 会提高检索权重，并在生成物中溯源。",
+        "operationId": "upload_document_api_v1_documents_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_api_v1_documents_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "file_type": "pdf",
+                  "filename": "一次函数讲义.pdf",
+                  "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                  "is_reference": true,
+                  "status": "处理中"
+                },
+                "schema": {}
+              }
+            },
+            "description": "已接收，后台解析中"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "上传教学资料",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/exam/generate": {
+      "post": {
+        "description": "按备课意图出题并同侧入库：生成 `n` 道题（默认 5）→ 题目写入题库（来源=`自编`）→ 按考查知识点关联知识图谱节点 → 渲染 Word 试卷。\n\n返回的 `questions` 供生成物区直接预览，`bank_saved` 为实际入题库的题目数，`filename` 可用于 `GET /api/v1/files/{filename}` 下载。\n\n`intent` 可直接透传上次备课的意图对象；结构不完整时退化为仅凭 `topic` 出题，不会因为字段缺失卡住一键生成。",
+        "operationId": "generate_exam_paper_api_v1_exam_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExamGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "bank_saved": 5,
+                  "filename": "exam-8f7e6d5c.docx",
+                  "questions": [
+                    {
+                      "analysis": "一次函数形如 y=kx+b（k≠0）。",
+                      "answer": "A",
+                      "content": "下列函数中，属于一次函数的是？",
+                      "knowledge_point": "一次函数的定义",
+                      "options": [
+                        "A. y=2x+1",
+                        "B. y=x²",
+                        "C. y=1/x",
+                        "D. y=√x"
+                      ],
+                      "type": "选择"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExamGenerateResponse"
+                }
+              }
+            },
+            "description": "试卷已生成，题目已入题库"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "试卷生成失败：模型未返回可解析的题目，请重试"
+                }
+              }
+            },
+            "description": "试卷生成失败：模型未返回可解析的题目"
+          }
+        },
+        "summary": "一键生成试卷",
+        "tags": [
+          "生成物"
+        ]
+      }
+    },
+    "/api/v1/files/{filename}": {
+      "get": {
+        "description": "按文件名取回落盘的生成物（课件 pptx / 教案与提纲 docx / 试卷 docx / 互动内容 html）。\n\n* `inline=false`（默认）：附下载头，浏览器保存文件；\n* `inline=true`：不附下载头，互动内容 HTML 可直接在浏览器内联打开试用。\n\n文件名由生成接口返回，不接受目录与路径分隔符；生成物与版本记录的一一对应关系见 `docs/api/`。",
+        "operationId": "download_file_api_v1_files__filename__get",
+        "parameters": [
+          {
+            "description": "生成物文件名（不含目录），取自生成接口返回",
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "description": "生成物文件名（不含目录），取自生成接口返回",
+              "title": "Filename",
+              "type": "string"
+            }
+          },
+          {
+            "description": "true 时不附下载头：互动内容 HTML 可在浏览器直接打开互动",
+            "in": "query",
+            "name": "inline",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "true 时不附下载头：互动内容 HTML 可在浏览器直接打开互动",
+              "title": "Inline",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/octet-stream": {
+                "description": "文件二进制内容",
+                "example": "<file bytes>"
+              }
+            },
+            "description": "文件字节流；实际媒体类型由生成物后缀决定（pptx / docx / xlsx / html），`Content-Disposition` 决定下载或内联"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "非法文件名"
+                }
+              }
+            },
+            "description": "文件名非法：含 `..` 或路径分隔符（防止目录穿越）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "文件不存在"
+                }
+              }
+            },
+            "description": "文件不存在或已被清理"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "下载生成物文件",
+        "tags": [
+          "生成物"
+        ]
+      }
+    },
+    "/api/v1/interactive/generate": {
+      "post": {
+        "description": "按意图生成一份**单文件 HTML5** 互动内容（小游戏 / 知识点动画），落盘后返回 HTML 正文与文件名。\n\n前端可用 `GET /api/v1/files/{filename}?inline=true` 在新标签页直接打开试用。\n模型返回的不是完整单文件 HTML 时，本接口以 502 报错而不落盘半成品。",
+        "operationId": "generate_interactive_api_v1_interactive_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractiveGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "filename": "creative-3c2b1a09.html",
+                  "html": "<!doctype html><html lang=zh><body>…</body></html>"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/InteractiveGenerateResponse"
+                }
+              }
+            },
+            "description": "互动内容已生成并落盘"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "互动内容生成失败：模型未返回单文件 HTML，请重试"
+                }
+              }
+            },
+            "description": "互动内容生成失败：模型未返回单文件 HTML"
+          }
+        },
+        "summary": "生成互动内容",
+        "tags": [
+          "生成物"
+        ]
+      }
+    },
+    "/api/v1/knowledge/graph": {
+      "get": {
+        "description": "返回知识图谱的全部知识点与关系，前端据此自行渲染图谱。\n\n`relation_type` 取值：`前置依赖` / `父子包含` / `推导关系` / `相关关联`。\n节点详情、按学科章节过滤与邻域取子图接口随知识图谱工作台（票 10）交付。",
+        "operationId": "get_graph_api_v1_knowledge_graph_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "edges": [
+                    {
+                      "from": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                      "relation_type": "前置依赖",
+                      "to": "9c8b7a65-4321-4f0e-8d9c-1b2a3c4d5e6f"
+                    }
+                  ],
+                  "nodes": [
+                    {
+                      "difficulty": "基础",
+                      "id": "2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901",
+                      "title": "一次函数的定义"
+                    }
+                  ]
+                },
+                "schema": {}
+              }
+            },
+            "description": "知识点与关系"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "知识图谱数据",
+        "tags": [
+          "知识图谱"
+        ]
+      }
+    },
+    "/api/v1/knowledge/search": {
+      "post": {
+        "description": "在本地知识库里做语义检索，返回最相近的段落（`distance` 越小越相近，`doc_id` 可回溯来源文档）。\n\n检索用向量由当前配置的向量化能力生成；无云端 Key 时由 stub 提供与宿主无关的兜底向量，因此无 Key 时排序不具语义意义，仅供链路联调。",
+        "operationId": "search_api_v1_knowledge_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "hits": [
+                    {
+                      "chunk_id": 42,
+                      "content": "一次函数：形如 y=kx+b（k≠0）的函数。",
+                      "distance": 0.18,
+                      "doc_id": "7f6e5d4c-3b2a-4918-8776-655443322110"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "命中段落（按相似度升序）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "知识库语义检索",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/knowledge/web-search": {
+      "post": {
+        "description": "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n本能力无 stub 实现：`BOCHA_API_KEY` 未配置时请求失败（`500`，`detail` 为 `BOCHA_API_KEY 未配置`），而不是静默返回空结果。",
+        "operationId": "web_search_api_v1_knowledge_web_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "results": [
+                    {
+                      "snippet": "一次函数 y=kx+b（k≠0）的图象是一条直线…",
+                      "title": "一次函数的定义与图象",
+                      "url": "https://example.com/lesson/linear-function"
+                    }
+                  ]
+                },
+                "schema": {}
+              }
+            },
+            "description": "搜索结果"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "网络搜索（BOCHA_API_KEY）未配置"
+                }
+              }
+            },
+            "description": "网络搜索（BOCHA_API_KEY）未配置:该能力缺 Key 且当前配置未指向可用实现,请在 .env 或设置中补齐(票 13 落地前只能改配置后重启)。"
+          }
+        },
+        "summary": "网络搜索",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/ping": {
+      "get": {
+        "description": "确认 `/api/v1` 已挂载且服务能响应。只回固定文本，不访问数据库、不调用外部能力，适合作为前端连接异常时的最小排查点（若 `/health` 也失败则是进程问题）。",
+        "operationId": "ping_api_v1_ping_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "EduMind API v1",
+                  "status": "ok"
+                },
+                "schema": {}
+              }
+            },
+            "description": "v1 已就绪"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "v1 存活探测",
+        "tags": [
+          "系统"
+        ]
+      }
+    },
+    "/api/v1/revise": {
+      "post": {
+        "description": "对**所选课件**提修改意见并重新生成：把待改的课件结构连同意见交模型重排，再渲染为**新文件**（旧文件保留，因此可反复修改互不覆盖）。\n\n本接口只作用于传入的这一份课件，不影响同次备课的教案与提纲；`style` 用于沿用原课件风格（配色主题），不传则回退默认主题。",
+        "operationId": "revise_api_v1_revise_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "filename": "ppt-6a5b4c3d.pptx",
+                  "slides": [
+                    {
+                      "bullets": [
+                        "形如 y=kx+b（k≠0）",
+                        "出租车计价就是一次函数"
+                      ],
+                      "title": "一次函数"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ReviseResponse"
+                }
+              }
+            },
+            "description": "修改后的课件与新文件名"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "按修改意见重做课件",
+        "tags": [
+          "生成物"
+        ]
+      }
+    },
+    "/api/v1/revise/word": {
+      "post": {
+        "description": "与课件修改同模式：完整教案结构交模型重排后**重新渲染为新 Word 文件**，旧文件保留。\n\n传 `references` 时再渲染的教案保留「参考资料」一节，保证修改后溯源不断。",
+        "operationId": "revise_word_endpoint_api_v1_revise_word_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseWordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "filename": "word-9i8h7g6f.docx",
+                  "word": {
+                    "objectives": {
+                      "knowledge": [
+                        "能说出一次函数的定义并判断给定函数"
+                      ]
+                    },
+                    "process": [
+                      {
+                        "content": "…",
+                        "minutes": 5,
+                        "stage": "情境导入"
+                      }
+                    ]
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ReviseWordResponse"
+                }
+              }
+            },
+            "description": "修改后的教案与新文件名"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "按修改意见重做教案",
+        "tags": [
+          "生成物"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "返回服务状态、应用名与当前生效的对话模型供应商。前端启动自检与运维探活都读这一条；不访问数据库、不调用外部能力。`llm_provider` 为 `stub` 时表示当前无云端 Key，功能仍可全链路跑通。",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "app": "EduMind",
+                  "llm_provider": "stub",
+                  "status": "ok"
+                },
+                "schema": {}
+              }
+            },
+            "description": "服务可用"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "健康检查",
+        "tags": [
+          "系统"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "description": "存活检查与服务信息；不含备课语义。",
+      "name": "系统"
+    },
+    {
+      "description": "备课对话主入口：澄清与生成两种回复形态，支持追问粒度与参考资料。",
+      "name": "备课会话"
+    },
+    {
+      "description": "教学资料上传、列表与语义检索；参考资料标记影响备课检索加权与溯源。",
+      "name": "知识库"
+    },
+    {
+      "description": "知识点及其关系：前置依赖 / 父子包含 / 推导关系 / 相关关联。",
+      "name": "知识图谱"
+    },
+    {
+      "description": "课件、教案、提纲、试卷、互动内容的生成、修改与文件下载。",
+      "name": "生成物"
+    },
+    {
+      "description": "待审冲突队列与教师的裁决动作。",
+      "name": "冲突审核"
+    }
+  ]
+}
