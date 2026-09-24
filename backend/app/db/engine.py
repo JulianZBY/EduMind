@@ -37,9 +37,7 @@ def _ensure_sqlite_columns(bind=None) -> None:
     with target.connect() as conn:
         tables = {
             row[0]
-            for row in conn.exec_driver_sql(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
+            for row in conn.exec_driver_sql("SELECT name FROM sqlite_master WHERE type = 'table'")
         }
         for table, column, ddl in _LEGACY_COLUMNS:
             if table not in tables:
@@ -50,8 +48,7 @@ def _ensure_sqlite_columns(bind=None) -> None:
                 conn.commit()
         if "conflicts" in tables:
             conn.exec_driver_sql(
-                "UPDATE conflicts SET category = '定义冲突'"
-                " WHERE category IS NULL OR category = ''"
+                "UPDATE conflicts SET category = '定义冲突' WHERE category IS NULL OR category = ''"
             )
             conn.commit()
 

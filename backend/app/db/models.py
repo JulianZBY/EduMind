@@ -158,9 +158,7 @@ class Conflict(Base):
     # 冲突类别（CONTEXT.md 第 6 节）：定义冲突 / 结构冲突 / 常识存疑。
     # 类别是「检测来源」的标记，不能靠裁决动作反推——同一动作在不同类别下含义不同
     # （例如「并存」对常识错误没有意义）。默认与回填口径见 ADR-0006。
-    category: Mapped[str] = mapped_column(
-        String(20), default="定义冲突", server_default="定义冲突"
-    )
+    category: Mapped[str] = mapped_column(String(20), default="定义冲突", server_default="定义冲突")
     # 常识存疑「编辑修正后入库」实际入库的正文；原文留在 new_knowledge 里，两条都留痕，
     # 教师日后能看出「原来的说法」与「最终入库的说法」的差别（ADR-0004）。
     revised_content: Mapped[str | None] = mapped_column(Text, nullable=True)

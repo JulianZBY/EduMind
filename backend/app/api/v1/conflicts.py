@@ -41,9 +41,7 @@ ReviewAction = Literal["接受新", "保留旧", "并存", "照常入库", "拒�
 class ReviewRequest(BaseModel):
     """裁决动作；「编辑修正后入库」另需带修正后的内容。"""
 
-    model_config = ConfigDict(
-        json_schema_extra={"example": {"action": "接受新"}}
-    )
+    model_config = ConfigDict(json_schema_extra={"example": {"action": "接受新"}})
 
     action: ReviewAction = Field(
         description=(
@@ -431,7 +429,7 @@ async def list_conflicts(
         "动作不属于该类别 = `422`（与冲突当前状态无关的请求语义错误）；"
         "对已裁决的冲突再提交 = `409`（状态冲突，不是请求格式错误）。\n\n"
         "审核前新知不入知识图谱——「待审」期间图谱里看不到它；"
-        "结构冲突的新知可自带关系（`new_knowledge[\"relations\"]`，端点按知识点标题解析），"
+        '结构冲突的新知可自带关系（`new_knowledge["relations"]`，端点按知识点标题解析），'
         "随「接受新」/「并存」一并入图。"
     ),
     responses={
@@ -466,9 +464,7 @@ async def list_conflicts(
             {
                 "动作与类别不匹配": named(
                     "动作与类别不匹配",
-                    {
-                        "detail": "常识存疑的动作是 照常入库 / 拒绝 / 编辑修正后入库，不接受: 并存"
-                    },
+                    {"detail": "常识存疑的动作是 照常入库 / 拒绝 / 编辑修正后入库，不接受: 并存"},
                 ),
                 "请求体校验失败": named(
                     "请求体校验失败",

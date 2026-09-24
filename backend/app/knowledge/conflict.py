@@ -176,9 +176,7 @@ async def resolve_conflict(
         if allowed is None:
             raise ActionNotAllowed(f"未知冲突类别: {category}")
         if action not in allowed:
-            raise ActionNotAllowed(
-                f"{category}的动作是 {' / '.join(allowed)}，不接受: {action}"
-            )
+            raise ActionNotAllowed(f"{category}的动作是 {' / '.join(allowed)}，不接受: {action}")
 
         old_id = (conflict.existing_knowledge or {}).get("id")
         old = db.get(KnowledgeNode, old_id) if old_id else None
@@ -219,17 +217,13 @@ async def resolve_conflict(
 
 def _rehang_edges(db: Session, old: KnowledgeNode, node: KnowledgeNode) -> None:
     """把旧节点上的关系边改挂到新节点：接受新会**移动边**而不是重建边。"""
-    db.query(KnowledgeEdge).filter(KnowledgeEdge.from_node == old.id).update(
-        {"from_node": node.id}
-    )
+    db.query(KnowledgeEdge).filter(KnowledgeEdge.from_node == old.id).update({"from_node": node.id})
     db.query(KnowledgeEdge).filter(KnowledgeEdge.to_node == old.id).update({"to_node": node.id})
 
 
 def _node_ids_by_title(db: Session, user_id: str) -> dict[str, str]:
     """标题 → 知识点 id（同名取先入库的那个），供结构冲突的关系端点按标题解析。"""
-    rows = db.query(KnowledgeNode.id, KnowledgeNode.title).filter(
-        KnowledgeNode.user_id == user_id
-    )
+    rows = db.query(KnowledgeNode.id, KnowledgeNode.title).filter(KnowledgeNode.user_id == user_id)
     mapping: dict[str, str] = {}
     for node_id, title in rows:
         mapping.setdefault(title, node_id)
@@ -401,7 +395,10 @@ def preview_structure(db: Session, conflict: Conflict) -> dict | None:
 
 
 async def _insert_node(
-    db: Session, conflict: Conflict, inherit: KnowledgeNode | None = None, content: str | None = None
+    db: Session,
+    conflict: Conflict,
+    inherit: KnowledgeNode | None = None,
+    content: str | None = None,
 ) -> KnowledgeNode:
     """按待审新知建节点（接受新时可继承旧节点属性），并写入标题索引。
 

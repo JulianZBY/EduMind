@@ -326,9 +326,7 @@ def test_corrected_content_lands_in_graph_and_original_stays_on_record():
         "status": "已接受",
         "action": "编辑修正后入库",
     }
-    assert [row["content"] for row in _nodes_by_title(title)] == [corrected], (
-        "落库的是修正后的内容"
-    )
+    assert [row["content"] for row in _nodes_by_title(title)] == [corrected], "落库的是修正后的内容"
 
     stored = _conflict_fields(conflict_id)
     assert stored is not None
@@ -440,9 +438,7 @@ def test_action_not_in_category_keeps_conflict_pending():
     )
     r = client.post(f"/api/v1/conflicts/{common_id}/review", json={"action": "并存"})
     assert r.status_code == 422
-    r = client.post(
-        f"/api/v1/conflicts/{common_id}/review", json={"action": "编辑修正后入库"}
-    )
+    r = client.post(f"/api/v1/conflicts/{common_id}/review", json={"action": "编辑修正后入库"})
     assert r.status_code == 422, "编辑修正后入库缺修正后的内容 = 请求体校验失败"
     stored = _conflict_fields(common_id)
     assert stored is not None and stored["status"] == "待审"
@@ -458,9 +454,7 @@ def test_review_is_idempotent_boundary_for_every_category():
     r = client.post(f"/api/v1/conflicts/{common_id}/review", json={"action": "拒绝"})
     assert r.status_code == 409
 
-    unknown = client.post(
-        f"/api/v1/conflicts/{uuid.uuid4()}/review", json={"action": "照常入库"}
-    )
+    unknown = client.post(f"/api/v1/conflicts/{uuid.uuid4()}/review", json={"action": "照常入库"})
     assert unknown.status_code == 404
     bad_action = client.post("/api/v1/conflicts/" + common_id + "/review", json={"action": "覆盖"})
     assert bad_action.status_code == 422
