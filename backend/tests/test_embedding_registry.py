@@ -8,10 +8,19 @@ from app.core.embedding.base import Embedder
 from app.core.embedding.factory import get_embedder
 from app.core.embedding.hash import HashEmbedder
 from app.core.embedding.openai_compat import OpenAICompatEmbedder
+from app.core.errors import ProviderNotConfigured
 from tests.support.fakes import FakeEmbedder
 
 QWEN_BASE = "https://maas.qianwenaiapi.com/compatible-mode/v1"
 SILICONFLOW_BASE = "https://api.siliconflow.cn/v1"
+
+
+def test_known_chat_model_is_rejected_for_embedding(monkeypatch):
+    monkeypatch.setattr(settings, "embedding_provider", "qwen")
+    monkeypatch.setattr(settings, "embedding_model", "qwen-plus")
+    monkeypatch.setattr(settings, "qwen_api_key", "offline-key")
+    with pytest.raises(ProviderNotConfigured, match="向量化"):
+        get_embedder()
 
 
 @pytest.fixture(autouse=True)
@@ -97,7 +106,7 @@ def test_explicit_openai_provider_needs_base_url_model_key(monkeypatch):
     monkeypatch.setattr(settings, "embedding_base_url", "https://llm.example.edu/v1")
     monkeypatch.setattr(settings, "embedding_model", "edu-embed")
     get_embedder.cache_clear()
-    with pytest.raises(ValueError, match="EMBEDDING_API_KEY"):
+    with pytest.raises(ProviderNotConfigured, match="EMBEDDING_API_KEY"):
         get_embedder()
 
     monkeypatch.setattr(settings, "embedding_api_key", "sk-e")

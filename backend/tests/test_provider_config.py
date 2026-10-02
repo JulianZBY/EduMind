@@ -11,6 +11,8 @@ import pytest
 from app.core import provider_config
 from app.core.catalog import PROVIDERS, validate_patch
 from app.core.dialects import DIALECTS
+from app.core.embedding.factory import EMBEDDING_BUILDERS
+from app.core.errors import ProviderNotConfigured
 from app.core.llm.factory import LLM_BUILDERS, get_llm
 
 ENTRY = {
@@ -30,17 +32,14 @@ def _isolated_config(monkeypatch):
     monkeypatch.setenv(provider_config.ENV_VAR, "")
     monkeypatch.delenv(ENTRY["api_key_env"], raising=False)
     provider_config.reset_for_tests()
-    before_dialects = set(DIALECTS)
-    before_providers = set(PROVIDERS)
-    before_builders = set(LLM_BUILDERS)
+    snapshots = [
+        (table, dict(table)) for table in (DIALECTS, PROVIDERS, LLM_BUILDERS, EMBEDDING_BUILDERS)
+    ]
     get_llm.cache_clear()
     yield
-    for name in set(DIALECTS) - before_dialects:
-        DIALECTS.pop(name, None)
-    for name in set(PROVIDERS) - before_providers:
-        PROVIDERS.pop(name, None)
-    for name in set(LLM_BUILDERS) - before_builders:
-        LLM_BUILDERS.pop(name, None)
+    for table, before in snapshots:
+        table.clear()
+        table.update(before)
     get_llm.cache_clear()
     provider_config.reset_for_tests()
 
@@ -73,7 +72,11 @@ def test_load_without_model_lists_accepts_any_model(tmp_path):
     from pathlib import Path
 
     entries = provider_config.load_entries(
-        Path(_write(tmp_path, [{"id": "gateway", "label": "网关", "base_url": "https://a.example/v1"}]))
+        Path(
+            _write(
+                tmp_path, [{"id": "gateway", "label": "网关", "base_url": "https://a.example/v1"}]
+            )
+        )
     )
 
     assert entries[0]["accepts_any_model"] is True
@@ -164,7 +167,7 @@ def test_legacy_path_without_key_names_the_env_var(monkeypatch):
     monkeypatch.setattr(settings, "llm_provider", "my-gateway")
     get_llm.cache_clear()
 
-    with pytest.raises(ValueError, match="MY_GATEWAY_API_KEY"):
+    with pytest.raises(ProviderNotConfigured, match="MY_GATEWAY_API_KEY"):
         get_llm()
 
 
@@ -177,3 +180,59 @@ def _entry() -> dict:
         entries = provider_config.load_entries(Path(_write(Path(tmp), [ENTRY])))
     assert len(entries) == 1
     return entries[0]
+
+
+def test_catalog_keeps_arbitrary_model_policy():
+    entry = _entry()
+    entry["accepts_any_model"] = True
+    provider_config.merge_entries([entry])
+    assert PROVIDERS[entry["id"]].accepts_any_model is True
+    validate_patch({"llm_provider": entry["id"], "llm_model": "manual-id"}, {}, {})
+
+
+def test_catalog_keeps_all_embedding_and_vision_models():
+    entry = _entry()
+    entry.update(
+        embed_model="embed-a",
+        embed_models=["embed-a", "embed-b"],
+        vision_model="",
+        vision_models=["vision-only"],
+    )
+    provider_config.merge_entries([entry])
+    spec = PROVIDERS[entry["id"]]
+    assert spec.embed_models == ("embed-a", "embed-b")
+    assert spec.vision_models == ("vision-only",)
+
+
+def test_explicit_override_does_not_append_builtin_models():
+    entry = _entry()
+    entry["id"] = "deepseek"
+    provider_config.merge_entries([entry])
+    spec = PROVIDERS["deepseek"]
+    assert spec.chat_models == ("edu-chat-32b", "edu-chat-8b")
+    assert spec.vision_models == ("edu-vl-8b",)
+
+
+def test_declared_key_and_path_are_loaded_from_dotenv(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    path = _write(tmp_path, [ENTRY])
+    (tmp_path / ".env").write_text(
+        f"PROVIDERS_CONFIG={path}\nMY_GATEWAY_API_KEY=offline-dotenv-key\n", encoding="utf-8"
+    )
+    monkeypatch.delenv("PROVIDERS_CONFIG", raising=False)
+    monkeypatch.delenv("MY_GATEWAY_API_KEY", raising=False)
+    entries = provider_config.load_entries()
+    assert [entry["id"] for entry in entries] == [ENTRY["id"]]
+    assert (
+        provider_config.env_api_key(provider_config.dialect_of(entries[0])) == "offline-dotenv-key"
+    )
+    monkeypatch.setenv("MY_GATEWAY_API_KEY", "process-wins")
+    assert provider_config.env_api_key(provider_config.dialect_of(entries[0])) == "process-wins"
+    monkeypatch.setenv("MY_GATEWAY_API_KEY", "")
+    assert provider_config.env_api_key(provider_config.dialect_of(entries[0])) == ""
+
+
+def test_non_utf8_config_is_skipped(tmp_path):
+    path = tmp_path / "bad.json"
+    path.write_bytes(b"\xff\xfe")
+    assert provider_config.load_entries(path) == []

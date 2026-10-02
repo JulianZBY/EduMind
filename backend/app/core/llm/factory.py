@@ -14,10 +14,13 @@ from app.core.dialects import DIALECTS
 from app.core.errors import ProviderNotConfigured
 from app.core.llm import provider_instances
 from app.core.llm.base import LLMProvider
+from app.core.llm.model_capabilities import capability_map, require_capability, vision_model_for
 from app.core.llm.providers.openai_compat import OpenAICompatProvider
 from app.core.registry import build, register
 
-NOT_CONFIGURED_MESSAGE = "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+NOT_CONFIGURED_MESSAGE = (
+    "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+)
 
 LLM_BUILDERS: dict[str, Callable[[Settings], LLMProvider]] = {}
 
@@ -27,13 +30,23 @@ def _from_dialect(name: str, cfg: Settings) -> LLMProvider:
     field_key = getattr(cfg, dialect.api_key_field) if dialect.api_key_field else ""
     api_key = cfg.llm_api_key or field_key or provider_config.env_api_key(dialect)
     if not api_key:
-        hint = dialect.api_key_field.upper() if dialect.api_key_field else (dialect.api_key_env or "API Key")
-        raise ValueError(f"{hint} 未配置")
+        hint = (
+            dialect.api_key_field.upper()
+            if dialect.api_key_field
+            else (dialect.api_key_env or "API Key")
+        )
+        raise ProviderNotConfigured(f"{hint} 未配置：请到设置页配置模型供应商。")
+    model = cfg.llm_model or dialect.chat_model
+    caps = capability_map(name)
+    require_capability(model, "text", caps.get(model, ()))
     return OpenAICompatProvider(
         base_url=cfg.llm_base_url or dialect.base_url,
-        model=cfg.llm_model or dialect.chat_model,
+        model=model,
         api_key=api_key,
-        vision_model=cfg.llm_vision_model or dialect.vision_model,
+        vision_model=vision_model_for(
+            name, model, selected=bool(cfg.llm_model), override=cfg.llm_vision_model
+        ),
+        model_capabilities=caps,
     )
 
 
@@ -43,17 +56,18 @@ def _custom(cfg: Settings) -> LLMProvider:
     与方言预设的区别：没有预设地址、没有默认模型——填什么就是什么，模型 ID 不限目录。
     """
     if not cfg.llm_base_url:
-        raise ValueError("LLM_BASE_URL 未配置（自定义服务要写服务商地址）")
+        raise ProviderNotConfigured("LLM_BASE_URL 未配置：请到设置页填写服务商地址。")
     if not cfg.llm_model:
-        raise ValueError("LLM_MODEL 未配置（自定义服务要填模型 ID）")
+        raise ProviderNotConfigured("LLM_MODEL 未配置：请到设置页填写模型。")
     if not cfg.llm_api_key:
-        raise ValueError("LLM_API_KEY 未配置")
+        raise ProviderNotConfigured("LLM_API_KEY 未配置：请到设置页配置 Key。")
     return OpenAICompatProvider(
         base_url=cfg.llm_base_url,
         model=cfg.llm_model,
         api_key=cfg.llm_api_key,
         vision_model=cfg.llm_vision_model,
     )
+
 
 provider_config.ensure_merged()  # 配置声明的家先进方言表，再据表注册
 for _dialect_name in DIALECTS:

@@ -1538,6 +1538,53 @@
               }
             ],
             "title": "Model"
+          },
+          "model_capabilities": {
+            "anyOf": [
+              {
+                "patternProperties": {
+                  "^\\S(?:.*\\S)?$": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "enum": [
+                            "text",
+                            "vision",
+                            "embedding"
+                          ],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "propertyNames": {
+                  "maxLength": 200,
+                  "minLength": 1
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "按模型标注 text / vision / embedding；未知模型不猜测能力。null 清除该模型的手动标注，刷新模型清单保留标注。",
+            "examples": [
+              {
+                "my-embed-model": [
+                  "embedding"
+                ],
+                "my-vision-model": [
+                  "text",
+                  "vision"
+                ]
+              }
+            ],
+            "title": "Model Capabilities"
           }
         },
         "title": "ProviderInstanceUpdate",
@@ -1574,6 +1621,13 @@
             "title": "Model",
             "type": "string"
           },
+          "model_details": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderModelView"
+            },
+            "title": "Model Details",
+            "type": "array"
+          },
           "models": {
             "items": {
               "type": "string"
@@ -1606,6 +1660,7 @@
           "model",
           "models",
           "models_error",
+          "model_details",
           "is_default",
           "ready",
           "reason",
@@ -1613,6 +1668,43 @@
           "key_masked"
         ],
         "title": "ProviderInstanceView",
+        "type": "object"
+      },
+      "ProviderModelView": {
+        "description": "模型能力来自目录或手动标注；服务商仅返回 ID 时保持 unknown。",
+        "properties": {
+          "capabilities": {
+            "items": {
+              "enum": [
+                "text",
+                "vision",
+                "embedding"
+              ],
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "catalog",
+              "manual",
+              "unknown"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "capabilities",
+          "source"
+        ],
+        "title": "ProviderModelView",
         "type": "object"
       },
       "ProviderView": {
@@ -7421,10 +7513,20 @@
                   "key_configured": true,
                   "key_masked": "••••9f8a",
                   "label": "DeepSeek",
-                  "model": "deepseek-chat",
+                  "model": "deepseek-flash",
+                  "model_details": [
+                    {
+                      "capabilities": [
+                        "text",
+                        "vision"
+                      ],
+                      "model_id": "deepseek-flash",
+                      "source": "catalog"
+                    }
+                  ],
                   "models": [
-                    "deepseek-chat",
-                    "deepseek-reasoner"
+                    "deepseek-flash",
+                    "deepseek-v4-pro"
                   ],
                   "models_error": "",
                   "provider": "deepseek",
@@ -7811,10 +7913,20 @@
                   "key_configured": true,
                   "key_masked": "••••9f8a",
                   "label": "DeepSeek",
-                  "model": "deepseek-chat",
+                  "model": "deepseek-flash",
+                  "model_details": [
+                    {
+                      "capabilities": [
+                        "text",
+                        "vision"
+                      ],
+                      "model_id": "deepseek-flash",
+                      "source": "catalog"
+                    }
+                  ],
                   "models": [
-                    "deepseek-chat",
-                    "deepseek-reasoner"
+                    "deepseek-flash",
+                    "deepseek-v4-pro"
                   ],
                   "models_error": "",
                   "provider": "deepseek",
@@ -7914,10 +8026,20 @@
                   "key_configured": true,
                   "key_masked": "••••9f8a",
                   "label": "DeepSeek",
-                  "model": "deepseek-chat",
+                  "model": "deepseek-flash",
+                  "model_details": [
+                    {
+                      "capabilities": [
+                        "text",
+                        "vision"
+                      ],
+                      "model_id": "deepseek-flash",
+                      "source": "catalog"
+                    }
+                  ],
                   "models": [
-                    "deepseek-chat",
-                    "deepseek-reasoner"
+                    "deepseek-flash",
+                    "deepseek-v4-pro"
                   ],
                   "models_error": "",
                   "provider": "deepseek",

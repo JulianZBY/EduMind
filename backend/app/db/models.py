@@ -154,6 +154,8 @@ class LLMProviderInstance(Base):
     api_key: Mapped[str] = mapped_column(Text, default="")
     # 上次模型拉取失败的原因（空 = 拉取成功或尚未拉取；模型清单存 provider_models 表）
     models_error: Mapped[str] = mapped_column(Text, default="")
+    # 模型能力的手动标注：优先于目录，刷新模型清单不丢失；Key 不在此字段。
+    model_capabilities: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now, onupdate=datetime.now
@@ -277,4 +279,5 @@ class ProviderModel(Base):
         String(36), ForeignKey("llm_provider_instances.id"), index=True
     )
     model_id: Mapped[str] = mapped_column(String(200))  # 服务商返回的模型 id
+    capabilities: Mapped[list[str]] = mapped_column(JSON, default=list)  # 模型级能力；空 = 尚未标注
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

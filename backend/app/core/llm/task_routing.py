@@ -37,7 +37,7 @@ def global_default_model() -> str:
     （显式 `LLM_MODEL`，或当前方言预设的对话模型）。"""
     instance = provider_instances.default_instance()
     if instance is not None:
-        return provider_instances.effective_model(instance)
+        return (settings.llm_model or provider_instances.effective_model(instance)).strip()
     provider = (settings.llm_provider or "").strip().lower()
     preset = DIALECTS.get(provider)
     return (settings.llm_model or (preset.chat_model if preset else "")).strip()

@@ -670,3 +670,167 @@ def test_fetch_failure_keeps_old_models_and_allows_manual_model():
     assert tasks["generate"]["model"] == "hand-typed-model"
     assert tasks["generate"]["source"] == "任务级"
 
+
+def test_global_model_readback_matches_all_task_calls():
+    from app.core.llm.task_routing import get_llm_for
+
+    instance = _add_provider({"provider": "deepseek", "api_key": PLAINTEXT})
+    view = _put({"default_provider_instance": instance["id"], "llm_model": "explicit-model"})
+    assert {row["model"] for row in view["tasks"]} == {"explicit-model"}
+    assert {get_llm_for(task).model for task in ("intent", "generate", "conflict")} == {"explicit-model"}
+
+
+def test_instance_update_invalidates_default_factory():
+    instance = _add_provider({"provider": "custom", "api_key": PLAINTEXT,
+                              "base_url": "https://old.example/v1", "model": "my-model"})
+    assert get_llm().base_url == "https://old.example/v1"
+    response = client.patch(f"/api/v1/settings/providers/{instance['id']}",
+                            json={"base_url": "https://new.example/v1"})
+    assert response.status_code == 200, response.text
+    assert get_llm().base_url == "https://new.example/v1"
+
+
+def test_instance_model_default_is_reported_consistently():
+    instance = _add_provider({"provider": "custom", "api_key": PLAINTEXT,
+                              "base_url": "https://example.com/v1", "model": "my-model"})
+    assert get_llm().model == "my-model"
+    assert _by_name(_get()["items"])["llm_model"]["effective"] == "my-model"
+    assert instance["ready"]
+
+
+def test_instance_key_can_be_cleared_and_chat_returns_503():
+    instance = _add_provider({"provider": "deepseek", "api_key": PLAINTEXT})
+    get_llm()  # 先构造旧能力，清空必须使它失效
+    response = client.patch(f"/api/v1/settings/providers/{instance['id']}", json={"api_key": ""})
+    assert response.status_code == 200, response.text
+    assert response.json()["ready"] is False
+    assert response.json()["key_masked"] == ""
+    turn = client.post("/api/v1/chat", json={"messages": [{"role": "user", "content": "备课"}]})
+    assert turn.status_code == 503, turn.text
+    assert turn.json()["detail"]["code"] == "provider_not_configured"
+
+
+async def test_custom_model_capabilities_survive_refresh_and_control_requests(tmp_path):
+    import httpx
+
+    from app.core.llm.base import ChatMessage
+    from app.core.llm.provider_instances import provider_of_instance
+    from app.db.models import ProviderModel
+
+    instance = _add_provider({"provider": "custom", "api_key": PLAINTEXT,
+                              "base_url": "https://offline.example/v1", "model": "fake-model-a"})
+    initial = {row["model_id"]: row for row in instance["model_details"]}
+    assert initial["fake-model-a"]["capabilities"] == []
+    assert initial["fake-model-a"]["source"] == "unknown"
+    response = client.patch(f"/api/v1/settings/providers/{instance['id']}", json={
+        "model_capabilities": {"fake-model-a": ["text", "vision"], "fake-model-b": ["embedding"]}})
+    assert response.status_code == 200, response.text
+    refreshed = client.post(f"/api/v1/settings/providers/{instance['id']}/refresh-models")
+    details = {row["model_id"]: row for row in refreshed.json()["model_details"]}
+    assert details["fake-model-a"]["capabilities"] == ["text", "vision"]
+    assert details["fake-model-b"]["source"] == "manual"
+    with SessionLocal() as db:
+        row = db.query(ProviderModel).filter_by(instance_id=instance["id"], model_id="fake-model-b").one()
+        assert row.capabilities == ["embedding"]
+    provider = provider_of_instance(instance["id"], "fake-model-a")
+    requests = []
+    def handle(request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "真实协议响应（离线替身）"}}]})
+    provider._transport = httpx.MockTransport(handle)
+    image = tmp_path / "image.png"
+    image.write_bytes(b"offline-image")
+    await provider.vision(str(image), "识别图片")
+    assert requests[0]["model"] == "fake-model-a"
+    with pytest.raises(ProviderNotConfigured):
+        await provider.chat([ChatMessage("user", "备课")], model="fake-model-b")
+    assert len(requests) == 1  # 不向对话接口发送向量化模型
+    cleared = client.patch(f"/api/v1/settings/providers/{instance['id']}",
+                           json={"model_capabilities": {"fake-model-a": None}})
+    details = {row["model_id"]: row for row in cleared.json()["model_details"]}
+    assert details["fake-model-a"]["source"] == "unknown"
+
+
+def test_invalid_model_capability_does_not_mutate_instance():
+    instance = _add_provider({"provider": "deepseek", "api_key": PLAINTEXT})
+    response = client.patch(f"/api/v1/settings/providers/{instance['id']}",
+                            json={"label": "不得落库", "model_capabilities": {"m": ["imaginary"]}})
+    assert response.status_code == 422
+    assert _get()["provider_instances"][0]["label"] == "DeepSeek"
+
+
+def test_global_vision_override_is_used_by_default_instance():
+    instance = _add_provider({"provider": "deepseek", "api_key": PLAINTEXT})
+    _put({"llm_vision_model": "deepseek-flash"})
+    assert get_llm().vision_model == "deepseek-flash"
+    assert instance["id"]
+
+
+@pytest.mark.parametrize("provider", ["deepseek", "custom"])
+def test_explicit_llm_without_key_has_configured_error(monkeypatch, provider):
+    monkeypatch.setattr(settings, "llm_provider", provider)
+    monkeypatch.setattr(settings, "llm_base_url", "https://offline.example/v1")
+    monkeypatch.setattr(settings, "llm_model", "offline-model")
+    get_llm.cache_clear()
+    response = client.post("/api/v1/chat", json={"messages": [{"role": "user", "content": "备课"}]})
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "provider_not_configured"
+
+
+def test_explicit_search_without_key_returns_503():
+    _put({"search_provider": "bocha"})
+    response = client.post("/api/v1/knowledge/web-search", json={"query": "教学资料", "k": 1})
+    assert response.status_code == 503
+
+
+def test_explicit_transcription_without_key_rejects_upload_before_saving():
+    _put({"asr_provider": "paraformer"})
+    before = client.get("/api/v1/documents").json()
+    response = client.post("/api/v1/documents/upload", files={"file": ("offline.wav", b"RIFF", "audio/wav")})
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "provider_not_configured"
+    assert client.get("/api/v1/documents").json() == before
+
+
+async def test_text_model_cannot_be_used_for_visual_calls(tmp_path):
+    import httpx
+    instance = _add_provider({"provider": "qwen", "api_key": PLAINTEXT})
+    _put({"llm_vision_model": "qwen-plus"})  # 实例模型池允许手动 ID，运行时仍校验能力
+    provider = get_llm()
+    def no_request(_):
+        raise AssertionError("纯文本模型不得调用视觉服务")
+    provider._transport = httpx.MockTransport(no_request)
+    with pytest.raises(ProviderNotConfigured, match="vision"):
+        await provider.vision(str(tmp_path / "missing.png"), "识别图片")
+    assert instance["id"]
+
+
+def test_embedding_only_model_is_not_ready_for_chat():
+    instance = _add_provider({"provider": "custom", "api_key": PLAINTEXT,
+                              "base_url": "https://offline.example/v1", "model": "fake-model-a"})
+    response = client.patch(f"/api/v1/settings/providers/{instance['id']}",
+                            json={"model_capabilities": {"fake-model-a": ["embedding"]}})
+    assert response.status_code == 200
+    assert response.json()["ready"] is False
+    with pytest.raises(ProviderNotConfigured):
+        get_llm()
+
+
+def test_model_capability_migration_preserves_legacy_rows(tmp_path):
+    from sqlalchemy import create_engine
+
+    from app.db.engine import _ensure_sqlite_columns
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'legacy.db'}")
+    with engine.begin() as conn:
+        conn.exec_driver_sql("CREATE TABLE llm_provider_instances (id TEXT, api_key TEXT, models_error TEXT)")
+        conn.exec_driver_sql("INSERT INTO llm_provider_instances VALUES ('old', 'offline-secret', '')")
+        conn.exec_driver_sql("CREATE TABLE provider_models (model_id TEXT)")
+        conn.exec_driver_sql("INSERT INTO provider_models VALUES ('old-model')")
+    _ensure_sqlite_columns(engine)
+    _ensure_sqlite_columns(engine)
+    with engine.connect() as conn:
+        assert conn.exec_driver_sql("SELECT api_key, model_capabilities FROM llm_provider_instances").one() == ("offline-secret", "{}")
+        assert conn.exec_driver_sql("SELECT model_id, capabilities FROM provider_models").one() == ("old-model", "[]")
+    engine.dispose()
+

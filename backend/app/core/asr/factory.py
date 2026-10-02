@@ -23,7 +23,7 @@ NOT_CONFIGURED_MESSAGE = (
 
 def _paraformer(cfg: Settings) -> Transcriber:
     if not cfg.asr_api_key:
-        raise ValueError("ASR_API_KEY 未配置（需要阿里云百炼的 Key，千问 MaaS 的 Key 不通用）")
+        raise ProviderNotConfigured(NOT_CONFIGURED_MESSAGE)
     return ParaformerTranscriber(api_key=cfg.asr_api_key)
 
 

@@ -114,15 +114,16 @@ def build_spec_from_dialect(dialect: Dialect) -> ProviderSpec:
         base_url=dialect.base_url,
         key_field=dialect.api_key_field,
         chat_models=_dedupe(
-            (dialect.chat_model, *_EXTRA_CHAT_MODELS.get(dialect.name, ()), *dialect.extra_chat_models)
+            (dialect.chat_model,
+             *(() if dialect.configured else _EXTRA_CHAT_MODELS.get(dialect.name, ())),
+             *dialect.extra_chat_models)
         ),
-        vision_models=(
-            _dedupe((dialect.vision_model, *_EXTRA_VISION_MODELS.get(dialect.name, ()), *dialect.extra_vision_models))
-            if dialect.vision_model
-            else ()
-        ),
-        embed_models=(dialect.embed_model,) if dialect.embed_model else (),
-        accepts_any_model=dialect.name in _ANY_MODEL_PROVIDERS,
+        vision_models=_dedupe((dialect.vision_model,
+            *(() if dialect.configured else _EXTRA_VISION_MODELS.get(dialect.name, ())),
+            *dialect.extra_vision_models)),
+        embed_models=_dedupe((dialect.embed_model, *dialect.extra_embed_models)),
+        accepts_any_model=(dialect.accepts_any_model if dialect.accepts_any_model is not None
+                           else dialect.name in _ANY_MODEL_PROVIDERS),
         note=dialect.note or _PROVIDER_NOTES.get(dialect.name, "由 providers.json 声明的服务商。"),
     )
 def _build_providers() -> dict[str, ProviderSpec]:

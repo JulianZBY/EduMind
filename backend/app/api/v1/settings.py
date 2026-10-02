@@ -11,7 +11,7 @@
 """
 
 from collections.abc import Mapping
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,18 +30,22 @@ from app.core.catalog import (
     probe,
 )
 from app.core.llm.factory import get_llm
+from app.core.llm.model_capabilities import ModelCapability, vision_model_for
 from app.core.llm.provider_instances import (
     default_instance,
     effective_base_url,
     effective_model,
     list_instances,
+    model_details,
     models_of_instance,
     probe_instance,
+    update_model_capabilities,
 )
 from app.core.llm.task_routing import routing_for
 from app.core.settings_store import (
     apply_stored_settings,
     ensure_bootstrap_provider_instance,
+    invalidate_capabilities,
     mask_key,
     read_stored,
     source_of,
@@ -61,6 +65,14 @@ NOTE = "改动即时生效、不需要重启；Key 只在写入时接收，回�
 # ---- 响应模型（前端类型由 OpenAPI 生成，禁止手抄）----
 
 
+class ProviderModelView(BaseModel):
+    """模型能力来自目录或手动标注；服务商仅返回 ID 时保持 unknown。"""
+
+    model_id: str
+    capabilities: list[ModelCapability]
+    source: Literal["catalog", "manual", "unknown"]
+
+
 class ProviderInstanceView(BaseModel):
     """一条已添加的供应商实例：设置页「添加供应商」产生的每一家。"""
 
@@ -71,6 +83,7 @@ class ProviderInstanceView(BaseModel):
     model: str  # 覆盖默认模型（兼容旧行；新添加不再选模型，全局默认走「全局默认」卡）
     models: list[str]  # 从服务商 /v1/models 拉取的模型清单（统一模型池的来源；失败为空）
     models_error: str  # 上次拉取失败的原因（空 = 拉取成功或尚未拉取）
+    model_details: list[ProviderModelView]  # 模型级能力，供按能力筛选；models 保留原契约
     is_default: bool  # 是否全局默认供应商
     ready: bool  # 用当前配置能否构造出实现（缺 Key 时为 false，不是错误响应）
     reason: str  # ready=false 时的原因（实现自己抛出的可读错误）
@@ -280,16 +293,17 @@ def _effective(name: str, value: str) -> str:
         return value
     instance = default_instance()
     if instance is not None:
+        if name == "llm_model":
+            return effective_model(instance)
+        if name == "llm_vision_model":
+            return vision_model_for(instance.provider, value_of("llm_model") or effective_model(instance),
+                                    selected=bool(value_of("llm_model") or instance.model),
+                                    overrides=instance.model_capabilities)
         provider = PROVIDERS.get(instance.provider)
         if provider is None:
             return ""
         if name == "llm_base_url":
             return instance.base_url or provider.base_url
-        if name == "llm_model":
-            # 全局默认模型由「全局默认」卡显式选（llm_model）；实例行不再承担默认模型
-            return provider.chat_models[0] if provider.chat_models else ""
-        if name == "llm_vision_model":
-            return provider.vision_models[0] if provider.vision_models else ""
     provider = PROVIDERS.get(value_of("llm_provider").strip().lower())
     if provider is None:
         return ""
@@ -870,6 +884,11 @@ class ProviderInstanceUpdate(BaseModel):
     base_url: str | None = None
     model: str | None = None
     api_key: str | None = Field(default=None, description="传空字符串 = 清除 Key；缺省 / null = 不动")
+    model_capabilities: dict[Annotated[str, Field(min_length=1, max_length=200, pattern=r"^\S(?:.*\S)?$")], list[ModelCapability] | None] | None = Field(
+        default=None,
+        description="按模型标注 text / vision / embedding；未知模型不猜测能力。null 清除该模型的手动标注，刷新模型清单保留标注。",
+        examples=[{"my-vision-model": ["text", "vision"], "my-embed-model": ["embedding"]}],
+    )
     make_default: bool = False
 
 
@@ -878,9 +897,10 @@ _INSTANCE_EXAMPLE: dict[str, Any] = {
     "provider": "deepseek",
     "label": "DeepSeek",
     "base_url": "https://api.deepseek.com",
-    "model": "deepseek-chat",
-    "models": ["deepseek-chat", "deepseek-reasoner"],
+    "model": "deepseek-flash",
+    "models": ["deepseek-flash", "deepseek-v4-pro"],
     "models_error": "",
+    "model_details": [{"model_id": "deepseek-flash", "capabilities": ["text", "vision"], "source": "catalog"}],
     "is_default": True,
     "ready": True,
     "reason": "",
@@ -913,6 +933,7 @@ def _instance_view(instance: LLMProviderInstance, default_id: bool | None = None
         model=effective_model(instance),
         models=models_of_instance(instance.id),
         models_error=instance.models_error,
+        model_details=model_details(instance),
         is_default=default_id,
         ready=ready,
         reason=reason,
@@ -922,7 +943,7 @@ def _instance_view(instance: LLMProviderInstance, default_id: bool | None = None
 
 
 def _validate_instance_fields(
-    provider: str, base_url: str, model: str, api_key: str
+    provider: str, base_url: str, model: str, api_key: str, *, allow_unconfigured: bool = False
 ) -> tuple[str, str, str, str]:
     """实例字段的目录校验：供应商在目录里、地址合法、模型在该方言目录内（放行档除外）。
 
@@ -957,7 +978,7 @@ def _validate_instance_fields(
                 f"未知模型：{model}（「{spec.label}」可选：{'、'.join(allowed)}；"
                 "目录之外的模型请用「自定义 OpenAI 兼容服务」）",
             )
-    if not api_key:
+    if not api_key and not allow_unconfigured:
         raise SettingsError(
             "missing_key", "api_key", f"「{spec.label}」要粘贴 API Key 才能用。"
         )
@@ -1056,7 +1077,7 @@ def update_provider_instance(
     api_key = req.api_key.strip() if req.api_key is not None else instance.api_key
     label = req.label.strip() if req.label is not None else instance.label
     try:
-        _validate_instance_fields(instance.provider, base_url, model, api_key)
+        _validate_instance_fields(instance.provider, base_url, model, api_key, allow_unconfigured=True)
     except SettingsError as error:
         raise HTTPException(
             status_code=400,
@@ -1066,6 +1087,8 @@ def update_provider_instance(
     instance.base_url = base_url
     instance.model = model
     instance.api_key = api_key
+    if req.model_capabilities is not None:
+        update_model_capabilities(db, instance, req.model_capabilities)
     db.commit()
     db.refresh(instance)
     if req.make_default:
@@ -1073,9 +1096,7 @@ def update_provider_instance(
             write_settings(db, {"default_provider_instance": instance.id})
         except SettingsError:
             pass
-    from app.core.llm.provider_instances import clear_instance_cache
-
-    clear_instance_cache()
+    invalidate_capabilities()
     return _instance_view(instance)
 
 
@@ -1120,9 +1141,7 @@ def delete_provider_instance(
                 write_settings(db, {"default_provider_instance": remaining[0].id})
             except SettingsError:
                 pass
-    from app.core.llm.provider_instances import clear_instance_cache
-
-    clear_instance_cache()
+    invalidate_capabilities()
     return _view(db)
 
 

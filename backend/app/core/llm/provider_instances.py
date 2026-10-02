@@ -17,6 +17,13 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.core.dialects import DIALECTS
+from app.core.errors import ProviderNotConfigured
+from app.core.llm.model_capabilities import (
+    capability_map,
+    model_info,
+    require_capability,
+    vision_model_for,
+)
 from app.core.llm.providers.openai_compat import OpenAICompatProvider
 from app.db import SessionLocal
 from app.db.models import LLMProviderInstance, ProviderModel
@@ -57,20 +64,33 @@ def effective_model(instance: LLMProviderInstance) -> str:
     return dialect.chat_model if dialect else ""
 
 
-def _resolve(instance: LLMProviderInstance, model_override: str = "") -> object:
+def _resolve(
+    instance: LLMProviderInstance, model_override: str = "", vision_override: str = ""
+) -> object:
     """把一条实例行构造成对话能力：全部走 OpenAI 兼容实现（目录家与自定义服务同构）。"""
     base_url = effective_base_url(instance)
     if not base_url:
         raise ValueError(f"「{instance.label}」没有可用地址：自定义服务要填服务商地址（base_url）")
     if not instance.api_key:
-        raise ValueError(f"「{instance.label}」还没有粘贴 API Key")
+        raise ProviderNotConfigured(f"「{instance.label}」未配置 Key：请到设置页粘贴 Key。")
     model = model_override or effective_model(instance)
-    dialect = DIALECTS.get(instance.provider)
+    if not model:
+        raise ProviderNotConfigured(f"「{instance.label}」未配置模型：请到设置页填写模型。")
+    caps = capability_map(instance.provider, instance.model_capabilities)
+    require_capability(model, "text", caps.get(model, ()))
+    vision_model = vision_model_for(
+        instance.provider,
+        model,
+        selected=bool(model_override or instance.model),
+        override=vision_override,
+        overrides=instance.model_capabilities,
+    )
     return OpenAICompatProvider(
         base_url=base_url,
         model=model,
         api_key=instance.api_key,
-        vision_model=dialect.vision_model if dialect else "",
+        vision_model=vision_model,
+        model_capabilities=caps,
     )
 
 
@@ -80,26 +100,30 @@ def _ts(value: datetime | None) -> str:
 
 @lru_cache(maxsize=64)
 def _cached_resolve(
-    instance_id: str, updated_at: str, model_override: str
+    instance_id: str, updated_at: str, model_override: str, vision_override: str = ""
 ) -> tuple[bool, object, str]:
     """带缓存的解析：ready=false 时把可读原因一并缓存（设置页就绪探针与真实调用同一结果）。"""
     instance = get_instance(instance_id)
     if instance is None:
         return False, None, f"供应商实例不存在：{instance_id}"
     try:
-        return True, _resolve(instance, model_override), ""
+        return True, _resolve(instance, model_override, vision_override), ""
     except Exception as error:  # noqa: BLE001 - 原因原样转述给教师
         return False, None, str(error)
 
 
-def provider_of_instance(instance_id: str, model_override: str = "") -> object:
+def provider_of_instance(
+    instance_id: str, model_override: str = "", vision_override: str = ""
+) -> object:
     """按实例 id 取对话能力（缓存）；实例不在了/构造不起来时抛可读错误。"""
     instance = get_instance(instance_id)
     if instance is None:
         raise ValueError(f"供应商实例不存在：{instance_id}")
-    ready, provider, reason = _cached_resolve(instance_id, _ts(instance.updated_at), model_override)
+    ready, provider, reason = _cached_resolve(
+        instance_id, _ts(instance.updated_at), model_override, vision_override
+    )
     if not ready:
-        raise ValueError(reason)
+        raise ProviderNotConfigured(f"{reason}；请到设置页检查供应商配置。")
     return provider
 
 
@@ -130,7 +154,11 @@ def default_provider() -> object:
     instance = default_instance()
     if instance is None:
         raise KeyError("no default provider instance")
-    return provider_of_instance(instance.id, model_override=(settings.llm_model or ""))
+    return provider_of_instance(
+        instance.id,
+        model_override=(settings.llm_model or ""),
+        vision_override=(settings.llm_vision_model or ""),
+    )
 
 
 def clear_instance_cache() -> None:
@@ -162,11 +190,7 @@ def fetch_model_ids(instance: LLMProviderInstance) -> list[str]:
     if not isinstance(rows, list):
         raise TypeError("服务商返回的模型清单读不懂（没有 data 列表）")
     models = sorted(
-        {
-            row.get("id")
-            for row in rows
-            if isinstance(row, dict) and isinstance(row.get("id"), str)
-        }
+        {row.get("id") for row in rows if isinstance(row, dict) and isinstance(row.get("id"), str)}
     )
     if not models:
         raise ValueError("服务商返回的模型清单是空的")
@@ -176,9 +200,39 @@ def fetch_model_ids(instance: LLMProviderInstance) -> list[str]:
 def store_models(db: Session, instance_id: str, model_ids: list[str]) -> None:
     """整表替换该实例的模型清单（幂等：先清后写）。"""
     db.execute(delete(ProviderModel).where(ProviderModel.instance_id == instance_id))
-    for model_id in model_ids:
-        db.add(ProviderModel(instance_id=instance_id, model_id=model_id))
+    instance = db.get(LLMProviderInstance, instance_id)
+    for model_id in sorted(set(model_ids)):
+        info = model_info(instance.provider, model_id, instance.model_capabilities)
+        db.add(
+            ProviderModel(
+                instance_id=instance_id, model_id=model_id, capabilities=info["capabilities"]
+            )
+        )
     db.commit()
+
+
+def model_details(instance: LLMProviderInstance) -> list[dict]:
+    """老库无需刷新/联网即可回读能力；手动模型在拉取失败时也可见。"""
+    ids = set(models_of_instance(instance.id)) | set(instance.model_capabilities or {})
+    default = effective_model(instance)
+    if default:
+        ids.add(default)
+    return [
+        model_info(instance.provider, model, instance.model_capabilities) for model in sorted(ids)
+    ]
+
+
+def update_model_capabilities(db: Session, instance: LLMProviderInstance, patch: dict) -> None:
+    """只覆盖传入模型；null 移除手动覆盖，刷新不会覆盖手动标注。"""
+    overrides = dict(instance.model_capabilities or {})
+    for model, caps in patch.items():
+        if caps is None:
+            overrides.pop(model, None)
+        else:
+            overrides[model] = sorted(set(caps))
+    instance.model_capabilities = overrides
+    for row in db.query(ProviderModel).filter(ProviderModel.instance_id == instance.id).all():
+        row.capabilities = model_info(instance.provider, row.model_id, overrides)["capabilities"]
 
 
 def models_of_instance(instance_id: str, db: Session | None = None) -> list[str]:

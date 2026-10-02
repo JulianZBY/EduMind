@@ -26,6 +26,9 @@ class Dialect:
     embed_dimensions: int = 0  # >0 = embedding 请求携带 dimensions（千问支持）
     extra_chat_models: tuple[str, ...] = ()  # 目录里补充的对话模型（配置声明的家用来列清单）
     extra_vision_models: tuple[str, ...] = ()  # 同上，多模态档
+    extra_embed_models: tuple[str, ...] = ()  # 配置声明的全部向量化模型
+    accepts_any_model: bool | None = None  # None 沿用内置策略；显式声明优先
+    configured: bool = False  # 显式配置覆盖时不拼回内置补充模型
     label: str = ""  # 面向教师的名称（空 = 用目录预设；配置声明的家自带）
     note: str = ""  # 设置页里的一句话说明（空 = 用目录预设）
 DIALECTS: dict[str, Dialect] = {

@@ -16,6 +16,7 @@ dependencies = [
     "python-pptx>=1.0.2",
     "opencv-python-headless>=5.0.0.93",
     "sqlite-vec>=0.1.9",
+    "python-dotenv>=1.2",
 ]
 
 [dependency-groups]

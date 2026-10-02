@@ -82,11 +82,8 @@ def test_factory_unconfigured_raises_provider_not_configured(monkeypatch):
 def test_factory_paraformer_requires_key(monkeypatch):
     monkeypatch.setattr(settings, "asr_provider", "paraformer")
     monkeypatch.setattr(settings, "asr_api_key", "")
-    try:
+    with pytest.raises(ProviderNotConfigured, match="ASR_API_KEY"):
         get_transcriber()
-        assert False, "缺 key 应抛 ValueError"
-    except ValueError:
-        pass
 
 
 def test_factory_unknown_provider(monkeypatch):

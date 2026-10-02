@@ -980,6 +980,14 @@ export type ProviderInstanceUpdate = {
      * Model
      */
     model?: string | null;
+    /**
+     * Model Capabilities
+     *
+     * 按模型标注 text / vision / embedding；未知模型不猜测能力。null 清除该模型的手动标注，刷新模型清单保留标注。
+     */
+    model_capabilities?: {
+        [key: string]: unknown | Array<'text' | 'vision' | 'embedding'> | null;
+    } | null;
 };
 
 /**
@@ -1017,6 +1025,10 @@ export type ProviderInstanceView = {
      */
     model: string;
     /**
+     * Model Details
+     */
+    model_details: Array<ProviderModelView>;
+    /**
      * Models
      */
     models: Array<string>;
@@ -1036,6 +1048,26 @@ export type ProviderInstanceView = {
      * Reason
      */
     reason: string;
+};
+
+/**
+ * ProviderModelView
+ *
+ * 模型能力来自目录或手动标注；服务商仅返回 ID 时保持 unknown。
+ */
+export type ProviderModelView = {
+    /**
+     * Capabilities
+     */
+    capabilities: Array<'text' | 'vision' | 'embedding'>;
+    /**
+     * Model Id
+     */
+    model_id: string;
+    /**
+     * Source
+     */
+    source: 'catalog' | 'manual' | 'unknown';
 };
 
 /**

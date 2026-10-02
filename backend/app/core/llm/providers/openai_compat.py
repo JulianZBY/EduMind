@@ -9,7 +9,9 @@ import mimetypes
 
 import httpx
 
+from app.core.errors import ProviderNotConfigured
 from app.core.llm.base import ChatMessage, ChatResult, LLMProvider
+from app.core.llm.model_capabilities import require_capability
 
 DEFAULT_TIMEOUT = 120.0
 
@@ -18,9 +20,7 @@ def content_of(data: dict) -> str:
     """取 choices[0].message.content；部分方言返回 parts 数组，按文本部分拼接。"""
     content = data["choices"][0]["message"]["content"]
     if isinstance(content, list):
-        return "".join(
-            part.get("text", "") for part in content if isinstance(part, dict)
-        )
+        return "".join(part.get("text", "") for part in content if isinstance(part, dict))
     return content or ""
 
 
@@ -48,6 +48,7 @@ class OpenAICompatProvider(LLMProvider):
         vision_model: str = "",
         timeout: float = DEFAULT_TIMEOUT,
         transport: httpx.AsyncBaseTransport | None = None,
+        model_capabilities: dict[str, tuple[str, ...]] | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -56,6 +57,7 @@ class OpenAICompatProvider(LLMProvider):
         self.timeout = timeout
         # 测试注入点（httpx.MockTransport）；生产恒为 None
         self._transport = transport
+        self.model_capabilities = model_capabilities or {}
 
     def _headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
@@ -77,13 +79,16 @@ class OpenAICompatProvider(LLMProvider):
         }
 
     async def chat(self, messages: list[ChatMessage], **kwargs) -> ChatResult:
-        payload = self._text_payload(kwargs.get("model") or self.model, messages)
+        model = kwargs.get("model") or self.model
+        self._check_capability(model, "text")
+        payload = self._text_payload(model, messages)
         data = await self._post("/chat/completions", payload)
         return ChatResult(content=content_of(data), raw=data)
 
     async def vision(self, image_path: str, prompt: str) -> str:
         if not self.vision_model:
-            raise NotImplementedError(f"{self.name} 方言未配置多模态模型")
+            raise ProviderNotConfigured("多模态模型未配置：请到设置页配置支持视觉的模型。")
+        self._check_capability(self.vision_model, "vision")
         content = [
             {"type": "image_url", "image_url": {"url": data_uri(image_path)}},
             {"type": "text", "text": prompt},
@@ -91,3 +96,8 @@ class OpenAICompatProvider(LLMProvider):
         payload = {"model": self.vision_model, "messages": [{"role": "user", "content": content}]}
         data = await self._post("/chat/completions", payload)
         return content_of(data)
+
+    def _check_capability(self, model: str, capability: str) -> None:
+        known = self.model_capabilities.get(model)
+        # unknown 模型支持既有手动配置；已标注模型则禁止走不支持的接口。
+        require_capability(model, capability, known or ())
