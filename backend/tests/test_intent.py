@@ -48,7 +48,7 @@ class _RecordingLLM:
 
 
 def test_analyze_intent_latest_expression_wins(monkeypatch):
-    """累积表述前后矛盾时，意图以教师最新表述为准（stub 网关断言）。"""
+    """累积表述前后矛盾时，意图以教师最新表述为准（假网关断言）。"""
     llm = _RecordingLLM()
     monkeypatch.setattr(intent_module, "get_llm", lambda: llm)
     accumulated = "讲导数，45分钟。算了，改成 90 分钟，加两个课堂练习。"

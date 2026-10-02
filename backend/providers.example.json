@@ -1,0 +1,22 @@
+[
+  {
+    "id": "example-gateway",
+    "label": "示例中转（改成你自己的）",
+    "base_url": "https://api.example.com/v1",
+    "api_key_env": "EXAMPLE_GATEWAY_API_KEY",
+    "chat_models": ["example-chat-pro", "example-chat-flash"],
+    "vision_models": ["example-chat-pro"],
+    "chat_model": "example-chat-flash",
+    "vision_model": "example-chat-pro",
+    "note": "把这份文件复制成 providers.json 再改；id 小写、唯一，与内置方言同名会覆盖内置。"
+  },
+  {
+    "id": "example-embed",
+    "label": "示例向量化服务",
+    "base_url": "https://embed.example.com/v1",
+    "api_key_env": "EXAMPLE_EMBED_API_KEY",
+    "embed_models": ["example-embed-v3"],
+    "embed_dimensions": 1024,
+    "note": "只提供 /embeddings 的服务也能这样接：声明 embed_models 即可在「能力实现 → 向量化」里选到。"
+  }
+]

@@ -4,7 +4,7 @@
 
 - 机器能覆盖的部分**不在这里重复**：后端契约与行为测试（`uv run pytest -q`）、
   前端 lint / 构建 / 禁用 class 扫描（`npm run lint` / `npm run build` / `npm run check:classes`）、
-  stub 模式全链路冒烟（附录 A，需要用你本机的端口跑一遍，但没有「点选判断」）。
+  未配置行为冒烟（附录 A，需要用你本机的端口跑一遍，但没有「点选判断」）。
 - 依据：`CONTEXT.md`（术语，判断文案对不对的唯一依据）、`docs/architecture.md`（应有的形态）、
   `docs/api/**`（协议语义）、`docs/style/minimalist-flat.md`（视觉硬标准）、`docs/adr/**`（决策）。
 
@@ -18,7 +18,7 @@
 ### 0.1 起服务（两条命令，端口固定 8000 / 5173）
 
 ```bash
-# 终端 1：后端（默认 stub 模式：不配任何 Key 也能全链路跑）
+# 终端 1：后端（默认未配置：不配任何 Key 也能起服务，涉及云端能力的操作返回 503 引导）
 cd backend && uv sync
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 
@@ -29,22 +29,22 @@ npm run dev
 
 浏览器打开 <http://localhost:5173>。
 
-**预期现象**：右上角没有报错提示；`curl http://localhost:8000/health` 返回
-`{"status":"ok","app":"EduMind","llm_provider":"stub"}`；`http://localhost:8000/docs` 打得开。
+**预期现象**：右上角没有报错提示；`curl http://localhost:8000/health` 返回 `status=ok`，
+`llm_provider` 为空（未配置）或回显你配置的供应商；`http://localhost:8000/docs` 打得开。
 
 **失败怎么判断**：
 - 页面白屏 / 顶栏出现连接异常 → 后端没起或端口被占（`/health` 直接打不通）；
 - `/health` 通了但页面数据全空 → 看浏览器 Network 面板：4xx 是契约问题，5xx 看后端控制台堆栈；
 - 前端起不来 → `node -v` 是否 ≥ 18、`npm install` 是否真的跑完（本仓库 `npm run dev` 不依赖后端先起）。
 
-### 0.2 两种模式，验收范围不同
+### 0.2 未配置与真实 Key，验收范围不同
 
-| 模式 | 怎么进入 | 能验收什么 |
+| 情形 | 怎么进入 | 能验收什么 |
 | --- | --- | --- |
-| **stub 模式**（默认） | 不配任何 Key | 链路、界面行为、导航、状态跟进、版本留痕。**内容不是真的**，且澄清回复 / 冲突队列等分支走不到（见 `docs/api/stub-mode.md`「走不到的分支」） |
+| **未配置**（默认） | 不配任何 Key | 引导与错误语义：涉及云端能力的操作返回 503 + 去设置页引导，**无假结果**；本地链路（上传、解析、分块入库、会话与生成物版本留痕）可用（见 `docs/api/provider-not-configured.md`） |
 | **真实 Key** | 设置页填 Key（或 `backend/.env`） | 上面全部 + 真实解析与生成质量、澄清追问、冲突检测 |
 
-第 1 节在两种模式下都能做（走不通的分支已在各条目里标注）；第 2 节必须真实 Key。
+第 1 节在两种情形下都能做（涉及云端能力的条目已标注未配置下的预期）；第 2 节必须真实 Key。
 
 ### 0.3 建议先准备一批资料
 
@@ -72,8 +72,8 @@ npm run dev
 | 步骤 | 预期现象 | 失败怎么判断 |
 | --- | --- | --- |
 | 打开 `/lesson-prep`，点「新建备课会话」，不填标题直接确认 | 侧栏出现一条会话，标题是「新的备课会话」 | 弹层确认后侧栏没动 = 创建失败（看 Network 的 `POST /api/v1/sessions`） |
-| 在对话轴输入「给初二讲一次函数，40 分钟」（回车发送） | 出现一条教师气泡 + 一条助手回复 | 助手回复里出现「[stub] 收到你的消息…」= 意图解析没命中 stub 场景（stub 下应返回完整 TCP 意图，属已知口径） |
-| **stub 下**：回复是**生成回复**（列出 PPT 页数、Word 教案、提纲与命中的来源文档） | 这是 stub 的固定口径：意图要素齐全 → 不再追问 | 若期望看到追问，说明你在验「澄清回复」——它在 stub 下走不到，见下一条 |
+| 在对话轴输入「给初二讲一次函数，40 分钟」（回车发送） | 未配置时：出现「未配置」toast（后端返回 503 provider_not_configured），**不返回假回复**；已配置时：出现一条教师气泡 + 一条助手回复 | 已配置却收到演示用占位内容 = 请求没走到真实模型（看 Network 的 `POST /api/v1/chat` 状态码） |
+| **已配置下**：回复是**生成回复**（列出 PPT 页数、Word 教案、提纲与命中的来源文档） | 意图要素齐全 → 不再追问 | 若期望看到追问，说明你在验「澄清回复」——先发一句信息不全的话，见下一条 |
 | **真实 Key 下**：先说一句信息不全的话（如「备课」） | 回复是**澄清回复**（追问主题 / 时长 / 风格 / 重点），不带生成物 | 直接出生成物 = 意图解析把缺失要素补全了或模型没按 JSON 返回，看后端日志里两次 LLM 调用的原始输出 |
 | 把追问粒度从「标准」改成「精细」再发一轮 | 精细档追问的要素更多（时长 / 风格 / 目标 / 重点 / 互动 / 方法） | 粒度没变 = 会话 PATCH 失败（`PATCH /api/v1/sessions/{id}`） |
 | 在侧栏点「参考资料」勾选一份已完成的资料，再发一轮 | 生成回复里出现「本次命中的来源文档：<你的文件名>」 | 没有来源 = 该资料仍「处理中」/「失败」（勾不上），或检索真的没命中（把资料标为参考资料会加权） |
@@ -90,7 +90,7 @@ npm run dev
 | --- | --- | --- |
 | 点「上传教学资料」，选一份 PDF | 列表立刻多一行，状态「处理中」 | 状态停不下来的前提是**没在跟进**（见下一条）；上传失败会直接给错误文案 |
 | 不动手，等几秒 | 状态**自动**变「已完成」，不需要手动刷新 | 不自动变 = 前端没有轮询（`CONTEXT.md` 第 4 节：处理中应自动跟进） |
-| **stub 下**上传图片 / 视频 | 都能走到「已完成」，分块内容带「[stub 视觉提取]」（视频另有「[帧 N]」） | 出现「失败」= 回归到票 15 修掉的老问题（视觉提取没有 stub） |
+| 上传图片 / 视频 | 已配置支持多模态的模型时：走到「已完成」，分块内容是**真实视觉解读**（视频另有「[帧 N]」） | 未配置多模态模型时走到「失败」（报配置错误而非占位）；出现演示用占位标记 = 假结果兜底回归 |
 | 点开一份资料详情 | 看到状态、文件类型、分块数与分块正文 | 详情 404 = 上传接口返回的 id 没对上 |
 | 对同一份资料点「标记为参考资料」 | 标记生效（再次打开仍是标记态），并给出「检索加权 / 溯源」的说明 | 标记丢 = PATCH 没落库 |
 | 上传一份同名文件 | 生成两条独立记录（同名不覆盖） | 覆盖 = 文件名唯一性退化 |
@@ -118,7 +118,7 @@ npm run dev
 
 | 步骤 | 预期现象 | 失败怎么判断 |
 | --- | --- | --- |
-| 打开 `/knowledge-graph`（先至少上传一份资料并等它「已完成」） | 画布画出知识点节点与关系线 | 画布空 = 该资料没提取出节点（stub 下只有正文前几行，见 `docs/api/stub-mode.md`） |
+| 打开 `/knowledge-graph`（先至少上传一份资料并等它「已完成」） | 画布画出知识点节点与关系线 | 画布空 = 该资料没提取出节点（未配置时知识提取跳过、分块照常入库，见 `docs/api/provider-not-configured.md`） |
 | 用「学科 / 章节」下拉过滤 | 画布只剩该范围内的节点；过滤条件出现在 URL（`?subject=` / `?chapter=`） | URL 不变 = 状态没上 URL（刷新会丢，属交互缺陷） |
 | 点一个节点 | 右侧抽屉：内容 / 难度 / 重要度 / **来源引用** | 抽屉空 = 节点详情端点失败 |
 | 在抽屉里把邻域切到 1 / 2 / 3 跳 | 画布切成以该点为中心的邻域子图，中心点用**强调色描边**（不是色块填充） | 中心点整块填色 = 违反扁平标准（填充会盖住黑字） |
@@ -129,7 +129,7 @@ npm run dev
 ### 1.5 冲突审核
 
 **重要前提**：队列里的三类冲突**不会自动齐**。
-- **stub 模式**：stub 的比对恒返回「无矛盾」，队列自然为空 → 用附录 B 造种子数据后再做本节；
+- **未配置 / 离线**：冲突比对依赖真实模型，比对结果离线无效 → 用附录 B 造种子数据后再做本节；
 - **真实 Key**：定义冲突由检测自然产出；**结构冲突与常识存疑的检测逻辑尚未实现**（ADR-0006），
   这两类的**形态与动作**只能在种子数据下验收，不能拿「队列里没有」当故障。
 
@@ -152,7 +152,7 @@ npm run dev
 | 先在生成物区「一键生成试卷」，再打开 `/question-bank` | 列表出现刚生成的题目（按入库时间倒序） | 列表空 = 试卷没入题库（看生成响应的 `bank_saved`） |
 | 用「考查知识点」下拉筛选 | 列表只剩该知识点的题；下拉里的知识点清单**不随筛选收窄** | 筛完就再也切不回别的知识点 = 筛选项被误做成随筛选变化 |
 | 点一条题目 | 详情：题型 / 题干 / 答案 / 来源（自编 / 上传 / 网络）/ 考查知识点（主考 / 涉及） | 详情没有答案 = 契约缺字段 |
-| 看「考查知识点」标注 | **只有当题干的知识点能对上图谱节点标题时才有标注**（stub 出题与你的资料往往对不上，属数据现象） | 一个标注都没有且你的资料里确实有对应知识点 = 匹配逻辑退化 |
+| 看「考查知识点」标注 | **只有当题干的知识点能对上图谱节点标题时才有标注**（出题模型生成的知识点与你的资料往往对不上，属数据现象） | 一个标注都没有且你的资料里确实有对应知识点 = 匹配逻辑退化 |
 
 > 已知落差：题目详情**不展示解析**（`questions` 表缺 `analysis` 字段，补列需同时改幂等补列）。
 
@@ -162,7 +162,7 @@ npm run dev
 | --- | --- | --- |
 | 打开 `/settings` | 四张卡：供应商目录 / 任务级模型 / 能力实现 / 自定义 OpenAI 兼容服务；每项都标「设置页」或「引导默认」 | 缺来源标记 = 教师分不清「我改过没有」 |
 | 在「供应商目录」选一家并粘贴 Key，保存 | 提示保存成功；供应商标为已就绪；**输入框立刻变成掩码**（`••••尾4位`） | 明文回显在任何位置 = 违反「Key 回读只见掩码」 |
-| 刷新页面 | 仍是刚配的供应商，Key 仍只显示掩码 | 掉回 stub = 设置没落库 |
+| 刷新页面 | 仍是刚配的供应商，Key 仍只显示掩码 | 设置没生效 = 没落库 |
 | 改「任务级模型」（意图分析 / 生成 / 冲突比对） | 每档都能看到「选择的值」与「**实际用的是什么**」 | 只有「选择的值」没有「实际生效值」= 少了解析回落后的可见值 |
 | 切「检索策略」为纯向量，保存，再去 `POST /api/v1/knowledge/retrieve`（或图谱/备课走一轮） | 当场生效，**不需要重启**；`strategy` 字段变成 `vector` | 需要重启才变 = 写穿失效（票 13 的核心验收点） |
 | 切「PDF 解析策略」「语音转写」「网络搜索」并保存 | 各自就绪状态随之变化（缺 Key 时显示原因，不是崩溃） | 直接 500 崩页面 = 就绪探测没兜住 |
@@ -175,7 +175,7 @@ npm run dev
 
 ### 2.1 先把能力配起来
 
-两种方式（**设置页优先于 `.env`**，见 `docs/api/stub-mode.md`「配置优先级」）：
+两种方式（**设置页优先于 `.env`**，见 `docs/api/provider-not-configured.md`「配置优先级」）：
 
 - **设置页**（推荐，改完即时生效）：供应商目录选一家 → 粘贴 Key → 保存；再按需配
   「向量化 / 网络搜索 / PDF 解析 / 录音转写」。
@@ -183,11 +183,12 @@ npm run dev
 
 | 能力 | 变量 / 设置项 | 去哪拿 | 配置后的预期 |
 | --- | --- | --- | --- |
-| 对话 + 多模态 + 向量化 + 转写（阿里云百炼） | `DASHSCOPE_API_KEY`，供应商选 dashscope | 阿里云百炼控制台 | `llm_provider=dashscope`；图片 / 视频能真实识别；录音转写可用 |
-| 对话（备选） | `DEEPSEEK_API_KEY`，供应商选 deepseek | DeepSeek 开放平台 | `llm_provider=deepseek`；**该家不支持图片 / 视频理解**，视觉调用仍会报错（预期行为） |
+| 对话 + 多模态 + 向量化（千问 MaaS） | `QWEN_API_KEY`，供应商选 qwen | 千问 MaaS 平台（maas.qianwenaiapi.com） | `llm_provider=qwen`；图片 / 视频能真实识别 |
+| 语音转写（阿里云百炼 paraformer） | `ASR_API_KEY`（百炼专用，千问 Key 不通用），能力实现选 paraformer | 阿里云百炼控制台 | 上传录音能真实转写；没有百炼 Key 时该能力显示「未配置」，上传录音直接得到 503 引导 |
+| 对话 + 多模态（备选） | `DEEPSEEK_API_KEY`，供应商选 deepseek | DeepSeek 开放平台 | `llm_provider=deepseek`；deepseek-flash / deepseek-v4-pro 均支持视觉；向量化该家不提供（另配或本地兜底） |
 | 向量化（备选） | `SILICONFLOW_API_KEY`，`EMBEDDING_PROVIDER=siliconflow` | 硅基流动控制台 | 向量维度变为该模型维度（**换供应商后要删 `backend/data/vectors.db` 重建**，否则维度冲突） |
 | PDF 解析（云端） | `MINERU_TOKEN`，`PDF_STRATEGY=mineru` 或 `mineru_then_pypdf` | mineru.net | 扫描件 PDF 也能解析出 Markdown；失败时自动退 pypdf（`mineru_then_pypdf` 档） |
-| 网络搜索 | `BOCHA_API_KEY`，`SEARCH_PROVIDER=bocha` | 博查 | `POST /api/v1/knowledge/web-search` 返回真实网页结果（**不再是「（stub 网络搜索）」占位**） |
+| 网络搜索 | `BOCHA_API_KEY`，`SEARCH_PROVIDER=bocha` | 博查 | `POST /api/v1/knowledge/web-search` 返回真实网页结果；未配置时 503 引导 |
 
 > **换 embedding 供应商后必须删 `backend/data/vectors.db`**：库里的向量维度是旧的，混用会报维度错误。
 > 这是既定行为，不是缺陷（已在 `MEMORY`/README 里记过）。
@@ -202,7 +203,7 @@ uv run python scripts/verify_services.py
 **预期现象**：打印四段，每段都写清用的是哪个实现：
 
 ```text
-=== 1. chat（LLM_PROVIDER=dashscope → OpenAICompatProvider）===
+=== 1. chat（LLM_PROVIDER=qwen → OpenAICompatProvider）===
 <一句中文回答>
 === 2. embed（OpenAICompatEmbedder）===
 向量数=2, 维度=1024
@@ -217,22 +218,22 @@ uv run python scripts/verify_services.py
 
 | 现象 | 含义 | 处置 |
 | --- | --- | --- |
-| `XXX_API_KEY 未配置` | 工厂选了真实实现但 Key 为空（**不静默回落 stub**，有意为之） | 补 Key 或把该能力切回 stub |
+| `XXX_API_KEY 未配置` | 工厂选了真实实现但 Key 为空（**不静默回落任何假实现**，有意为之） | 补 Key，或到设置页把该能力配置好 |
 | `401 / 403` | Key 错、过期、或没有该模型权限 | 换 Key / 换模型档位 |
 | `404 model not found` | 模型 ID 不在该家目录里（或自定义服务填错） | 设置页选目录内的模型，或改用「自定义 OpenAI 兼容服务」 |
 | `连接超时 / 无法解析主机` | 网络或 base_url 不对 | 检查 `base_url`、代理、防火墙 |
 | `向量维度冲突` | 换过 embedding 供应商但没重建向量库 | 删 `backend/data/vectors.db` 后重跑 |
 | 第 4 段跳过 | 仓库根目录没有 `test.pdf` | 放一份 PDF 到 `backend/test.pdf`（或直接在界面里上传验证） |
 
-### 2.3 真实 Key 下值得单独看的四件事（stub 下看不到）
+### 2.3 真实 Key 下值得单独看的四件事（未配置下看不到）
 
 1. **澄清回复 + 跳过追问**（`spec.md` 用户故事 4/5）：先说「备课」→ 应追问；把粒度切「精细」→ 追问更细；
    说「开始生成」→ 直接出生成物。**判据**：追问形态与生成形态互斥，`clarifying` 字段与界面一致。
 2. **定义冲突真的会被检测出来**：上传两份对同一知识点说法矛盾的资料 →
    `/conflicts` 出现「定义冲突」，裁决前图谱里**看不到**新知，裁决「接受新」后旧节点的边还在。
-3. **真实的图谱 / 视觉提取**：`/knowledge-graph` 的节点标题来自你的资料正文（不再是
-   「[stub 演示提取]」/「[stub 视觉提取]」占位）；图片 / 视频帧的解读反映画面内容。
-4. **网络搜索**：`POST /api/v1/knowledge/web-search` 的结果是真实网页（无「（stub 网络搜索）」标记）。
+3. **真实的图谱 / 视觉提取**：`/knowledge-graph` 的节点标题来自你的资料正文（不是任何占位标记）；
+   图片 / 视频帧的解读反映画面内容。
+4. **网络搜索**：`POST /api/v1/knowledge/web-search` 的结果是真实网页（无占位标记）。
 
 ---
 
@@ -274,13 +275,13 @@ npm run build           # 上面 + tsc -b + vite build
 
 ---
 
-## 附录 A. stub 模式全链路冒烟（可复现命令）
+## 附录 A. 未配置行为冒烟（可复现命令）
 
 **用途**：机器能跑，但需要你本机执行并肉眼核对输出（不是点选判断）。
-**前提**：不配任何 Key；用一个空闲端口（下面用 8000）；用**临时库与临时落盘目录**，别污染开发数据。
+**前提**：不配任何 Key（验证未配置行为）；用一个空闲端口（下面用 8000）；用**临时库与临时落盘目录**，别污染开发数据。
 
 ```powershell
-# 终端 1：隔离跑一个 stub 后端
+# 终端 1：隔离跑一个未配置后端
 cd backend
 $env:DATABASE_URL = "sqlite:///$env:TEMP/smoke/smoke.db"
 $env:VECTORS_DB_PATH = "$env:TEMP/smoke/vectors.db"
@@ -289,53 +290,64 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ```powershell
-# 终端 2：走一遍主链路（$base 固定，下面命令按顺序粘）
+# 终端 2：走一遍未配置行为（$base 固定，下面命令按顺序粘）
 $base = 'http://127.0.0.1:8000'
 
-# 1) 模式确认：预期 status=ok 且 llm_provider=stub
+# 1) 未配置确认：预期 status=ok 且 llm_provider 为空（未配置任何供应商；配了则回显你配的值）
 Invoke-RestMethod "$base/health"
 
-# 2) 上传资料（PDF / 图片 / 视频各来一份；用 curl.exe，PowerShell 的 -Form 会按 RFC 2047 编码文件名）
-curl.exe -s -X POST -F "file=@C:\path\to\tcp-handout.pdf" "$base/api/v1/documents/upload"   # 预期 status=处理中
-curl.exe -s -X POST -F "file=@C:\path\to\whiteboard.png"  "$base/api/v1/documents/upload"
-curl.exe -s -X POST -F "file=@C:\path\to\clip.avi"        "$base/api/v1/documents/upload"
+# 2) 上传资料：PDF 走「处理中 → 已完成」（本地解析 + 本地 hash 向量化，分块照常入库）；
+#    图片 / 视频的视觉解读依赖真实多模态模型，未配置时走到「失败」
+#    （用 curl.exe，PowerShell 的 -Form 会按 RFC 2047 编码文件名）
+curl.exe -s -X POST -F "file=@C:\path\to\tcp-handout.pdf" "$base/api/v1/documents/upload"   # 预期 status=处理中 → 已完成
+curl.exe -s -X POST -F "file=@C:\path\to\whiteboard.png"  "$base/api/v1/documents/upload"   # 预期走到「失败」
+curl.exe -s -X POST -F "file=@C:\path\to\clip.avi"        "$base/api/v1/documents/upload"   # 预期走到「失败」
 
-# 3) 状态跟进：把上一步的 id 填进来，预期 处理中 → 已完成，chunk_count≥1
+# 3) 状态跟进：把上一步 PDF 的 id 填进来，预期 处理中 → 已完成，chunk_count≥1
 $doc = '<上传返回的 id>'
 Invoke-RestMethod "$base/api/v1/documents/$doc"
-#   图片 / 视频的分块应带「[stub 视觉提取]」（视频另有「[帧 N]」）——这是票 15 的验收点
+#   分块内容是资料正文，不带任何演示用占位标记；未配置时知识提取跳过，分块照常入库
 
-# 4) 建会话（把 PDF 的 id 勾成参考资料）
+# 4) 建会话（本地链路，不需要云端能力）
 $session = Invoke-RestMethod "$base/api/v1/sessions" -Method Post -ContentType 'application/json' `
   -Body (@{ title='TCP 三次握手（大二）'; granularity='标准'; reference_doc_ids=@($doc) } | ConvertTo-Json -Depth 6)
 $session.id
 
-# 5) 一轮备课（stub 下第一轮就是生成回复：意图固定且要素齐全）
-$turn = Invoke-RestMethod "$base/api/v1/chat" -Method Post -ContentType 'application/json' `
-  -Body (@{ session_id=$session.id; messages=@(@{ role='user'; content='给大二讲 TCP 三次握手，45 分钟' }) } | ConvertTo-Json -Depth 6)
-$turn.clarifying      # 预期 False
-$turn.artifacts.references   # 预期含你上传的文件名（溯源）
+# 5) 一轮备课：未配置时返回 503 与 provider_not_configured（不返回假回复）
+try {
+  $turn = Invoke-RestMethod "$base/api/v1/chat" -Method Post -ContentType 'application/json' `
+    -Body (@{ session_id=$session.id; messages=@(@{ role='user'; content='给大二讲 TCP 三次握手，45 分钟' }) } | ConvertTo-Json -Depth 6)
+  "意外成功：说明已配置供应商（是否读到了本机 .env？）"
+} catch {
+  $err = $_.ErrorDetails.Message | ConvertFrom-Json
+  $err.detail.code      # 预期 provider_not_configured
+  $err.detail.message   # 预期「去设置页配置」的中文引导
+}
 
-# 6) 生成物版本：列表 → 详情 → 下载
-$versions = Invoke-RestMethod "$base/api/v1/sessions/$($session.id)/artifacts"
-$versions.groups | ForEach-Object { "$($_.artifact_type) 共 $($_.versions.Count) 版" }   # 预期 课件/教案/提纲
-$v = ($versions.groups | Where-Object { $_.artifact_type -eq '课件' }).versions[-1]
-curl.exe -s -o "$env:TEMP\smoke\v.pptx" "$base/api/v1/artifacts/$($v.id)/download"   # 预期文件非空
+# 6) 网络搜索：未配置时同样 503（需要 BOCHA_API_KEY，或设置页把网络搜索指到博查）
+try {
+  Invoke-RestMethod "$base/api/v1/knowledge/web-search" -Method Post -ContentType 'application/json' `
+    -Body (@{ query='TCP 三次握手'; k=5 } | ConvertTo-Json -Depth 6)
+  "意外成功：说明已配置博查 Key"
+} catch {
+  $err = $_.ErrorDetails.Message | ConvertFrom-Json
+  $err.detail.code      # 预期 provider_not_configured
+}
 
-# 7) 改一版：以历史版本为基线（预期版本号变大、旧版本仍在列表里）
-$detail = Invoke-RestMethod "$base/api/v1/artifacts/$($v.id)"
-# 提纲用 /revise/outline；课件用 /revise（见 /docs 的请求示例）
+# 7) 设置页添加供应商后立即可用（需要真实 Key）：打开 http://localhost:5173/settings，
+#    选一家粘 Key 保存，重跑第 5 步即得到生成回复；生成物版本、下载、改一版的完整验收见第 2 节。
 ```
 
-**预期汇总**：一条链路「上传 → 处理中 → 已完成 → 建会话 → 生成回复 → 版本列表 → 详情 → 下载 →
-以基线改一版」全绿；图片 / 视频也走到「已完成」。**冲突审核**在 stub 下需要种子数据，见附录 B。
+**预期汇总**：`/health` 的 `llm_provider` 为空；对话与网络搜索返回 503 provider_not_configured 与去设置页的引导；
+PDF 走「上传 → 处理中 → 已完成」（分块照常入库）；图片 / 视频走到「失败」（没有假视觉解读）。
+添加供应商后的生成回复 → 版本列表 → 详情 → 下载 → 以基线改一版见第 2 节；**冲突审核**需要种子数据，见附录 B。
 
 ---
 
 ## 附录 B. 冲突三类别的人工验证（种子数据）
 
-**为什么需要**：结构冲突与常识存疑的**检测逻辑尚未实现**（ADR-0006），而 stub 的比对恒返回「无矛盾」，
-所以这两类的**形态与动作**只能由种子数据造出来给眼睛看。
+**为什么需要**：结构冲突与常识存疑的**检测逻辑尚未实现**（ADR-0006），冲突比对依赖真实模型、
+离线跑不出自然冲突，所以这两类的**形态与动作**只能由种子数据造出来给眼睛看。
 
 在附录 A 那个临时库上种三条待审冲突（定义 / 结构 / 常识存疑各一条），然后刷新 `/conflicts`：
 

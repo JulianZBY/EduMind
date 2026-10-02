@@ -19,7 +19,6 @@ from app.core.llm.parsing import parse_json
 from app.core.llm.task_routing import get_llm_for
 from app.db import SessionLocal
 from app.db.models import Conflict, KnowledgeEdge, KnowledgeNode
-from app.knowledge.vector_store import VectorStore
 
 # 「冲突比对」任务：模型档位在设置页按任务选，未设置回落全局默认（CONTEXT.md「任务级模型」）。
 # 入口仍叫 get_llm：既有测试用它替换对话能力（monkeypatch.setattr(本模块, "get_llm", ...)）。
@@ -92,6 +91,7 @@ async def detect_conflicts(
       保持图谱中无重复同名节点。
     """
     db = SessionLocal()
+    from app.knowledge.vector_store import VectorStore
     store = VectorStore()
     embedder = get_embedder()
     try:
@@ -169,6 +169,7 @@ async def resolve_conflict(
     结构冲突的新知可自带关系（`new_knowledge["relations"]`，端点按标题解析）：
     端点在被替换的旧节点上时改挂到新知，详见 `_apply_proposed_relations`。
     """
+    from app.knowledge.vector_store import VectorStore
     db = SessionLocal()
     try:
         conflict = db.get(Conflict, conflict_id)
@@ -426,5 +427,6 @@ async def _insert_node(
     db.add(node)
     db.flush()
     emb = (await get_embedder().embed([node.title]))[0]
+    from app.knowledge.vector_store import VectorStore
     VectorStore().add_node_title(node.id, node.title, emb)
     return node

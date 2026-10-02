@@ -20,8 +20,8 @@ _LEGACY_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("conflicts", "category", "VARCHAR(20) DEFAULT '定义冲突'"),
     ("conflicts", "revised_content", "TEXT"),
     ("conflicts", "review_action", "VARCHAR(20)"),
+    ("llm_provider_instances", "models_error", "TEXT DEFAULT ''"),
 )
-
 
 def _ensure_sqlite_columns(bind=None) -> None:
     """轻量幂等迁移：补列 + 回填（默认库为 SQLite）。

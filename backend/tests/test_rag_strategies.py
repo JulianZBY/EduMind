@@ -58,7 +58,7 @@ _STRATEGY_PACKAGES = ("app/knowledge/chunking/", "app/knowledge/retrieval/")
 
 
 class _FixedEmbedder:
-    """确定性向量（以文本长度为特征，与 stub 同构）：排名完全可预期。"""
+    """确定性向量（以文本长度为特征，与替身向量同构）：排名完全可预期。"""
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         return [[float(len(t))] * 8 for t in texts]

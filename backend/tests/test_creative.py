@@ -1,11 +1,11 @@
-"""互动内容生成测试：提示词填充 + stub 模式产物可解析。"""
+"""互动内容生成测试：提示词填充 + 假网关产物可解析。"""
 
 import app.generate.creative as creative_module
 from app.core.llm.base import ChatResult
-from app.core.llm.providers.stub import StubProvider
+from tests.support.fakes import FakeLLM
 
 
-class _CapturingProvider(StubProvider):
+class _CapturingProvider(FakeLLM):
     """记录 prompt 的假网关：返回固定文本以便断言提示词内容。"""
 
     def __init__(self):
@@ -30,9 +30,9 @@ async def test_creative_prompt_fills_knowledge_once(monkeypatch):
     assert prompt.count(knowledge) == 1
 
 
-async def test_creative_stub_produces_parseable_html(monkeypatch):
-    """stub 模式下产出可解析的单文件 HTML（内联样式与脚本，无外部依赖）。"""
-    monkeypatch.setattr(creative_module, "get_llm", lambda: StubProvider())
+async def test_creative_fake_produces_parseable_html(monkeypatch):
+    """假网关下产出可解析的单文件 HTML（内联样式与脚本，无外部依赖）。"""
+    monkeypatch.setattr(creative_module, "get_llm", lambda: FakeLLM())
     html = await creative_module.generate_html_creative("TCP三次握手")
     lowered = html.lower()
     assert "<html" in lowered

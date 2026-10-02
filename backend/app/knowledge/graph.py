@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from app.core.llm.parsing import parse_json
 from app.db import SessionLocal
 from app.db.models import Document, KnowledgeEdge, KnowledgeNode
-from app.knowledge.vector_store import VectorStore
 
 RELATION_TYPES = ("前置依赖", "父子包含", "推导关系", "相关关联")
 # 邻接子图拉取时优先扩展的边：知识递进关系（前置/父子）先于弱关联
@@ -57,6 +56,7 @@ def save_knowledge(
     title_embeddings：title → 向量。提供时同步写入向量库标题索引，
     供冲突检测的近名预筛使用（ADR-0006）。
     """
+    from app.knowledge.vector_store import VectorStore
     db = SessionLocal()
     try:
         title_to_id: dict[str, str] = {}

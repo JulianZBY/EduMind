@@ -9,7 +9,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
-import { ApiError, apiRequest } from '../../api/client'
+import { ApiError, apiErrorMessage, apiRequest } from '../../api/client'
 import type {
   DocumentDetail,
   DocumentListResponse,
@@ -45,13 +45,13 @@ export const knowledgeKeys = {
   detail: (documentId: string) => [...knowledgeKeys.all, 'detail', documentId] as const,
 }
 
-/** 接口错误翻成教师能读的一句话（界面上不出现 4xx/5xx 这类工程术语）。 */
+/** 接口错误翻成教师能读的一句话（400 的 `detail.message` 本身就是面向教师的文案）。 */
 export function documentErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 404) return '这份资料已不存在，请回到资料列表重新选择。'
     if (error.status === 422) return '请求内容不符合要求，请换一个文件再试。'
   }
-  return '操作没有成功，请稍后重试。'
+  return apiErrorMessage(error, '操作没有成功，请稍后重试。')
 }
 
 /** 教学资料列表：有「处理中」的资料就保持轮询，全部到终态自动停。 */

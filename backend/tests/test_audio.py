@@ -1,11 +1,11 @@
-"""录音转写测试（HTTP API 主接缝：stub 转写器 + stub 网关，不触真实云端）。
+"""录音转写测试（HTTP API 主接缝：tests/support 替身转写器，不触真实云端）。
 
 覆盖 ticket #11 验收项：
 - 音频解析接入真实 provider：paraformer 云端契约单测（MockTransport 全流程）
-- stub 模式下管道单测通过：上传录音 → 文档状态完成 → 语义检索命中转写内容
+- 替身转写器管道单测通过：上传录音 → 文档状态完成 → 语义检索命中转写内容
 - 转写失败文档状态标记为失败，且不拖垮其他格式的解析
+\"\"\"
 """
-
 import asyncio
 import json
 import time
@@ -16,6 +16,7 @@ from docx import Document as DocxDocument
 from fastapi.testclient import TestClient
 
 import app.api.v1.knowledge as knowledge_module
+import app.core.asr.factory as asr_factory_module
 import app.core.embedding.factory as embedding_factory_module
 import app.knowledge.parsers.audio as audio_module
 import app.knowledge.vector_store as vector_store_module
@@ -23,13 +24,13 @@ from app.config import settings
 from app.core.asr.base import Transcriber
 from app.core.asr.factory import get_transcriber
 from app.core.asr.paraformer import ParaformerTranscriber
-from app.core.asr.stub import STUB_TRANSCRIPT, StubTranscriber
-from app.core.embedding.stub import StubEmbedder
+from app.core.errors import ProviderNotConfigured
 from app.db import init_db
 from app.knowledge.parsers import get_parser
 from app.knowledge.parsers.audio import AudioParser
 from app.knowledge.vector_store import VectorStore
 from app.main import app
+from tests.support.fakes import FAKE_TRANSCRIPT, FakeEmbedder, FakeTranscriber
 
 client = TestClient(app)
 init_db()  # 幂等：确保表和默认用户存在
@@ -69,14 +70,18 @@ def test_registry_maps_audio_formats():
         assert isinstance(get_parser(ext), AudioParser), ext
 
 
-def test_factory_stub_default(monkeypatch):
-    monkeypatch.setattr(settings, "asr_provider", "stub")
-    assert isinstance(get_transcriber(), StubTranscriber)
+def test_factory_unconfigured_raises_provider_not_configured(monkeypatch):
+    """未配置（产品不再有假数据兜底）：不再有假转写兜底，抛 ProviderNotConfigured 引导去设置。"""
+    monkeypatch.setattr(settings, "asr_provider", "")
+    monkeypatch.setattr(settings, "asr_api_key", "")
+    get_transcriber.cache_clear()
+    with pytest.raises(ProviderNotConfigured):
+        get_transcriber()
 
 
 def test_factory_paraformer_requires_key(monkeypatch):
     monkeypatch.setattr(settings, "asr_provider", "paraformer")
-    monkeypatch.setattr(settings, "dashscope_api_key", "")
+    monkeypatch.setattr(settings, "asr_api_key", "")
     try:
         get_transcriber()
         assert False, "缺 key 应抛 ValueError"
@@ -93,18 +98,34 @@ def test_factory_unknown_provider(monkeypatch):
         pass
 
 
-def test_stub_transcriber_returns_fixed_transcript():
-    text = asyncio.run(StubTranscriber().transcribe("x.wav"))
-    assert text == STUB_TRANSCRIPT
+def test_upload_audio_unconfigured_returns_503_guidance(monkeypatch):
+    """未配置百炼 Key：上传录音立刻 503 + provider_not_configured 引导，不落「处理中/失败」。"""
+    monkeypatch.setattr(settings, "asr_provider", "")
+    monkeypatch.setattr(settings, "asr_api_key", "")
+    get_transcriber.cache_clear()
+    r = client.post(
+        "/api/v1/documents/upload",
+        files={"file": ("讲座录音.wav", b"RIFF fake audio bytes", "audio/wav")},
+    )
+    assert r.status_code == 503
+    detail = r.json()["detail"]
+    assert detail["code"] == "provider_not_configured"
+    assert "设置" in detail["message"]
+
+
+def test_fake_transcriber_returns_fixed_transcript():
+    text = asyncio.run(FakeTranscriber().transcribe("x.wav"))
+    assert text == FAKE_TRANSCRIPT
 
 
 def test_upload_audio_completes_and_search_hits_transcript(monkeypatch, tmp_path):
-    """stub 模式管道：上传录音 → 状态已完成 → 语义检索命中转写内容。"""
+    """替身转写器管道：上传录音 → 状态已完成 → 语义检索命中转写内容。"""
     store = VectorStore(str(tmp_path / "vectors.db"))
-    monkeypatch.setattr(audio_module, "get_transcriber", lambda: StubTranscriber())
+    monkeypatch.setattr(audio_module, "get_transcriber", lambda: FakeTranscriber())
+    monkeypatch.setattr(asr_factory_module, "get_transcriber", lambda: FakeTranscriber())
     # 向量化只依赖 Embedder 接口：管道（晚绑定）替换工厂，检索端点（早绑定）替换模块引用
-    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
-    monkeypatch.setattr(knowledge_module, "get_embedder", lambda: StubEmbedder())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
+    monkeypatch.setattr(knowledge_module, "get_embedder", lambda: FakeEmbedder())
     monkeypatch.setattr(vector_store_module, "VectorStore", lambda: store)
     monkeypatch.setattr(knowledge_module, "VectorStore", lambda: store)
 
@@ -120,16 +141,17 @@ def test_upload_audio_completes_and_search_hits_transcript(monkeypatch, tmp_path
     sr = client.post("/api/v1/knowledge/search", json={"query": "转写文字稿", "k": 3})
     assert sr.status_code == 200
     contents = [h["content"] for h in sr.json()["hits"]]
-    assert any(STUB_TRANSCRIPT[:20] in c for c in contents), contents
+    assert any(FAKE_TRANSCRIPT[:20] in c for c in contents), contents
 
 
 def test_transcription_failure_marks_failed_without_blocking_others(monkeypatch, tmp_path):
     """转写失败 → 文档状态失败；其他格式（docx 本地解析）不受影响照常完成。"""
     store = VectorStore(str(tmp_path / "vectors.db"))
-    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
     monkeypatch.setattr(vector_store_module, "VectorStore", lambda: store)
 
     monkeypatch.setattr(audio_module, "get_transcriber", lambda: FailingTranscriber())
+    monkeypatch.setattr(asr_factory_module, "get_transcriber", lambda: FakeTranscriber())
     r = client.post(
         "/api/v1/documents/upload",
         files={"file": ("坏录音.mp3", b"not really audio", "audio/mpeg")},
@@ -138,7 +160,7 @@ def test_transcription_failure_marks_failed_without_blocking_others(monkeypatch,
     bad_id = r.json()["id"]
     _wait_status(bad_id, "失败")
 
-    monkeypatch.setattr(audio_module, "get_transcriber", lambda: StubTranscriber())
+    monkeypatch.setattr(audio_module, "get_transcriber", lambda: FakeTranscriber())
     doc = DocxDocument()
     doc.add_paragraph("教学目标：理解录音转写管道")
     docx_path = tmp_path / "讲义.docx"

@@ -24,6 +24,7 @@ from app.config import Settings, settings
 from app.core import settings_store
 from app.core.asr.factory import get_transcriber
 from app.core.catalog import FIELDS, MANAGED_FIELDS
+from app.core.errors import ProviderNotConfigured
 from app.core.intent import analyze_intent
 from app.core.llm.base import ChatResult, LLMProvider
 from app.core.llm.factory import LLM_BUILDERS, get_llm
@@ -53,14 +54,20 @@ _BOOTSTRAP_WITHOUT_DEVELOPER_ENV = {
 
 
 @pytest.fixture(autouse=True)
-def _isolated_bootstrap_defaults(monkeypatch):
+def _isolated_bootstrap_defaults(_default_fake_llm, monkeypatch):
     """把引导默认换成「本机没有 `.env`」的代码默认，用例才对开发者环境密封。
 
+    依赖 `_default_fake_llm` 保证在其之后运行：设置页测试要断言的是**未配置**状态，
+    故再把对话供应商复位为空（假 LLM 替身留给需要它的测试文件）。
     换掉的是引导快照本身（`apply_stored_settings()` 读它回落未写过的项），进程内配置随之同步；
     用例结束恢复真值快照并再重放一次，不把受控值留给后面的测试文件。
     """
     monkeypatch.setattr(settings_store, "_BOOTSTRAP", dict(_BOOTSTRAP_WITHOUT_DEVELOPER_ENV))
     apply_stored_settings()
+    from app.core.llm.factory import get_llm
+
+    monkeypatch.setattr(settings, "llm_provider", "")
+    get_llm.cache_clear()
     yield
     monkeypatch.undo()  # 恢复本机真值快照
     apply_stored_settings()  # 让进程内配置也跟着回落
@@ -68,10 +75,38 @@ def _isolated_bootstrap_defaults(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _clean_settings_store(_isolated_bootstrap_defaults):
-    """用例前后都清空设置库并回落引导默认（受控的引导默认，见上个夹具）。"""
+    """用例前后都清空设置库与供应商实例表并回落引导默认（受控的引导默认，见上个夹具）。"""
     clear_stored_settings()
+    _clear_provider_instances()
     yield
-    clear_stored_settings()
+    _clear_provider_instances()
+    clear_stored_settings()  # 实例先删：清理存量指针的兜底才有东西可清
+
+
+@pytest.fixture(autouse=True)
+def _offline_model_fetch(monkeypatch):
+    """模型拉取在测试里钉死为本地假实现：不碰网络，返回固定清单。"""
+    from app.core.llm import provider_instances
+
+    monkeypatch.setattr(
+        provider_instances,
+        "fetch_model_ids",
+        lambda instance: ["fake-model-a", "fake-model-b"],
+    )
+
+
+def _clear_provider_instances() -> None:
+    """供应商实例与模型清单是设置页状态的一部分：用例间不共享（Key 与默认指针都不许串）。"""
+    from sqlalchemy import delete
+
+    from app.core.llm.provider_instances import clear_instance_cache
+    from app.db.models import LLMProviderInstance, ProviderModel
+
+    with SessionLocal() as db:
+        db.execute(delete(ProviderModel))
+        db.execute(delete(LLMProviderInstance))
+        db.commit()
+    clear_instance_cache()
 
 
 def _get() -> dict:
@@ -99,13 +134,16 @@ def _by_name(rows: list[dict], key: str = "name") -> dict[str, dict]:
 
 
 def test_read_starts_from_bootstrap_defaults():
-    """没在设置页改过时，读回来的一切都是引导默认（受控为「本机无 `.env`」），Key 一个都没配。"""
+    """没在设置页改过时，读回来的一切都是引导默认（受控为「本机无 .env」），Key 一个都没配。"""
     view = _get()
 
-    assert view["provider"]["value"] == "stub"
-    assert view["provider"]["label"] == "stub 模式"
+    # 未配置供应商：诚实的状态（不再是假数据兜底模式）
+    assert view["provider"]["value"] == ""
+    assert view["provider"]["label"] == "未配置"
     assert view["provider"]["source"] == "引导默认"
-    assert view["provider"]["ready"] is True
+    assert view["provider"]["ready"] is False
+    assert view["provider"]["reason"]
+    assert view["provider_instances"] == []
     assert set(_by_name(view["items"])) == {
         "llm_base_url",
         "llm_model",
@@ -134,15 +172,26 @@ def test_catalog_lists_providers_implementations_and_tasks():
     catalog = response.json()
 
     providers = _by_name(catalog["providers"], "id")
-    assert set(providers) == {"stub", "dashscope", "deepseek", "siliconflow", "custom"}
+    assert set(providers) == {
+        "qwen",
+        "deepseek",
+        "moonshot",
+        "zhipu",
+        "minimax",
+        "ark",
+        "siliconflow",
+        "custom",
+    }
     assert providers["deepseek"]["key_field"] == "deepseek_api_key"
-    assert providers["deepseek"]["chat_models"] == ["deepseek-chat", "deepseek-reasoner"]
-    assert providers["dashscope"]["base_url"].startswith("https://")
-    assert providers["stub"]["key_field"] == ""  # stub 模式不需要 Key
+    assert providers["deepseek"]["chat_models"] == ["deepseek-flash", "deepseek-v4-pro"]
+    assert providers["qwen"]["base_url"] == "https://maas.qianwenaiapi.com/compatible-mode/v1"
+    assert providers["qwen"]["label"] == "千问（Qwen）"  # 面向教师叫千问
+    assert providers["moonshot"]["key_field"] == "moonshot_api_key"
+    assert providers["ark"]["accepts_any_model"] is True  # 豆包的 ep- 接入点放行
     assert providers["custom"]["accepts_any_model"] is True
 
     capabilities = _by_name(catalog["capabilities"], "key")
-    assert {o["id"] for o in capabilities["asr_provider"]["options"]} == {"stub", "paraformer"}
+    assert {o["id"] for o in capabilities["asr_provider"]["options"]} == {"auto", "paraformer"}
     assert {o["id"] for o in capabilities["pdf_strategy"]["options"]} == {
         "mineru_then_pypdf",
         "pypdf",
@@ -150,7 +199,6 @@ def test_catalog_lists_providers_implementations_and_tasks():
     }
     assert {o["id"] for o in capabilities["search_provider"]["options"]} == {
         "auto",
-        "stub",
         "bocha",
     }
     assert [task["id"] for task in catalog["tasks"]] == ["intent", "generate", "conflict"]
@@ -183,12 +231,14 @@ def test_capability_switch_takes_effect_without_restart():
 def test_capability_switch_changes_the_factory_immediately():
     """语音转写 / PDF 解析 / 网络搜索三档：写库后工厂当场换实现（lru_cache 已失效）。"""
     assert type(get_pdf_parser()).__name__ == "FallbackPdfParser"
-    assert type(get_transcriber()).__name__ == "StubTranscriber"
+    # 未配置语音转写：抛 ProviderNotConfigured（产品没有假转写兜底）
+    with pytest.raises(ProviderNotConfigured):
+        get_transcriber()
 
     _put({"pdf_strategy": "pypdf"})
     assert type(get_pdf_parser()).__name__ == "PypdfParser"
 
-    _put({"asr_provider": "paraformer", "dashscope_api_key": "sk-dashscope-1234"})
+    _put({"asr_provider": "paraformer", "asr_api_key": "sk-bailian-1234"})
     assert type(get_transcriber()).__name__ == "ParaformerTranscriber"
 
     _put({"search_provider": "bocha", "bocha_api_key": "sk-bocha-1234"})
@@ -196,8 +246,8 @@ def test_capability_switch_changes_the_factory_immediately():
 
 
 def test_provider_switch_with_key_becomes_ready_without_restart():
-    """目录选择 + 粘贴 Key：从 stub 模式切到真实服务，读回来就是新供应商且已就绪。"""
-    assert _get()["provider"]["value"] == "stub"
+    """目录选择 + 粘贴 Key：从未配置切到真实服务，读回来就是新供应商且已就绪。"""
+    assert _get()["provider"]["value"] == ""
     view = _put({"llm_provider": "deepseek", "deepseek_api_key": PLAINTEXT})
 
     assert view["provider"]["value"] == "deepseek"
@@ -211,16 +261,16 @@ def test_provider_switch_with_key_becomes_ready_without_restart():
     llm = get_llm()
     assert isinstance(llm, OpenAICompatProvider)
     assert llm.base_url == "https://api.deepseek.com"
-    assert llm.model == "deepseek-chat"
+    assert llm.model == "deepseek-flash"
     assert llm.api_key == PLAINTEXT
 
 
 def test_stored_settings_survive_a_restart():
     """配置库优先于引导默认：重启（进程内配置回到引导默认 + 启动钩子重放）后仍然是设置页的值。"""
-    _put({"asr_provider": "paraformer", "dashscope_api_key": "sk-dashscope-9f8a"})
+    _put({"asr_provider": "paraformer", "asr_api_key": "sk-bailian-9f8a"})
 
     # 模拟新进程：进程内配置回到引导默认，缓存清掉
-    settings.asr_provider = "stub"
+    settings.asr_provider = ""
     get_transcriber.cache_clear()
 
     with TestClient(app):  # 真实启动路径：init_db() + 设置启动钩子
@@ -230,7 +280,6 @@ def test_stored_settings_survive_a_restart():
     assert asr["value"] == "paraformer"
     assert asr["source"] == "设置页"
     assert asr["ready"] is True
-
 
 # ---- 自定义 OpenAI 兼容服务 ----
 
@@ -281,9 +330,9 @@ def test_task_models_fall_back_to_the_global_default():
     """任务级模型逐任务可选；没设的任务回落全局默认，页面能看到「实际用的模型」与来源。"""
     _put(
         {
-            "llm_provider": "dashscope",
+            "llm_provider": "qwen",
             "llm_model": "qwen-plus",
-            "dashscope_api_key": "sk-dashscope-1234",
+            "qwen_api_key": "sk-qwen-1234",
         }
     )
     tasks = _by_name(_get()["tasks"], "task")
@@ -352,9 +401,9 @@ async def test_task_level_models_reach_each_call_site(monkeypatch):
 @pytest.mark.parametrize(
     ("payload", "code", "hint"),
     [
-        ({"llm_provider": "openai-x"}, "unknown_provider", "可选：stub"),
-        ({"llm_provider": "dashscope", "llm_model": "gpt-4o"}, "unknown_model", "qwen-plus"),
-        ({"task_model_generate": "没有这个模型"}, "unknown_model", "自定义 OpenAI 兼容服务"),
+        ({"llm_provider": "openai-x"}, "unknown_provider", "可选：qwen"),
+        ({"llm_provider": "qwen", "llm_model": "gpt-4o"}, "unknown_model", "qwen-plus"),
+        ({"llm_provider": "deepseek", "task_model_generate": "gpt-4o"}, "unknown_model", "deepseek-flash"),
         ({"asr_provider": "whisper"}, "unknown_capability_impl", "paraformer"),
         ({"llm_base_url": "example.com/v1"}, "invalid_base_url", "http(s)"),
         ({"embedding_base_url": "ftp://example.com/v1"}, "invalid_base_url", "http(s)"),
@@ -378,7 +427,7 @@ def test_partial_write_keeps_the_other_items():
         {
             "llm_provider": "deepseek",
             "deepseek_api_key": PLAINTEXT,
-            "task_model_generate": "deepseek-reasoner",
+            "task_model_generate": "deepseek-v4-pro",
         }
     )
     view = _put({"retrieval_strategy": "vector"})
@@ -386,7 +435,7 @@ def test_partial_write_keeps_the_other_items():
     assert _stored_rows() == {
         "llm_provider": "deepseek",
         "deepseek_api_key": PLAINTEXT,
-        "task_model_generate": "deepseek-reasoner",
+        "task_model_generate": "deepseek-v4-pro",
         "retrieval_strategy": "vector",
     }
     assert view["provider"]["value"] == "deepseek"
@@ -461,8 +510,7 @@ def test_settings_operations_all_declare_a_response_model():
             media = ok.get("content", {}).get("application/json", {})
             assert media.get("schema", {}).get("$ref"), f"{method.upper()} {path} 缺 response_model"
             checked += 1
-    assert checked == 3  # 读设置 / 写设置 / 可选目录
-
+    assert checked == 7  # 读设置 / 写设置 / 可选目录 + 供应商实例的增 / 改 / 删 / 刷新模型
 
 def test_update_body_covers_every_managed_setting():
     """请求体字段与设置项登记表不许走散（少一个字段 = 那一项永远改不了）。"""
@@ -474,3 +522,151 @@ def test_update_body_covers_every_managed_setting():
 def test_every_managed_setting_exists_on_the_settings_object():
     """设置项必须真的落在 Settings 上：写穿靠 setattr 同步，字段名写错会当场报错而不是静默失效。"""
     assert set(FIELDS) <= set(Settings.model_fields)
+
+
+# ---- 供应商实例（多供应商并存）----
+
+
+def _add_provider(payload: dict) -> dict:
+    response = client.post("/api/v1/settings/providers", json=payload)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_add_provider_first_becomes_default_and_is_ready():
+    """添加的第一家自动成为全局默认；回读带掩码与就绪状态（明文一个字节都不回显）。"""
+    instance = _add_provider({"provider": "deepseek", "api_key": PLAINTEXT})
+    assert instance["provider"] == "deepseek"
+    assert instance["label"] == "DeepSeek"
+    assert instance["is_default"] is True
+    assert instance["ready"] is True
+    assert instance["key_configured"] is True
+    assert instance["key_masked"] == f"••••{MASKED_TAIL}"
+
+    view = _get()
+    assert len(view["provider_instances"]) == 1
+    assert view["provider"]["label"] == "DeepSeek"  # legacy 单供应商视图由默认实例派生
+
+
+def test_custom_service_lives_in_the_provider_list():
+    """自定义 OpenAI 兼容服务也是「添加供应商」里的一家：同一列表、同一入口、可设为默认。"""
+    first = _add_provider({"provider": "deepseek", "api_key": PLAINTEXT})
+    second = _add_provider(
+        {
+            "provider": "custom",
+            "label": "我的中转",
+            "base_url": "https://example.com/v1",
+            "model": "my-model",
+            "api_key": PLAINTEXT,
+        }
+    )
+    assert second["is_default"] is False
+    assert second["models"] == ["fake-model-a", "fake-model-b"]  # 添加时同步拉取并缓存
+
+    patched = client.patch(
+        f"/api/v1/settings/providers/{second['id']}", json={"make_default": True}
+    )
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["is_default"] is True
+
+    # 全局默认模型由「全局默认」卡显式选：指默认实例 + 填模型，实际生效值就是它
+    _put({"default_provider_instance": second["id"], "llm_model": "my-model"})
+    items = _by_name(_get()["items"])
+    assert items["llm_model"]["effective"] == "my-model"
+
+    # 删掉默认的那家：默认回落到剩下的第一家，指针不悬空
+    deleted = client.delete(f"/api/v1/settings/providers/{second['id']}")
+    assert deleted.status_code == 200, deleted.text
+    instances = _by_name(deleted.json()["provider_instances"], "id")
+    assert instances[first["id"]]["is_default"] is True
+
+
+def test_task_can_pick_provider_and_model_independently():
+    """任务级 = 供应商实例 + 模型：不同任务可以各用一家（意图用 DeepSeek，生成用 Kimi）。"""
+    deepseek = _add_provider({"provider": "deepseek", "api_key": PLAINTEXT})
+    moonshot = _add_provider({"provider": "moonshot", "api_key": PLAINTEXT})
+
+    view = _put(
+        {
+            "task_provider_intent": deepseek["id"],
+            "task_model_intent": "deepseek-v4-pro",
+            "task_provider_generate": moonshot["id"],
+        }
+    )
+    tasks = _by_name(view["tasks"], "task")
+    assert tasks["intent"]["model"] == "deepseek-v4-pro"
+    assert tasks["intent"]["provider_label"] == "DeepSeek"
+    assert tasks["intent"]["source"] == "任务级"
+    # 指了实例没选模型：用该实例方言的默认模型（仍是任务级口径）
+    assert tasks["generate"]["model"] == "kimi-latest"
+    assert tasks["generate"]["provider_label"] == "Kimi（月之暗面）"
+    # 冲突比对没指：跟随全局默认
+    assert tasks["conflict"]["source"] == "全局默认"
+
+
+def test_add_provider_validation_errors_are_explicit():
+    """实例字段的目录校验：未知供应商 / 缺地址 / 缺 Key / 目录外模型，都给稳定 code。"""
+    cases = [
+        ({"provider": "openai"}, "unknown_provider"),
+        ({"provider": "custom", "model": "my-model"}, "missing_base_url"),
+        ({"provider": "custom", "base_url": "https://example.com/v1"}, "missing_key"),
+        ({"provider": "deepseek"}, "missing_key"),
+        ({"provider": "deepseek", "api_key": PLAINTEXT, "model": "gpt-4o"}, "unknown_model"),
+    ]
+    for payload, code in cases:
+        response = client.post("/api/v1/settings/providers", json=payload)
+        assert response.status_code == 400, f"{code}: {response.text}"
+        assert response.json()["detail"]["code"] == code
+
+
+def test_task_provider_pointer_must_reference_an_added_instance():
+    """任务指向未添加的实例 id：400 unknown_provider_instance，库内一行不动。"""
+    before = _stored_rows()
+    response = client.put("/api/v1/settings", json={"task_provider_generate": "no-such-id"})
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"]["code"] == "unknown_provider_instance"
+    assert _stored_rows() == before
+
+
+def test_refresh_models_endpoint_replaces_the_cache():
+    """刷新模型清单：整表替换缓存，返回更新后的实例视图。"""
+    instance = _add_provider({"provider": "deepseek", "api_key": PLAINTEXT})
+    assert instance["models"] == ["fake-model-a", "fake-model-b"]
+
+    from app.core.llm import provider_instances
+
+    original = provider_instances.fetch_model_ids
+    try:
+        provider_instances.fetch_model_ids = lambda _row: ["brand-new-model"]
+        refreshed = client.post(f"/api/v1/settings/providers/{instance['id']}/refresh-models")
+    finally:
+        provider_instances.fetch_model_ids = original
+    assert refreshed.status_code == 200, refreshed.text
+    assert refreshed.json()["models"] == ["brand-new-model"]
+    assert refreshed.json()["models_error"] == ""
+
+
+def test_fetch_failure_keeps_old_models_and_allows_manual_model():
+    """拉取失败：不落半行、原因可见；该家的模型走「手动填写」仍可被任务采用。"""
+    from app.core.llm import provider_instances
+
+    original = provider_instances.fetch_model_ids
+    try:
+
+        def _boom(_row) -> list[str]:
+            raise RuntimeError("网络不通（测试替身）")
+
+        provider_instances.fetch_model_ids = _boom
+        instance = _add_provider({"provider": "moonshot", "api_key": PLAINTEXT})
+    finally:
+        provider_instances.fetch_model_ids = original
+
+    assert instance["models"] == []
+    assert "网络不通" in instance["models_error"]
+
+    # 手动填模型 ID（实例路径不做硬编码目录校验）：任务可以照常采用
+    view = _put({"task_provider_generate": instance["id"], "task_model_generate": "hand-typed-model"})
+    tasks = _by_name(view["tasks"], "task")
+    assert tasks["generate"]["model"] == "hand-typed-model"
+    assert tasks["generate"]["source"] == "任务级"
+

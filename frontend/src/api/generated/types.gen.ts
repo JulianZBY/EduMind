@@ -909,6 +909,136 @@ export type PingResponse = {
 };
 
 /**
+ * ProviderInstanceCreate
+ *
+ * 添加一家供应商：目录家只填 provider + Key；自定义服务另填名称 / 地址 / 模型。
+ */
+export type ProviderInstanceCreate = {
+    /**
+     * Api Key
+     *
+     * 该供应商的 API Key
+     */
+    api_key?: string;
+    /**
+     * Base Url
+     *
+     * 服务商地址覆盖；目录家用预设，自定义服务必填
+     */
+    base_url?: string;
+    /**
+     * Label
+     *
+     * 面向教师的名称；留空用目录名（自定义服务建议填写）
+     */
+    label?: string;
+    /**
+     * Make Default
+     *
+     * 添加后设为全局默认；第一家自动成为默认
+     */
+    make_default?: boolean;
+    /**
+     * Model
+     *
+     * 默认模型覆盖；目录家用预设，自定义服务必填
+     */
+    model?: string;
+    /**
+     * Provider
+     *
+     * 供应商目录里的 id（内置方言 + providers.json 声明的家；取值见 GET /settings/catalog）
+     */
+    provider: string;
+};
+
+/**
+ * ProviderInstanceUpdate
+ *
+ * 改一家已添加的供应商：只传要改的字段；api_key 缺省 = 不动（回读也拿不到明文）。
+ */
+export type ProviderInstanceUpdate = {
+    /**
+     * Api Key
+     *
+     * 传空字符串 = 清除 Key；缺省 / null = 不动
+     */
+    api_key?: string | null;
+    /**
+     * Base Url
+     */
+    base_url?: string | null;
+    /**
+     * Label
+     */
+    label?: string | null;
+    /**
+     * Make Default
+     */
+    make_default?: boolean;
+    /**
+     * Model
+     */
+    model?: string | null;
+};
+
+/**
+ * ProviderInstanceView
+ *
+ * 一条已添加的供应商实例：设置页「添加供应商」产生的每一家。
+ */
+export type ProviderInstanceView = {
+    /**
+     * Base Url
+     */
+    base_url: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Is Default
+     */
+    is_default: boolean;
+    /**
+     * Key Configured
+     */
+    key_configured: boolean;
+    /**
+     * Key Masked
+     */
+    key_masked: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Models
+     */
+    models: Array<string>;
+    /**
+     * Models Error
+     */
+    models_error: string;
+    /**
+     * Provider
+     */
+    provider: string;
+    /**
+     * Ready
+     */
+    ready: boolean;
+    /**
+     * Reason
+     */
+    reason: string;
+};
+
+/**
  * ProviderView
  *
  * 当前对话供应商：id、面向教师的名称、它用哪个字段存 Key，以及「现在能不能用」。
@@ -1719,9 +1849,21 @@ export type SettingsCatalog = {
  */
 export type SettingsUpdate = {
     /**
+     * Ark Api Key
+     *
+     * 豆包 API Key
+     */
+    ark_api_key?: string | null;
+    /**
+     * Asr Api Key
+     *
+     * 百炼语音转写 Key（paraformer 专用，千问 MaaS 的 Key 不通用）
+     */
+    asr_api_key?: string | null;
+    /**
      * Asr Provider
      *
-     * 语音转写实现：stub / paraformer
+     * 语音转写实现：auto / paraformer
      */
     asr_provider?: string | null;
     /**
@@ -1737,17 +1879,17 @@ export type SettingsUpdate = {
      */
     chunk_strategy?: string | null;
     /**
-     * Dashscope Api Key
-     *
-     * 阿里云百炼 API Key
-     */
-    dashscope_api_key?: string | null;
-    /**
      * Deepseek Api Key
      *
      * DeepSeek API Key
      */
     deepseek_api_key?: string | null;
+    /**
+     * Default Provider Instance
+     *
+     * 全局默认供应商实例 id（留空 = legacy 单供应商路径）
+     */
+    default_provider_instance?: string | null;
     /**
      * Embedding Api Key
      *
@@ -1793,7 +1935,7 @@ export type SettingsUpdate = {
     /**
      * Llm Provider
      *
-     * 供应商目录里的 id（stub / dashscope / deepseek / siliconflow / custom）
+     * 供应商目录里的 id（内置方言 + providers.json 声明的家；取值见 GET /settings/catalog）
      */
     llm_provider?: string | null;
     /**
@@ -1809,11 +1951,29 @@ export type SettingsUpdate = {
      */
     mineru_token?: string | null;
     /**
+     * Minimax Api Key
+     *
+     * MiniMax API Key
+     */
+    minimax_api_key?: string | null;
+    /**
+     * Moonshot Api Key
+     *
+     * Kimi API Key
+     */
+    moonshot_api_key?: string | null;
+    /**
      * Pdf Strategy
      *
      * PDF 解析策略：mineru_then_pypdf / pypdf / mineru
      */
     pdf_strategy?: string | null;
+    /**
+     * Qwen Api Key
+     *
+     * 千问 API Key
+     */
+    qwen_api_key?: string | null;
     /**
      * Retrieval Strategy
      *
@@ -1823,7 +1983,7 @@ export type SettingsUpdate = {
     /**
      * Search Provider
      *
-     * 网络搜索实现：auto / stub / bocha
+     * 网络搜索实现：auto / bocha
      */
     search_provider?: string | null;
     /**
@@ -1850,6 +2010,30 @@ export type SettingsUpdate = {
      * 意图分析用的模型档位
      */
     task_model_intent?: string | null;
+    /**
+     * Task Provider Conflict
+     *
+     * 冲突比对用的供应商实例 id
+     */
+    task_provider_conflict?: string | null;
+    /**
+     * Task Provider Generate
+     *
+     * 生成用的供应商实例 id
+     */
+    task_provider_generate?: string | null;
+    /**
+     * Task Provider Intent
+     *
+     * 意图分析用的供应商实例 id
+     */
+    task_provider_intent?: string | null;
+    /**
+     * Zhipu Api Key
+     *
+     * 智谱 API Key
+     */
+    zhipu_api_key?: string | null;
 };
 
 /**
@@ -1875,6 +2059,10 @@ export type SettingsView = {
      */
     note: string;
     provider: ProviderView;
+    /**
+     * Provider Instances
+     */
+    provider_instances: Array<ProviderInstanceView>;
     /**
      * Tasks
      */
@@ -1983,7 +2171,7 @@ export type StructurePreview = {
 /**
  * TaskModelView
  *
- * 一个任务级模型档位：选了什么、**实际用的是什么**、来源是任务级还是全局默认。
+ * 一个任务级模型档位：选了哪家、选了什么、**实际用的是哪家哪个模型**、来源。
  */
 export type TaskModelView = {
     /**
@@ -1999,9 +2187,25 @@ export type TaskModelView = {
      */
     model: string;
     /**
+     * Provider
+     */
+    provider: string;
+    /**
+     * Provider Field
+     */
+    provider_field: string;
+    /**
+     * Provider Label
+     */
+    provider_label: string;
+    /**
      * Selected
      */
     selected: string;
+    /**
+     * Selected Provider
+     */
+    selected_provider: string;
     /**
      * Source
      */
@@ -2043,7 +2247,7 @@ export type ValidationError = {
 /**
  * WebSearchResponse
  *
- * 网络搜索响应：结果列表（无 Key 时由 stub 返回带标记的占位结果）。
+ * 网络搜索响应：结果列表（未配置博查 Key 时返回 503 引导，不返回占位结果）。
  */
 export type WebSearchResponse = {
     /**
@@ -3312,6 +3516,153 @@ export type ReadCatalogApiV1SettingsCatalogGetResponses = {
 };
 
 export type ReadCatalogApiV1SettingsCatalogGetResponse = ReadCatalogApiV1SettingsCatalogGetResponses[keyof ReadCatalogApiV1SettingsCatalogGetResponses];
+
+export type CreateProviderInstanceApiV1SettingsProvidersPostData = {
+    body: ProviderInstanceCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings/providers';
+};
+
+export type CreateProviderInstanceApiV1SettingsProvidersPostErrors = {
+    /**
+     * 供应商实例不成立：`code` 是稳定机器码（unknown_provider / missing_key / missing_base_url / missing_model / invalid_base_url / unknown_model），`message` 可直接显示给教师；本次未落库
+     */
+    400: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type CreateProviderInstanceApiV1SettingsProvidersPostResponses = {
+    /**
+     * 添加成功的供应商实例（Key 只有掩码）
+     */
+    200: ProviderInstanceView;
+};
+
+export type CreateProviderInstanceApiV1SettingsProvidersPostResponse = CreateProviderInstanceApiV1SettingsProvidersPostResponses[keyof CreateProviderInstanceApiV1SettingsProvidersPostResponses];
+
+export type DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Instance Id
+         */
+        instance_id: string;
+    };
+    query?: never;
+    url: '/api/v1/settings/providers/{instance_id}';
+};
+
+export type DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteErrors = {
+    /**
+     * 这条供应商实例不存在（可能刚被删除）
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteError = DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteErrors[keyof DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteErrors];
+
+export type DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteResponses = {
+    /**
+     * 删除后的当前生效设置
+     */
+    200: SettingsView;
+};
+
+export type DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteResponse = DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteResponses[keyof DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteResponses];
+
+export type UpdateProviderInstanceApiV1SettingsProvidersInstanceIdPatchData = {
+    body: ProviderInstanceUpdate;
+    path: {
+        /**
+         * Instance Id
+         */
+        instance_id: string;
+    };
+    query?: never;
+    url: '/api/v1/settings/providers/{instance_id}';
+};
+
+export type UpdateProviderInstanceApiV1SettingsProvidersInstanceIdPatchErrors = {
+    /**
+     * 供应商实例不成立：`code` 是稳定机器码（unknown_provider / missing_key / missing_base_url / missing_model / invalid_base_url / unknown_model），`message` 可直接显示给教师；本次未落库
+     */
+    400: unknown;
+    /**
+     * 这条供应商实例不存在（可能刚被删除）
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type UpdateProviderInstanceApiV1SettingsProvidersInstanceIdPatchResponses = {
+    /**
+     * 改后的供应商实例（Key 只有掩码）
+     */
+    200: ProviderInstanceView;
+};
+
+export type UpdateProviderInstanceApiV1SettingsProvidersInstanceIdPatchResponse = UpdateProviderInstanceApiV1SettingsProvidersInstanceIdPatchResponses[keyof UpdateProviderInstanceApiV1SettingsProvidersInstanceIdPatchResponses];
+
+export type RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostData = {
+    body?: never;
+    path: {
+        /**
+         * Instance Id
+         */
+        instance_id: string;
+    };
+    query?: never;
+    url: '/api/v1/settings/providers/{instance_id}/refresh-models';
+};
+
+export type RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostErrors = {
+    /**
+     * 这条供应商实例不存在（可能刚被删除）
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostError = RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostErrors[keyof RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostErrors];
+
+export type RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostResponses = {
+    /**
+     * 刷新后的供应商实例（Key 只有掩码）
+     */
+    200: ProviderInstanceView;
+};
+
+export type RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostResponse = RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostResponses[keyof RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostResponses];
 
 export type HealthHealthGetData = {
     body?: never;

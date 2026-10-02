@@ -17,11 +17,13 @@ import { UploadDialog } from './UploadDialog'
 import { isProcessing } from './status'
 import { useDocuments } from './queries'
 import { useKnowledgeUi } from './store'
-
+import { ProviderMissingNotice } from '../settings/ProviderMissingNotice'
+import { useProviderMissingState } from '../settings/queries'
 export function KnowledgeArea() {
   const { data, isPending, isError } = useDocuments()
   const openUpload = useKnowledgeUi((state) => state.openUpload)
   const documents = data?.documents ?? []
+  const missing = useProviderMissingState()
 
   return (
     <Workbench
@@ -40,6 +42,9 @@ export function KnowledgeArea() {
       }
     >
       <MainPanel title="知识库" tagline="教师个人教学资料的仓库">
+        {missing.providersMissing ? (
+          <ProviderMissingNotice message="还没有配置供应商：上传资料后分块与解析照常入库，知识提取与冲突检测需要对话模型，先添加一家再用全能力。" />
+        ) : null}
         <Outlet />
       </MainPanel>
       <UploadDialog />

@@ -26,13 +26,14 @@ const PYTHON_SNIPPET = [
   'sys.stdout.write("\\n")',
 ].join('\n')
 
-function run(candidates, args) {
+function run(candidates, args, env = {}) {
   let lastError = null
   for (const bin of candidates) {
     const result = spawnSync(bin, args, {
       cwd: backendDir,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
+      env: { ...process.env, ...env },
     })
     if (result.error) {
       lastError = result.error
@@ -43,10 +44,9 @@ function run(candidates, args) {
   }
   return { error: lastError }
 }
-
 const uvBinaries = process.platform === 'win32' ? ['uv.exe', 'uv'] : ['uv']
-const result = run(uvBinaries, ['run', 'python', '-c', PYTHON_SNIPPET])
-
+// Windows 控制台默认 GBK：schema 里的中文与「•」掩码字符会炸 stdout，钉住 UTF-8
+const result = run(uvBinaries, ['run', 'python', '-c', PYTHON_SNIPPET], { PYTHONIOENCODING: 'utf-8' })
 if (result.error) {
   console.error(`[openapi:snapshot] 无法执行 uv（${result.error.message}）。`)
   console.error('[openapi:snapshot] 请先安装 uv，并执行：cd backend && uv sync')

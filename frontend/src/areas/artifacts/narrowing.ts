@@ -23,7 +23,7 @@ import type {
   ReviseWordEndpointApiV1ReviseWordPostData,
   ReviseWordRequest,
 } from '../../api/generated'
-import { ApiError } from '../../api/client'
+import { ApiError, apiErrorMessage } from '../../api/client'
 
 /**
  * 五类生成物（CONTEXT.md「生成物」）的类别与展示次序。
@@ -371,11 +371,12 @@ export function producedVersionLabel(version: number | null | undefined): string
   return typeof version === 'number' ? versionLabel(version) : '新版本'
 }
 
-/** 生成失败的说法：502 = 模型没给出可用结果（没落半成品），与「后端连不上」分开讲。 */
+/** 生成失败的说法：502 = 模型没给出可用结果（没落半成品）；503 = 云端能力未配置（后端给了去设置页的引导）；与「后端连不上」分开讲。 */
 export function generationFailureMessage(error: unknown, kind: string): string {
   if (error instanceof ApiError) {
     if (error.status === 502) return `模型这次没给出可用的${kind}，也没落半成品：重试即可。`
     if (error.status === 404) return '这次备课在服务端找不到了：回备课会话列表重选一次。'
+    if (error.status === 503) return apiErrorMessage(error)
   }
   return `没生成成：后端暂时做不了这一次${kind}生成，重试即可。`
 }

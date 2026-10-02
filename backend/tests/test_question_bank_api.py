@@ -1,4 +1,4 @@
-"""题库查询与题目详情测试（HTTP API 主接缝：stub 网关 + 直接种子数据）。
+"""题库查询与题目详情测试（HTTP API 主接缝：假网关 + 直接种子数据）。
 
 覆盖票 12 验收项与票 01 登记的遗留：
 - 按考查知识点筛选，经 HTTP 缝断言
@@ -15,24 +15,23 @@ from sqlalchemy import select
 import app.core.embedding.factory as embedding_factory_module
 import app.generate.exam as exam_module
 import app.knowledge.vector_store as vector_store_module
-from app.core.embedding.stub import StubEmbedder
-from app.core.llm.providers.stub import StubProvider
 from app.db import SessionLocal, init_db
 from app.db.models import KnowledgeNode, Question
 from app.knowledge.vector_store import VectorStore
 from app.main import app
+from tests.support.fakes import FakeEmbedder, FakeLLM
 
 client = TestClient(app)
 init_db()  # 幂等：确保表、列与默认用户存在
 
-# StubProvider 固定试卷中题目考查的知识点（与 test_exam_api.py 同一份约定）
-STUB_KNOWLEDGE_POINTS = ["TCP三次握手", "TCP四次挥手", "TCP滑动窗口"]
+# FakeLLM 固定试卷中题目考查的知识点（与 test_exam_api.py 同一份约定）
+FAKE_KNOWLEDGE_POINTS = ["TCP三次握手", "TCP四次挥手", "TCP滑动窗口"]
 
 
-def _install_stub(monkeypatch, tmp_path) -> None:
-    """stub 网关 + 空向量库：生成与查询都不触外部服务，检索降级为空上下文。"""
-    monkeypatch.setattr(exam_module, "get_llm", lambda: StubProvider())
-    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
+def _install_fake(monkeypatch, tmp_path) -> None:
+    """假网关 + 空向量库：生成与查询都不触外部服务，检索降级为空上下文。"""
+    monkeypatch.setattr(exam_module, "get_llm", lambda: FakeLLM())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
     monkeypatch.setattr(
         vector_store_module, "VectorStore", lambda: VectorStore(str(tmp_path / "v.db"))
     )
@@ -51,13 +50,13 @@ def _seed_node(title: str) -> str:
 
 
 def _seed_all_knowledge_points() -> dict[str, str]:
-    return {title: _seed_node(title) for title in STUB_KNOWLEDGE_POINTS}
+    return {title: _seed_node(title) for title in FAKE_KNOWLEDGE_POINTS}
 
 
 def _bank_ids() -> set[str]:
     """题库现有的题目 id。
 
-    只用来圈出「本轮新入库」的行：同文件前序用例会写出同一份 stub 题目（内容一模一样），
+    只用来圈出「本轮新入库」的行：同文件前序用例会写出同一份替身题目（内容一模一样），
     不按 id 区分就会把没有考查知识点关联的存量行当成新行（顺序无关、可重复跑）。
     """
     db = SessionLocal()
@@ -85,12 +84,12 @@ def _list(**params) -> dict:
 
 def test_list_narrows_to_the_examined_knowledge_point(monkeypatch, tmp_path):
     """验收 1：按考查知识点筛选经 HTTP 缝成立——筛出来的题都考这个知识点，别的题被排除。"""
-    _install_stub(monkeypatch, tmp_path)
+    _install_fake(monkeypatch, tmp_path)
     _seed_all_knowledge_points()
     generated = _generate()
-    # stub 里「TCP滑动窗口」只被其中一道题主考（另两题考三次握手/四次挥手）
+    # 替身试卷里「TCP滑动窗口」只被其中一道题主考（另两题考三次握手/四次挥手）
     target = [q for q in generated["questions"] if q["knowledge_point"] == "TCP滑动窗口"]
-    assert target, "stub 题目里应有以 TCP滑动窗口 为考查知识点的题"
+    assert target, "替身题目里应有以 TCP滑动窗口 为考查知识点的题"
 
     body = _list(knowledge_point="TCP滑动窗口", limit=100)
 
@@ -112,7 +111,7 @@ def test_list_narrows_to_the_examined_knowledge_point(monkeypatch, tmp_path):
 
 def test_list_returns_empty_for_knowledge_point_without_questions(monkeypatch, tmp_path):
     """筛了没人考的知识点就返回空列表（不是全量、也不是报错）。"""
-    _install_stub(monkeypatch, tmp_path)
+    _install_fake(monkeypatch, tmp_path)
     _generate()
 
     body = _list(knowledge_point=f"没有题目的知识点-{uuid.uuid4().hex[:6]}")
@@ -123,7 +122,7 @@ def test_list_returns_empty_for_knowledge_point_without_questions(monkeypatch, t
 
 def test_generated_questions_are_listable_immediately(monkeypatch, tmp_path):
     """验收 2：试卷生成入库的题目立即出现在列表，且排在最新一页（入库时间倒序）。"""
-    _install_stub(monkeypatch, tmp_path)
+    _install_fake(monkeypatch, tmp_path)
     _seed_all_knowledge_points()
     before = _bank_ids()
     generated = _generate()
@@ -142,7 +141,7 @@ def test_generated_questions_are_listable_immediately(monkeypatch, tmp_path):
 
 def test_list_paginates_and_caps_page_size(monkeypatch, tmp_path):
     """分页与上限：limit 决定本页条数，offset 跳过已看过的题，越界参数由框架拦下。"""
-    _install_stub(monkeypatch, tmp_path)
+    _install_fake(monkeypatch, tmp_path)
     _generate()
     total = _list(limit=1)["total"]
     assert total >= 1
@@ -164,7 +163,7 @@ def test_list_paginates_and_caps_page_size(monkeypatch, tmp_path):
 
 def test_detail_shows_type_answer_source_and_knowledge_points(monkeypatch, tmp_path):
     """验收 3：详情呈现题型 / 答案 / 来源 / 考查知识点。"""
-    _install_stub(monkeypatch, tmp_path)
+    _install_fake(monkeypatch, tmp_path)
     _seed_all_knowledge_points()
     before = _bank_ids()
     generated = _generate()
@@ -183,7 +182,7 @@ def test_detail_shows_type_answer_source_and_knowledge_points(monkeypatch, tmp_p
     assert detail["created_at"]  # 入库时间
     assert detail["knowledge_points"], "详情必须给出考查知识点"
     for point in detail["knowledge_points"]:
-        assert point["title"] in STUB_KNOWLEDGE_POINTS
+        assert point["title"] in FAKE_KNOWLEDGE_POINTS
         assert point["weight"] in {"主考", "涉及"}
 
 
@@ -219,7 +218,7 @@ def test_question_bank_group_is_declared_and_used():
 
 def test_list_rows_do_not_carry_the_answer(monkeypatch, tmp_path):
     """列表是工作台密度的题目行（不含答案）；答案只在详情里给出。"""
-    _install_stub(monkeypatch, tmp_path)
+    _install_fake(monkeypatch, tmp_path)
     generated = _generate()
     contents = {q["content"] for q in generated["questions"]}
     item = next(x for x in _list(limit=100)["items"] if x["content"] in contents)

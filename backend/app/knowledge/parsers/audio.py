@@ -1,4 +1,4 @@
-"""录音解析：转写 provider（paraformer 真实云端 / stub 无 key 可跑）→ 文字稿。"""
+"""录音解析：转写 provider（paraformer 云端，需百炼 Key）→ 文字稿；未配置时给出引导。"""
 
 from app.core.asr.factory import get_transcriber
 from app.knowledge.parsers.base import Parser

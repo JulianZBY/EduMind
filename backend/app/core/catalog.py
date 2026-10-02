@@ -15,8 +15,9 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
 
+from app.core import provider_config
 from app.core.asr.factory import ASR_BUILDERS, get_transcriber
-from app.core.dialects import DIALECTS
+from app.core.dialects import DIALECTS, Dialect
 from app.core.embedding.factory import EMBEDDING_BUILDERS, get_embedder
 from app.core.parser.factory import PDF_BUILDERS, get_pdf_parser
 from app.core.search.factory import SEARCH_BUILDERS, get_search
@@ -57,50 +58,77 @@ class ProviderSpec:
 
 # 目录内补充的常用对话模型（预设里只带一个默认档位，这里给出可选的更便宜/更强的档位）
 _EXTRA_CHAT_MODELS: dict[str, tuple[str, ...]] = {
-    "dashscope": ("qwen-turbo", "qwen-max"),
-    "deepseek": ("deepseek-reasoner",),
+    "qwen": ("qwen-turbo", "qwen-max"),
+    "deepseek": ("deepseek-v4-pro",),
+    "moonshot": ("kimi-k2-turbo-preview", "kimi-k2-0905-preview"),
+    "zhipu": ("glm-4.5-air", "glm-4.5v", "glm-4-flash"),
+    "minimax": ("MiniMax-M1", "abab6.5s-chat"),
+    "ark": ("doubao-seed-1-6-flash-250715", "doubao-pro-32k"),
     "siliconflow": ("deepseek-ai/DeepSeek-V3",),
 }
 
 _PROVIDER_LABELS = {
-    "dashscope": "阿里云百炼（dashscope）",
+    "qwen": "千问（Qwen）",
     "deepseek": "DeepSeek",
+    "moonshot": "Kimi（月之暗面）",
+    "zhipu": "智谱 GLM",
+    "minimax": "MiniMax",
+    "ark": "豆包（字节火山方舟）",
     "siliconflow": "硅基流动（SiliconFlow）",
 }
 
 _PROVIDER_NOTES = {
-    "stub": "没有任何云端 Key 时的兜底实现：全链路可跑，结果用于试用与联调，不追求真实质量。",
-    "dashscope": "对话 + 多模态 + 向量化；语音转写也复用它。",
-    "deepseek": "只提供对话；多模态与向量化不在此目录内。",
+    "qwen": "千问官方 MaaS 平台：对话 + 多模态 + 向量化。",
+    "deepseek": "对话 + 多模态（deepseek-flash / deepseek-v4-pro 均支持视觉）；向量化不提供。",
+    "moonshot": "只提供对话；多模态与向量化不在此目录内。",
+    "zhipu": "对话 + 多模态（glm-4.5v）+ 向量化（embedding-3）。",
+    "minimax": "只提供对话；多模态与向量化不在此目录内。",
+    "ark": "对话为主；模型 ID 也接受 ep- 接入点（目录外 ID 放行）。",
     "siliconflow": "对话 + 多模态 + 向量化。",
     "custom": "目录之外的接入方式：填 base_url + 模型 ID + Key 即可用。",
 }
 
+# 目录内补充的常用多模态模型（方言预设只带一个默认档位）
+_EXTRA_VISION_MODELS: dict[str, tuple[str, ...]] = {
+    "deepseek": ("deepseek-flash",),
+}
 
+# 目录之外模型 ID 放行的方言：豆包的 ep- 接入点与自定义服务一样不受目录限制
+_ANY_MODEL_PROVIDERS = {"ark"}
+
+
+def _dedupe(names: tuple[str, ...]) -> tuple[str, ...]:
+    """去掉重复模型名但保持声明顺序（默认档与清单里的第一个常常是同一个）。"""
+    seen: dict[str, None] = {}
+    for name in names:
+        if name:
+            seen.setdefault(name, None)
+    return tuple(seen)
+
+
+def build_spec_from_dialect(dialect: Dialect) -> ProviderSpec:
+    """方言 → 目录里的供应商行。内置方言用预设 label/note；配置声明的家自带名称与说明。"""
+    return ProviderSpec(
+        id=dialect.name,
+        label=dialect.label or _PROVIDER_LABELS.get(dialect.name, dialect.name),
+        base_url=dialect.base_url,
+        key_field=dialect.api_key_field,
+        chat_models=_dedupe(
+            (dialect.chat_model, *_EXTRA_CHAT_MODELS.get(dialect.name, ()), *dialect.extra_chat_models)
+        ),
+        vision_models=(
+            _dedupe((dialect.vision_model, *_EXTRA_VISION_MODELS.get(dialect.name, ()), *dialect.extra_vision_models))
+            if dialect.vision_model
+            else ()
+        ),
+        embed_models=(dialect.embed_model,) if dialect.embed_model else (),
+        accepts_any_model=dialect.name in _ANY_MODEL_PROVIDERS,
+        note=dialect.note or _PROVIDER_NOTES.get(dialect.name, "由 providers.json 声明的服务商。"),
+    )
 def _build_providers() -> dict[str, ProviderSpec]:
-    providers = {
-        "stub": ProviderSpec(
-            id="stub",
-            label="stub 模式",
-            base_url="",
-            key_field="",
-            chat_models=("stub",),
-            vision_models=(),
-            embed_models=(),
-            note=_PROVIDER_NOTES["stub"],
-        )
+    providers: dict[str, ProviderSpec] = {
+        name: build_spec_from_dialect(dialect) for name, dialect in DIALECTS.items()
     }
-    for name, dialect in DIALECTS.items():
-        providers[name] = ProviderSpec(
-            id=name,
-            label=_PROVIDER_LABELS[name],
-            base_url=dialect.base_url,
-            key_field=dialect.api_key_field,
-            chat_models=(dialect.chat_model, *_EXTRA_CHAT_MODELS.get(name, ())),
-            vision_models=(dialect.vision_model,) if dialect.vision_model else (),
-            embed_models=(dialect.embed_model,) if dialect.embed_model else (),
-            note=_PROVIDER_NOTES[name],
-        )
     providers["custom"] = ProviderSpec(
         id="custom",
         label="自定义 OpenAI 兼容服务",
@@ -115,6 +143,9 @@ def _build_providers() -> dict[str, ProviderSpec]:
     return providers
 
 
+# 声明式扩展：`providers.json` 里声明的家先并进方言表，再据方言表建目录——
+# 顺序有意如此，保证「配置文件写了什么，设置页就列什么」，且不依赖模块 import 的先后。
+provider_config.ensure_merged()
 PROVIDERS: dict[str, ProviderSpec] = _build_providers()
 
 
@@ -124,13 +155,14 @@ class TaskSpec:
 
     id: str  # 调用方用的任务名
     label: str  # 面向教师的名称
-    field: str  # 存放该任务档位的 Settings 字段（空 = 回落全局默认）
+    field: str  # 存放该任务模型档位的 Settings 字段（空 = 用供应商实例的默认模型）
+    provider_field: str  # 存放该任务供应商实例 id 的 Settings 字段（空 = 跟随全局默认供应商）
 
 
 TASKS: tuple[TaskSpec, ...] = (
-    TaskSpec("intent", "意图分析", "task_model_intent"),
-    TaskSpec("generate", "生成", "task_model_generate"),
-    TaskSpec("conflict", "冲突比对", "task_model_conflict"),
+    TaskSpec("intent", "意图分析", "task_model_intent", "task_provider_intent"),
+    TaskSpec("generate", "生成", "task_model_generate", "task_provider_generate"),
+    TaskSpec("conflict", "冲突比对", "task_model_conflict", "task_provider_conflict"),
 )
 
 TASKS_BY_ID: dict[str, TaskSpec] = {spec.id: spec for spec in TASKS}
@@ -173,8 +205,8 @@ class CapabilitySpec:
 
 _OPTION_LABELS: dict[str, dict[str, str]] = {
     "asr_provider": {
-        "stub": "stub 模式（无 Key 可跑）",
-        "paraformer": "paraformer（阿里云百炼，复用 DASHSCOPE_API_KEY）",
+        "auto": "自动（有百炼 Key 走 paraformer，否则未配置）",
+        "paraformer": "paraformer（阿里云百炼录音转写：需要百炼 Key，千问 MaaS 不提供）",
     },
     "pdf_strategy": {
         "mineru_then_pypdf": "mineru → pypdf 兜底（默认）",
@@ -182,16 +214,14 @@ _OPTION_LABELS: dict[str, dict[str, str]] = {
         "mineru": "mineru（仅云端，失败即失败）",
     },
     "search_provider": {
-        "auto": "自动（有 Key 走博查，否则 stub 模式）",
-        "stub": "stub 模式",
+        "auto": "自动（有 Key 走博查，未配置则提示去配置）",
         "bocha": "博查（Bocha）",
     },
     "embedding_provider": {
-        "auto": "自动（跟随对话供应商）",
-        "stub": "stub 模式",
+        "auto": "自动（跟随对话供应商，未配置时本地 hash）",
         "hash": "hash（本地确定性兜底向量）",
         "openai": "自定义 OpenAI 兼容 /embeddings",
-        "dashscope": "阿里云百炼 text-embedding-v3",
+        "qwen": "千问 text-embedding-v3",
         "siliconflow": "硅基流动 BAAI/bge-large-zh-v1.5",
     },
     "retrieval_strategy": {
@@ -206,9 +236,9 @@ CAPABILITIES: tuple[CapabilitySpec, ...] = (
         key="asr_provider",
         label="语音转写",
         registry=ASR_BUILDERS,
-        order=("stub", "paraformer"),
+        order=("paraformer",),
         probe=get_transcriber,
-        note="录音资料走哪条转写路径；paraformer 复用阿里云百炼的 Key。",
+        note="录音资料走哪条转写路径；paraformer 是阿里云百炼的服务（千问 MaaS 不提供，需要专门的百炼 Key）。",
     ),
     CapabilitySpec(
         key="pdf_strategy",
@@ -222,19 +252,19 @@ CAPABILITIES: tuple[CapabilitySpec, ...] = (
         key="search_provider",
         label="网络搜索",
         registry=SEARCH_BUILDERS,
-        order=("auto", "stub", "bocha"),
+        order=("auto", "bocha"),
         probe=get_search,
         auto_id="auto",
-        note="题库的「网络」来源用它取题；无 Key 时走 stub 模式占位结果。",
+        note="题库的「网络」来源用它取题；未配置博查 Key 时给出「去配置」提示，不返回占位结果。",
     ),
     CapabilitySpec(
         key="embedding_provider",
         label="向量化",
         registry=EMBEDDING_BUILDERS,
-        order=("auto", "stub", "hash", "openai", "dashscope", "siliconflow"),
+        order=("auto", "hash", "openai", "qwen", "siliconflow"),
         probe=get_embedder,
         auto_id="auto",
-        note="独立于对话供应商；换向量化口径后向量库需重建。",
+        note="独立于对话供应商；未配置时用本地 hash（真实算法，检索质量降级）；换口径后向量库需重建。",
     ),
     CapabilitySpec(
         key="retrieval_strategy",
@@ -278,12 +308,20 @@ FIELDS: dict[str, FieldSpec] = {
         FieldSpec("embedding_base_url", "向量化服务地址（base_url）", "url"),
         FieldSpec("embedding_model", "向量化模型", "embed_model"),
         FieldSpec("llm_api_key", "自定义服务的 API Key", "key"),
-        FieldSpec("dashscope_api_key", "阿里云百炼 API Key", "key"),
+        FieldSpec("qwen_api_key", "千问 API Key", "key"),
         FieldSpec("deepseek_api_key", "DeepSeek API Key", "key"),
+        FieldSpec("moonshot_api_key", "Kimi API Key", "key"),
+        FieldSpec("zhipu_api_key", "智谱 API Key", "key"),
+        FieldSpec("minimax_api_key", "MiniMax API Key", "key"),
+        FieldSpec("ark_api_key", "豆包 API Key", "key"),
         FieldSpec("siliconflow_api_key", "硅基流动 API Key", "key"),
         FieldSpec("embedding_api_key", "向量化 API Key", "key"),
         FieldSpec("mineru_token", "MinerU Token", "key"),
+        FieldSpec("asr_api_key", "百炼语音转写 Key", "key"),
         FieldSpec("bocha_api_key", "博查搜索 Key", "key"),
+        # 多供应商：默认实例与任务级实例指针（存在性由 API 层对着实例表校验）
+        FieldSpec("default_provider_instance", "默认供应商", "provider_instance"),
+        *(FieldSpec(spec.provider_field, spec.label, "provider_instance") for spec in TASKS),
         *(FieldSpec(spec.key, spec.label, "capability") for spec in CAPABILITIES),
         *(FieldSpec(spec.field, spec.label, "task_model") for spec in TASKS),
     )
@@ -313,15 +351,21 @@ def normalize(name: str, value: str) -> str:
         return value.lower()
     return value
 
-
-def validate_patch(values: Mapping[str, str], current: Mapping[str, str]) -> None:
+def validate_patch(
+    values: Mapping[str, str],
+    current: Mapping[str, str],
+    instance_dialects: Mapping[str, str] | None = None,
+) -> None:
     """目录口径校验：不在目录里的值一律抛 SettingsError（调用方据此返回明确错误码）。
 
-    `current` 是当前生效值，用于跨字段判断——模型要落到哪个供应商的目录里，取决于
-    「本次是否改供应商，否则看当前生效的供应商」。
+    `current` 是当前生效值，用于跨字段判断；`instance_dialects` 是供应商实例 id → 方言 id
+    的映射（多供应商）：任务级模型落在哪个方言的目录里，取决于该任务指向的实例
+    （`task_provider_*`，没指则默认实例）；没有实例映射时回落 legacy 单供应商（`llm_provider`）。
     """
+    instances = instance_dialects or {}
     provider_id = provider_of(values) or provider_of(current)
-    if "llm_provider" in values or "llm_provider" in current:
+    if ("llm_provider" in values or "llm_provider" in current) and provider_id:
+        # 空 = 未配置，合法状态（产品没有假数据兜底）
         _check_provider(provider_id)
 
     for name, raw in values.items():
@@ -335,12 +379,56 @@ def validate_patch(values: Mapping[str, str], current: Mapping[str, str]) -> Non
             _check_provider(value)
         elif spec.kind == "url":
             _check_url(spec, value)
-        elif spec.kind in ("chat_model", "vision_model", "task_model"):
-            _check_model(spec, value, provider_id)
+        elif spec.kind in ("chat_model", "vision_model"):
+            # 实例路径（多供应商）：模型池由 /v1/models 动态拉取 + 手动填写，不做硬编码目录校验
+            dialect = _dialect_for_global(values, current, instances)
+            if dialect:
+                _check_model(spec, value, dialect)
+        elif spec.kind == "task_model":
+            dialect = _dialect_for_task(name, values, current, instances)
+            if dialect:
+                _check_model(spec, value, dialect)
         elif spec.kind == "capability":
             _check_capability(name, value)
         # embed_model：向量化是独立轴（EMBEDDING_PROVIDER=openai 时就是任意模型 ID），不做目录校验
+        # provider_instance：目录校验无从谈起，存在性由 API 层对着实例表校验（unknown_provider_instance）
 
+TASKS_BY_FIELD: dict[str, TaskSpec] = {spec.field: spec for spec in TASKS}
+
+
+def _dialect_for_global(
+    values: Mapping[str, str],
+    current: Mapping[str, str],
+    instances: Mapping[str, str],
+) -> str:
+    """全局模型项（llm_model / llm_vision_model）落在哪个目录里校验。
+
+    指到供应商实例时返回空字符串：模型池动态拉取 + 手动填写，不按硬编码目录校验；
+    未指实例（legacy 单供应商路径）时返回方言 id，照旧按目录校验。
+    """
+    default_id = (
+        values.get("default_provider_instance") or current.get("default_provider_instance") or ""
+    ).strip()
+    if default_id in instances:
+        return ""  # 实例路径：跳过目录校验（动态模型池）
+    return provider_of(values) or provider_of(current)
+
+
+def _dialect_for_task(
+    name: str,
+    values: Mapping[str, str],
+    current: Mapping[str, str],
+    instances: Mapping[str, str],
+) -> str:
+    """任务级模型落在哪个目录里校验：指了实例（动态模型池）返回空，否则走全局口径。"""
+    task = TASKS_BY_FIELD.get(name)
+    if task is not None:
+        instance_id = (
+            values.get(task.provider_field) or current.get(task.provider_field) or ""
+        ).strip()
+        if instance_id in instances:
+            return ""  # 实例路径：跳过目录校验（动态模型池）
+    return _dialect_for_global(values, current, instances)
 
 def _check_provider(value: str) -> str:
     if value in PROVIDERS:

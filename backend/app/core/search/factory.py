@@ -1,15 +1,21 @@
-"""搜索工厂：settings.search_provider（留空 = 有 BOCHA_API_KEY 用 bocha，否则 stub）。"""
+"""搜索工厂：settings.search_provider（留空 = 有 BOCHA_API_KEY 用 bocha，否则未配置）。
+
+无 Key 时抛 `ProviderNotConfigured`（不再返回占位假结果）：题库的「网络」来源
+会得到明确的「去配置博查 Key」引导。
+"""
 
 from collections.abc import Callable
 from functools import lru_cache
 
 from app.config import Settings, settings
+from app.core.errors import ProviderNotConfigured
 from app.core.registry import build, register
 from app.core.search.base import WebSearch
 from app.core.search.bocha import BochaSearch
-from app.core.search.stub import StubSearch
 
 SEARCH_BUILDERS: dict[str, Callable[[Settings], WebSearch]] = {}
+
+NOT_CONFIGURED_MESSAGE = "网络搜索未配置：到「设置 → 能力实现」把网络搜索指到博查，或在 .env 配置 BOCHA_API_KEY。"
 
 
 def _bocha(cfg: Settings) -> WebSearch:
@@ -19,10 +25,11 @@ def _bocha(cfg: Settings) -> WebSearch:
 
 
 def _auto(cfg: Settings) -> WebSearch:
-    return _bocha(cfg) if cfg.bocha_api_key else StubSearch()
+    if cfg.bocha_api_key:
+        return _bocha(cfg)
+    raise ProviderNotConfigured(NOT_CONFIGURED_MESSAGE)
 
 
-register(SEARCH_BUILDERS, "stub", lambda cfg: StubSearch())
 register(SEARCH_BUILDERS, "bocha", _bocha)
 register(SEARCH_BUILDERS, "auto", _auto)
 

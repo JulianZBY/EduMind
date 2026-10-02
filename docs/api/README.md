@@ -21,7 +21,8 @@
 | --- | --- |
 | [`conflicts.md`](conflicts.md) | 冲突裁决动作的领域含义、终态映射、三类别的动作矩阵 |
 | [`artifacts.md`](artifacts.md) | 生成物落盘与取回：文件名从哪来、`inline` 的用途、版本与文件的对应关系 |
-| [`stub-mode.md`](stub-mode.md) | 无 Key 时各能力分别是什么行为，为什么有的能跑有的报错 |
+| [`provider-not-configured.md`](provider-not-configured.md) | 未配置云端能力时各接口的行为（503 引导，无假结果兜底） |
+| [`provider-config.md`](provider-config.md) | 不改代码加一家 OpenAI 兼容服务商：`providers.json` 的字段与纪律 |
 
 ## 通用约定
 

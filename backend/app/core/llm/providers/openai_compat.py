@@ -1,6 +1,6 @@
 """OpenAI 兼容 provider：base_url + model + api_key 三个构造参数即可接任何方言。
 
-dashscope / deepseek / 硅基流动的差异（地址、模型名、是否支持多模态）全部落在
+千问 / DeepSeek / 硅基流动的差异（地址、模型名、是否支持多模态）全部落在
 `app.core.dialects` 预设与配置里，实现只有这一份。
 """
 

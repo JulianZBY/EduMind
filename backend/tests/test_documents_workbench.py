@@ -1,12 +1,12 @@
 """知识库工作台的 HTTP 契约测试：上传 → 解析状态落终态 / 资料详情 / 参考资料标记切换。
 
-只断言**响应与数据变迁**（不探内部函数调用）：解析全程走 stub 能力
-（`asr_provider=stub`，无任何云端 Key），因此本文件在 stub 模式下必须全绿
-（见 `docs/architecture.md` 的 stub 底线）。
+只断言**响应与数据变迁**（不探内部函数调用）：录音解析走 tests/support 的替身转写器
+（产品里语音转写未配置时 503 引导，不给假结果），本文件不触任何真实云端。
 
 穷举的状态口径来自 CONTEXT.md 第 4 节：处理中 → 已完成 / 有冲突 / 失败。
 """
 
+import pytest
 from fastapi.testclient import TestClient
 
 import app.api.v1.documents as documents_module
@@ -15,6 +15,16 @@ from app.main import app
 
 client = TestClient(app)
 init_db()  # 幂等：确保表和默认用户存在
+
+@pytest.fixture(autouse=True)
+def _fake_transcriber(monkeypatch):
+    """录音解析挂替身转写器：上传用例离线跑通（产品行为见 asr 工厂的 ProviderNotConfigured）。"""
+    import app.core.asr.factory as asr_factory_module
+    import app.knowledge.parsers.audio as audio_module
+    from tests.support.fakes import FakeTranscriber
+
+    monkeypatch.setattr(audio_module, "get_transcriber", lambda: FakeTranscriber())
+    monkeypatch.setattr(asr_factory_module, "get_transcriber", lambda: FakeTranscriber())
 
 
 def _upload(filename: str, content: bytes, is_reference: bool = False) -> dict:
@@ -42,7 +52,7 @@ def _listed(doc_id: str) -> dict:
 
 def test_upload_returns_processing_then_reaches_completed_without_manual_refresh():
     """上传立即返回「处理中」，后台解析结束后同一份资料已是终态「已完成」。"""
-    created = _upload("lesson-recording.mp3", b"stub audio bytes")
+    created = _upload("lesson-recording.mp3", b"fake audio bytes")
 
     assert created["status"] == "处理中"  # 立即返回，不等解析
     # 上传请求返回即代表后台解析任务已跑完：再读一次就是终态，教师无需任何手动刷新动作
@@ -63,7 +73,7 @@ def test_parse_failure_is_reported_as_terminal_state_and_keeps_no_chunks():
 
 def test_document_detail_exposes_status_reference_and_chunks():
     """详情页要的东西一次给全：状态、参考资料标记、冲突数、分块（含内容可回溯）。"""
-    created = _upload("lecture.mp3", b"stub audio bytes")
+    created = _upload("lecture.mp3", b"fake audio bytes")
 
     detail = _detail(created["id"])
     assert detail["filename"] == "lecture.mp3"
@@ -73,8 +83,8 @@ def test_document_detail_exposes_status_reference_and_chunks():
     assert detail["conflict_count"] == 0
     assert detail["parsed_at"]  # 解析完成时间：终态才写
     assert detail["chunk_count"] == len(detail["chunks"]) >= 1
-    # stub 转写器返回固定文字稿 → 分块内容与来源资料一一对应
-    assert any("stub 录音转写" in chunk["content"] for chunk in detail["chunks"])
+    # 替身转写器返回固定文字稿 → 分块内容与来源资料一一对应
+    assert any("测试替身录音转写" in chunk["content"] for chunk in detail["chunks"])
     assert [chunk["chunk_index"] for chunk in detail["chunks"]] == list(
         range(len(detail["chunks"]))
     )
@@ -91,7 +101,7 @@ def test_processing_document_is_visible_in_list_and_detail(monkeypatch):
         return ""
 
     monkeypatch.setattr(documents_module, "parse_document", noop_parse)
-    created = _upload("still-parsing.mp3", b"stub audio bytes", is_reference=True)
+    created = _upload("still-parsing.mp3", b"fake audio bytes", is_reference=True)
 
     assert created["status"] == "处理中"
     assert _listed(created["id"])["status"] == "处理中"
@@ -117,7 +127,7 @@ def test_unknown_document_detail_is_404():
 
 def test_reference_mark_toggle_takes_effect_immediately():
     """参考资料标记切换即刻生效：切换响应、列表与详情三处口径一致。"""
-    created = _upload("notes.mp3", b"stub audio bytes")
+    created = _upload("notes.mp3", b"fake audio bytes")
     doc_id = created["id"]
     assert created["is_reference"] is False
 
@@ -142,12 +152,12 @@ def test_reference_mark_toggle_rejects_unknown_document_and_bad_body():
     )
     assert missing.status_code == 404
 
-    doc_id = _upload("body-check.mp3", b"stub audio bytes")["id"]
+    doc_id = _upload("body-check.mp3", b"fake audio bytes")["id"]
     assert client.patch(f"/api/v1/documents/{doc_id}/reference", json={}).status_code == 422
 
 
 def test_upload_and_list_expose_the_same_document_shape():
     """上传响应与列表项同形（同一份 response_model），前端不必为两处各推断一次。"""
-    created = _upload("shape.mp3", b"stub audio bytes")
+    created = _upload("shape.mp3", b"fake audio bytes")
 
     assert set(created) == set(_listed(created["id"]))

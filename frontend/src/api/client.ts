@@ -72,3 +72,20 @@ export async function apiRequest<TData>(
   }
   return payload as TData
 }
+
+/**
+ * 接口错误翻成教师能读的一句话：
+ * - 优先 `detail.message`（400 校验与 503 `provider_not_configured` 都是 `{code, message}`，
+ *   message 本身是面向教师的文案，含「去设置页配置」的引导）；
+ * - 兜底用调用方给的默认说法（不出现 4xx/5xx 工程术语）。
+ */
+export function apiErrorMessage(error: unknown, fallback = '操作没有成功，请稍后重试。'): string {
+  if (error instanceof ApiError) {
+    const detail = (error.payload as { detail?: unknown } | null)?.detail
+    if (typeof detail === 'string' && detail) return detail
+    if (detail && typeof (detail as { message?: unknown }).message === 'string') {
+      return (detail as { message: string }).message
+    }
+  }
+  return fallback
+}

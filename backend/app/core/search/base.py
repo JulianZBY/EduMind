@@ -1,4 +1,4 @@
-"""网络搜索能力：接口 + 按配置选择的工厂（stub 为无 Key 底线）。"""
+"""网络搜索能力：接口 + 按配置选择的工厂。未配置博查 Key 时抛 ProviderNotConfigured（无占位假结果）。"""
 
 from abc import ABC, abstractmethod
 

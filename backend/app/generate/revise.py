@@ -137,7 +137,7 @@ async def revise_exam(questions: list[dict], feedback: str, n: int | None = None
 
 # ---- 互动内容：修改意见作用在单文件 HTML 上 ----
 
-# 提示词里保留「HTML5 互动学习小游戏」这一句：stub provider 按它命中固定的单文件 HTML，
+# 提示词里保留「HTML5 互动学习小游戏」这一句：网关按它走互动内容生成，测试替身也按它命中固定 HTML；
 # 无 Key 时互动内容的修改同样能走通（与生成路径同一口径）。
 _REVISE_CREATIVE_PROMPT = """你是创意内容设计师。根据教师的修改意见，调整已有的 HTML5 互动学习小游戏。
 

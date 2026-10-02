@@ -42,7 +42,7 @@ def internal_error(detail: str = "Internal Server Error") -> dict:
 
 
 def unconfigured(capability: str) -> dict:
-    """外部能力未配置时的错误说明:缺少 Key 又未回落 stub 时由能力工厂抛出。"""
+    """外部能力未配置时的错误说明：由能力工厂抛 ProviderNotConfigured，全局处理器转 503。"""
     return error_response(
         f"{capability}未配置:该能力缺 Key 且当前配置未指向可用实现,"
         "请在 .env 或设置中补齐(票 13 落地前只能改配置后重启)。",

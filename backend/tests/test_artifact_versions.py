@@ -2,7 +2,7 @@
 
 只经 HTTP 缝断言**响应与数据变迁**（不断言任何内部函数调用）；「版本 ↔ 文件」一一对应
 按真实落盘内容核验——落盘目录经 conftest 的 `isolated_output_dir` 重定向到临时目录。
-LLM / 嵌入走无 Key 的 stub 兜底（`StubProvider`），本文件不替换任何内部函数。
+LLM / 嵌入走无 Key 的替身兜底（`FakeLLM`），本文件不替换任何内部函数。
 """
 
 from io import BytesIO
@@ -20,9 +20,9 @@ from app.main import app
 client = TestClient(app)
 init_db()  # 幂等：生成物版本表在临时库里就位
 
-# stub 兜底对话的固定意图（见 core/llm/providers/stub.py），用于断言版本标题
-STUB_TOPIC = "TCP 三次握手"
-# 每次生成都能走完「检索 → 生成」的教师表述（stub 不跳过追问，但意图本身就完整）
+# 替身兜底对话的固定意图，用于断言版本标题
+FAKE_TOPIC = "TCP 三次握手"
+# 每次生成都能走完「检索 → 生成」的教师表述（替身不跳过追问，但意图本身就完整）
 TURN = "讲 TCP 三次握手，45 分钟，风格学术"
 # 五类生成物（CONTEXT.md「生成物」）在版本中心里的固定展示次序
 CLASSES = ("课件", "教案", "提纲", "试卷", "互动内容")
@@ -124,7 +124,7 @@ def test_each_generation_records_a_version_with_monotonic_numbers():
         assert len(set(filenames)) == 2
         assert all((generate_module.OUTPUT_DIR / name).is_file() for name in filenames)
         # 教师看到的标题来自版本记录（不是不可读的文件名）
-        assert {v["title"] for v in group["versions"]} == {STUB_TOPIC}
+        assert {v["title"] for v in group["versions"]} == {FAKE_TOPIC}
         assert {v["origin"] for v in group["versions"]} == {"生成"}
         assert {v["artifact_type"] for v in group["versions"]} == {artifact_type}
 

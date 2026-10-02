@@ -23,7 +23,7 @@
 - `【Ownership】` 写明了可改路径与禁区；
 - 依赖（`Blocked by`）都已关闭，或写明了「None」。
 
-**什么必须留在 `ready-for-human`**：需要真实云端 Key 才能做的验证（无 Key 环境下 agent 只能走 stub）、
+**什么必须留在 `ready-for-human`**：需要真实云端 Key 才能做的验证（无 Key 环境下 agent 只能跑离线测试替身（tests/support））、
 需要人眼判断的视觉效果、需要对外沟通或涉及仓库外资源的动作、任何不可逆操作。
 
 **`wontfix` 的写法**：在工单正文里写明不做理由，并指向依据（`docs/adr/` 里的决策，或 `spec.md` 的「范围外」条款）。

@@ -11,6 +11,8 @@ build/
 .env
 .env.local
 .env.*.local
+# 本机的声明式供应商配置（可手改、含各家的服务地址与模型清单；模板见 backend/providers.example.json）
+backend/providers.json
 *.db
 *.db-wal
 *.db-shm
@@ -32,3 +34,5 @@ e2e-artifacts/
 .demo-backup/
 .playwright-cli/
 EduMind-demo/
+# .scratch：本地 issue 跟踪与一次性向导/验收脚本等工作痕迹
+.scratch/

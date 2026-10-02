@@ -159,6 +159,20 @@ async def upload_document(
     file_path = save_upload(content, filename)
     ext = Path(filename).suffix.lstrip(".").lower()
 
+    # 录音资料唯一解析路径是百炼 paraformer：未配置时立刻给教师 503 引导，
+    # 而不是收下文件再落一个没有原因的「失败」（产品没有假转写兜底）。
+    from app.knowledge.parsers import get_parser
+    from app.knowledge.parsers.audio import AudioParser
+
+    try:
+        parser = get_parser(ext)
+    except ValueError:
+        parser = None
+    if isinstance(parser, AudioParser):
+        from app.core.asr.factory import get_transcriber
+
+        get_transcriber()  # 未配置抛 ProviderNotConfigured → 全局 503 处理器给引导
+
     doc = Document(
         user_id=DEFAULT_USER_ID,
         filename=filename,

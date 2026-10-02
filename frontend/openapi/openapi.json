@@ -1055,7 +1055,7 @@
         "description": "健康检查响应：服务状态 + 应用名 + 当前生效的对话模型供应商。",
         "example": {
           "app": "EduMind",
-          "llm_provider": "stub",
+          "llm_provider": "qwen",
           "status": "ok"
         },
         "properties": {
@@ -1431,6 +1431,188 @@
           "message"
         ],
         "title": "PingResponse",
+        "type": "object"
+      },
+      "ProviderInstanceCreate": {
+        "description": "添加一家供应商：目录家只填 provider + Key；自定义服务另填名称 / 地址 / 模型。",
+        "example": {
+          "api_key": "sk-在这里粘贴你自己的 Key",
+          "provider": "deepseek"
+        },
+        "properties": {
+          "api_key": {
+            "default": "",
+            "description": "该供应商的 API Key",
+            "title": "Api Key",
+            "type": "string"
+          },
+          "base_url": {
+            "default": "",
+            "description": "服务商地址覆盖；目录家用预设，自定义服务必填",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "description": "面向教师的名称；留空用目录名（自定义服务建议填写）",
+            "title": "Label",
+            "type": "string"
+          },
+          "make_default": {
+            "default": false,
+            "description": "添加后设为全局默认；第一家自动成为默认",
+            "title": "Make Default",
+            "type": "boolean"
+          },
+          "model": {
+            "default": "",
+            "description": "默认模型覆盖；目录家用预设，自定义服务必填",
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "description": "供应商目录里的 id（内置方言 + providers.json 声明的家；取值见 GET /settings/catalog）",
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "title": "ProviderInstanceCreate",
+        "type": "object"
+      },
+      "ProviderInstanceUpdate": {
+        "description": "改一家已添加的供应商：只传要改的字段；api_key 缺省 = 不动（回读也拿不到明文）。",
+        "example": {
+          "label": "DeepSeek（公司账号）",
+          "make_default": true
+        },
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "传空字符串 = 清除 Key；缺省 / null = 不动",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "make_default": {
+            "default": false,
+            "title": "Make Default",
+            "type": "boolean"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "title": "ProviderInstanceUpdate",
+        "type": "object"
+      },
+      "ProviderInstanceView": {
+        "description": "一条已添加的供应商实例：设置页「添加供应商」产生的每一家。",
+        "properties": {
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "key_configured": {
+            "title": "Key Configured",
+            "type": "boolean"
+          },
+          "key_masked": {
+            "title": "Key Masked",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "models_error": {
+            "title": "Models Error",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "label",
+          "base_url",
+          "model",
+          "models",
+          "models_error",
+          "is_default",
+          "ready",
+          "reason",
+          "key_configured",
+          "key_masked"
+        ],
+        "title": "ProviderInstanceView",
         "type": "object"
       },
       "ProviderView": {
@@ -2798,6 +2980,30 @@
           "task_model_generate": "deepseek-reasoner"
         },
         "properties": {
+          "ark_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "豆包 API Key",
+            "title": "Ark Api Key"
+          },
+          "asr_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "百炼语音转写 Key（paraformer 专用，千问 MaaS 的 Key 不通用）",
+            "title": "Asr Api Key"
+          },
           "asr_provider": {
             "anyOf": [
               {
@@ -2807,7 +3013,7 @@
                 "type": "null"
               }
             ],
-            "description": "语音转写实现：stub / paraformer",
+            "description": "语音转写实现：auto / paraformer",
             "title": "Asr Provider"
           },
           "bocha_api_key": {
@@ -2834,18 +3040,6 @@
             "description": "分块策略：paragraph",
             "title": "Chunk Strategy"
           },
-          "dashscope_api_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "阿里云百炼 API Key",
-            "title": "Dashscope Api Key"
-          },
           "deepseek_api_key": {
             "anyOf": [
               {
@@ -2857,6 +3051,18 @@
             ],
             "description": "DeepSeek API Key",
             "title": "Deepseek Api Key"
+          },
+          "default_provider_instance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "全局默认供应商实例 id（留空 = legacy 单供应商路径）",
+            "title": "Default Provider Instance"
           },
           "embedding_api_key": {
             "anyOf": [
@@ -2951,7 +3157,7 @@
                 "type": "null"
               }
             ],
-            "description": "供应商目录里的 id（stub / dashscope / deepseek / siliconflow / custom）",
+            "description": "供应商目录里的 id（内置方言 + providers.json 声明的家；取值见 GET /settings/catalog）",
             "title": "Llm Provider"
           },
           "llm_vision_model": {
@@ -2978,6 +3184,30 @@
             "description": "MinerU 云端 PDF 解析 Token",
             "title": "Mineru Token"
           },
+          "minimax_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MiniMax API Key",
+            "title": "Minimax Api Key"
+          },
+          "moonshot_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kimi API Key",
+            "title": "Moonshot Api Key"
+          },
           "pdf_strategy": {
             "anyOf": [
               {
@@ -2989,6 +3219,18 @@
             ],
             "description": "PDF 解析策略：mineru_then_pypdf / pypdf / mineru",
             "title": "Pdf Strategy"
+          },
+          "qwen_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "千问 API Key",
+            "title": "Qwen Api Key"
           },
           "retrieval_strategy": {
             "anyOf": [
@@ -3011,7 +3253,7 @@
                 "type": "null"
               }
             ],
-            "description": "网络搜索实现：auto / stub / bocha",
+            "description": "网络搜索实现：auto / bocha",
             "title": "Search Provider"
           },
           "siliconflow_api_key": {
@@ -3061,6 +3303,54 @@
             ],
             "description": "意图分析用的模型档位",
             "title": "Task Model Intent"
+          },
+          "task_provider_conflict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "冲突比对用的供应商实例 id",
+            "title": "Task Provider Conflict"
+          },
+          "task_provider_generate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "生成用的供应商实例 id",
+            "title": "Task Provider Generate"
+          },
+          "task_provider_intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "意图分析用的供应商实例 id",
+            "title": "Task Provider Intent"
+          },
+          "zhipu_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "智谱 API Key",
+            "title": "Zhipu Api Key"
           }
         },
         "title": "SettingsUpdate",
@@ -3097,6 +3387,13 @@
           "provider": {
             "$ref": "#/components/schemas/ProviderView"
           },
+          "provider_instances": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderInstanceView"
+            },
+            "title": "Provider Instances",
+            "type": "array"
+          },
           "tasks": {
             "items": {
               "$ref": "#/components/schemas/TaskModelView"
@@ -3107,6 +3404,7 @@
         },
         "required": [
           "provider",
+          "provider_instances",
           "items",
           "keys",
           "tasks",
@@ -3246,7 +3544,7 @@
         "type": "object"
       },
       "TaskModelView": {
-        "description": "一个任务级模型档位：选了什么、**实际用的是什么**、来源是任务级还是全局默认。",
+        "description": "一个任务级模型档位：选了哪家、选了什么、**实际用的是哪家哪个模型**、来源。",
         "properties": {
           "field": {
             "title": "Field",
@@ -3260,8 +3558,24 @@
             "title": "Model",
             "type": "string"
           },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_field": {
+            "title": "Provider Field",
+            "type": "string"
+          },
+          "provider_label": {
+            "title": "Provider Label",
+            "type": "string"
+          },
           "selected": {
             "title": "Selected",
+            "type": "string"
+          },
+          "selected_provider": {
+            "title": "Selected Provider",
             "type": "string"
           },
           "source": {
@@ -3277,7 +3591,11 @@
           "task",
           "label",
           "field",
+          "provider_field",
           "selected",
+          "selected_provider",
+          "provider",
+          "provider_label",
           "model",
           "source"
         ],
@@ -3325,7 +3643,7 @@
         "type": "object"
       },
       "WebSearchResponse": {
-        "description": "网络搜索响应：结果列表（无 Key 时由 stub 返回带标记的占位结果）。",
+        "description": "网络搜索响应：结果列表（未配置博查 Key 时返回 503 引导，不返回占位结果）。",
         "example": {
           "results": [
             {
@@ -3377,7 +3695,7 @@
     }
   },
   "info": {
-    "description": "多模态 AI 备课智能体后端。\n\nOpenAPI 是本服务接口文档的**唯一事实源**：每个端点都带 `summary`、描述、\n请求/响应示例、错误码与分组 tag；前端 TypeScript 类型由本 schema 生成，禁止手抄。\n\n* **界面**：Swagger UI `/docs`，ReDoc `/redoc`。\n* **分组**：系统 / 备课会话 / 知识库 / 知识图谱 / 生成物 / 冲突审核 / 题库。\n* **单用户**：固定 `user_id=\"default\"`，本服务不含登录与多租户。\n* **能力切换**：对话模型、向量化、语音转写、PDF 解析、网络搜索均按配置选择，\n  无 Key 时回落 stub，全链路仍可跑（协议语义见 `docs/api/`）。\n* **版本策略**：只有破坏性变更才升 `/api/v2`。\n",
+    "description": "多模态 AI 备课智能体后端。\n\nOpenAPI 是本服务接口文档的**唯一事实源**：每个端点都带 `summary`、描述、\n请求/响应示例、错误码与分组 tag；前端 TypeScript 类型由本 schema 生成，禁止手抄。\n* **界面**：Swagger UI `/docs`，ReDoc `/redoc`。\n* **分组**：系统 / 备课会话 / 知识库 / 知识图谱 / 生成物 / 冲突审核 / 题库。\n* **单用户**：固定 `user_id=\"default\"`，本服务不含登录与多租户。\n* **能力切换**：对话模型、向量化、语音转写、PDF 解析、网络搜索均按配置选择。\n  云端能力未配置时相关端点返回 `503`（`code: provider_not_configured`，`message` 面向教师，\n  指到设置页）——产品不返回任何「看起来像真结果的占位内容」。\n* **版本策略**：只有破坏性变更才升 `/api/v2`。\n",
     "title": "EduMind API",
     "version": "0.1.0"
   },
@@ -5039,7 +5357,7 @@
     },
     "/api/v1/knowledge/search": {
       "post": {
-        "description": "在本地知识库里做语义检索，返回最相近的段落（`distance` 越小越相近，`doc_id` 可回溯来源文档）。\n\n检索用向量由当前配置的向量化能力生成；无云端 Key 时由 stub 提供与宿主无关的兜底向量，因此无 Key 时排序不具语义意义，仅供链路联调。",
+        "description": "在本地知识库里做语义检索，返回最相近的段落（`distance` 越小越相近，`doc_id` 可回溯来源文档）。\n\n检索用向量由当前配置的向量化能力生成；未配置云端 Key 时用本地 hash 兜底向量（真实算法），因此无 Key 时排序不具语义意义，仅供链路联调。",
         "operationId": "search_api_v1_knowledge_search_post",
         "requestBody": {
           "content": {
@@ -5110,7 +5428,7 @@
     },
     "/api/v1/knowledge/web-search": {
       "post": {
-        "description": "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则回落 stub，返回带「（stub 网络搜索）」标记的占位结果（无 Key 全链路可跑的又一条路径）。显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时请求失败（`500`，`detail` 为 `BOCHA_API_KEY 未配置`），而不是静默返回空结果。",
+        "description": "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则返回 503 引导（code: provider_not_configured），不返回任何占位结果——拿假结果当教学依据比明确报错更糟。显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时请求失败（`500`，`detail` 为 `BOCHA_API_KEY 未配置`），而不是静默返回空结果。",
         "operationId": "web_search_api_v1_knowledge_web_search_post",
         "requestBody": {
           "content": {
@@ -6423,11 +6741,11 @@
                     {
                       "key": "asr_provider",
                       "label": "语音转写",
-                      "ready": true,
-                      "reason": "",
+                      "ready": false,
+                      "reason": "语音转写未配置：到「设置 → 能力实现」把语音转写指到 paraformer 并粘贴百炼 Key，或在 .env 配置 ASR_API_KEY（千问 MaaS 的 Key 不通用）。",
                       "source": "引导默认",
-                      "value": "stub",
-                      "value_label": "stub 模式（无 Key 可跑）"
+                      "value": "",
+                      "value_label": "未配置（需要百炼 paraformer Key）"
                     },
                     {
                       "key": "pdf_strategy",
@@ -6445,7 +6763,7 @@
                       "reason": "",
                       "source": "引导默认",
                       "value": "auto",
-                      "value_label": "自动（有 Key 走博查，否则 stub 模式）"
+                      "value_label": "自动（有 Key 走博查，否则未配置）"
                     },
                     {
                       "key": "embedding_provider",
@@ -6522,8 +6840,15 @@
                     },
                     {
                       "configured": false,
-                      "field": "dashscope_api_key",
-                      "label": "阿里云百炼 API Key",
+                      "field": "qwen_api_key",
+                      "label": "千问 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "asr_api_key",
+                      "label": "百炼语音转写 Key",
                       "masked": "",
                       "source": "引导默认"
                     },
@@ -6572,12 +6897,42 @@
                     "source": "设置页",
                     "value": "deepseek"
                   },
+                  "provider_instances": [
+                    {
+                      "base_url": "https://api.deepseek.com",
+                      "id": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "is_default": true,
+                      "key_configured": true,
+                      "key_masked": "••••9f8a",
+                      "label": "DeepSeek",
+                      "model": "deepseek-chat",
+                      "provider": "deepseek",
+                      "ready": true,
+                      "reason": ""
+                    },
+                    {
+                      "base_url": "https://example.com/v1",
+                      "id": "8a1d5b7c-2222-4e6f-8c3b-1d4a5e6f7a8b",
+                      "is_default": false,
+                      "key_configured": false,
+                      "key_masked": "",
+                      "label": "我的中转服务",
+                      "model": "my-model",
+                      "provider": "custom",
+                      "ready": false,
+                      "reason": "「我的中转服务」还没有粘贴 API Key"
+                    }
+                  ],
                   "tasks": [
                     {
                       "field": "task_model_intent",
                       "label": "意图分析",
                       "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_intent",
+                      "provider_label": "DeepSeek",
                       "selected": "deepseek-chat",
+                      "selected_provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
                       "source": "任务级",
                       "task": "intent"
                     },
@@ -6585,7 +6940,11 @@
                       "field": "task_model_generate",
                       "label": "生成",
                       "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_generate",
+                      "provider_label": "DeepSeek",
                       "selected": "",
+                      "selected_provider": "",
                       "source": "全局默认",
                       "task": "generate"
                     },
@@ -6593,7 +6952,11 @@
                       "field": "task_model_conflict",
                       "label": "冲突比对",
                       "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_conflict",
+                      "provider_label": "DeepSeek",
                       "selected": "",
+                      "selected_provider": "",
                       "source": "全局默认",
                       "task": "conflict"
                     }
@@ -6623,7 +6986,7 @@
         ]
       },
       "put": {
-        "description": "**只传要改的项**（界面一次只做一件事）；字段缺省或传 `null` = 该项不动，传空字符串 = **清除该项**（回落 `.env` 引导默认）。\n\n写穿链路：目录校验 → 落库（`app_settings`）→ 把生效值同步进进程内配置 → 清掉能力工厂缓存。全过程在本次请求内完成，**改完下一次调用就用新配置**：例如把 `retrieval_strategy` 从 `vector_graph` 改成 `vector` 后，紧接着的 `POST /api/v1/knowledge/retrieve` 就返回 `strategy: vector`。\n\n取值必须落在 `GET /api/v1/settings/catalog` 给出的目录里：未知供应商 / 未知模型 / 未实现的能力 / 格式不对的 `base_url` 一律 400（带稳定 `code`），**库内一行不动**；供应商目录之外的模型走「自定义 OpenAI 兼容服务」（`llm_provider=custom` + `llm_base_url` + `llm_model`）。\n\n装配：改供应商与模型时建议一次带上该家的 Key（`dashscope_api_key` / `deepseek_api_key` / `siliconflow_api_key` / 自定义服务的 `llm_api_key`），一次写入即从 stub 模式切到真实服务。",
+        "description": "**只传要改的项**（界面一次只做一件事）；字段缺省或传 `null` = 该项不动，传空字符串 = **清除该项**（回落 `.env` 引导默认）。\n\n写穿链路：目录校验 → 落库（`app_settings`）→ 把生效值同步进进程内配置 → 清掉能力工厂缓存。全过程在本次请求内完成，**改完下一次调用就用新配置**：例如把 `retrieval_strategy` 从 `vector_graph` 改成 `vector` 后，紧接着的 `POST /api/v1/knowledge/retrieve` 就返回 `strategy: vector`。\n\n取值必须落在 `GET /api/v1/settings/catalog` 给出的目录里：未知供应商 / 未知模型 / 未实现的能力 / 格式不对的 `base_url` 一律 400（带稳定 `code`），**库内一行不动**；供应商目录之外的模型走「自定义 OpenAI 兼容服务」（`llm_provider=custom` + `llm_base_url` + `llm_model`）。\n\n装配：改供应商与模型时建议一次带上该家的 Key（`qwen_api_key` / `deepseek_api_key` / `siliconflow_api_key` / 自定义服务的 `llm_api_key`），一次写入即切到真实服务。",
         "operationId": "update_settings_api_v1_settings_put",
         "requestBody": {
           "content": {
@@ -6644,11 +7007,11 @@
                     {
                       "key": "asr_provider",
                       "label": "语音转写",
-                      "ready": true,
-                      "reason": "",
+                      "ready": false,
+                      "reason": "语音转写未配置：到「设置 → 能力实现」把语音转写指到 paraformer 并粘贴百炼 Key，或在 .env 配置 ASR_API_KEY（千问 MaaS 的 Key 不通用）。",
                       "source": "引导默认",
-                      "value": "stub",
-                      "value_label": "stub 模式（无 Key 可跑）"
+                      "value": "",
+                      "value_label": "未配置（需要百炼 paraformer Key）"
                     },
                     {
                       "key": "pdf_strategy",
@@ -6666,7 +7029,7 @@
                       "reason": "",
                       "source": "引导默认",
                       "value": "auto",
-                      "value_label": "自动（有 Key 走博查，否则 stub 模式）"
+                      "value_label": "自动（有 Key 走博查，否则未配置）"
                     },
                     {
                       "key": "embedding_provider",
@@ -6743,8 +7106,15 @@
                     },
                     {
                       "configured": false,
-                      "field": "dashscope_api_key",
-                      "label": "阿里云百炼 API Key",
+                      "field": "qwen_api_key",
+                      "label": "千问 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "asr_api_key",
+                      "label": "百炼语音转写 Key",
                       "masked": "",
                       "source": "引导默认"
                     },
@@ -6793,12 +7163,42 @@
                     "source": "设置页",
                     "value": "deepseek"
                   },
+                  "provider_instances": [
+                    {
+                      "base_url": "https://api.deepseek.com",
+                      "id": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "is_default": true,
+                      "key_configured": true,
+                      "key_masked": "••••9f8a",
+                      "label": "DeepSeek",
+                      "model": "deepseek-chat",
+                      "provider": "deepseek",
+                      "ready": true,
+                      "reason": ""
+                    },
+                    {
+                      "base_url": "https://example.com/v1",
+                      "id": "8a1d5b7c-2222-4e6f-8c3b-1d4a5e6f7a8b",
+                      "is_default": false,
+                      "key_configured": false,
+                      "key_masked": "",
+                      "label": "我的中转服务",
+                      "model": "my-model",
+                      "provider": "custom",
+                      "ready": false,
+                      "reason": "「我的中转服务」还没有粘贴 API Key"
+                    }
+                  ],
                   "tasks": [
                     {
                       "field": "task_model_intent",
                       "label": "意图分析",
                       "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_intent",
+                      "provider_label": "DeepSeek",
                       "selected": "deepseek-chat",
+                      "selected_provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
                       "source": "任务级",
                       "task": "intent"
                     },
@@ -6806,7 +7206,11 @@
                       "field": "task_model_generate",
                       "label": "生成",
                       "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_generate",
+                      "provider_label": "DeepSeek",
                       "selected": "",
+                      "selected_provider": "",
                       "source": "全局默认",
                       "task": "generate"
                     },
@@ -6814,7 +7218,11 @@
                       "field": "task_model_conflict",
                       "label": "冲突比对",
                       "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_conflict",
+                      "provider_label": "DeepSeek",
                       "selected": "",
+                      "selected_provider": "",
                       "source": "全局默认",
                       "task": "conflict"
                     }
@@ -6890,30 +7298,26 @@
                     {
                       "key": "asr_provider",
                       "label": "语音转写",
-                      "note": "录音资料走哪条转写路径；paraformer 复用阿里云百炼的 Key。",
+                      "note": "录音资料走哪条转写路径；paraformer 是阿里云百炼的服务（千问 MaaS 不提供，需要百炼 Key）。",
                       "options": [
                         {
-                          "id": "stub",
-                          "label": "stub 模式（无 Key 可跑）"
+                          "id": "auto",
+                          "label": "自动（有百炼 Key 走 paraformer，否则未配置）"
                         },
                         {
                           "id": "paraformer",
-                          "label": "paraformer（阿里云百炼，复用 DASHSCOPE_API_KEY）"
+                          "label": "paraformer（阿里云百炼录音转写：需要百炼 Key，千问 MaaS 不提供）"
                         }
                       ]
                     },
                     {
                       "key": "search_provider",
                       "label": "网络搜索",
-                      "note": "题库的「网络」来源用它取题；无 Key 时走 stub 模式占位结果。",
+                      "note": "题库的「网络」来源用它取题；未配置博查 Key 时给出「去配置」提示，不返回占位结果。",
                       "options": [
                         {
                           "id": "auto",
-                          "label": "自动（有 Key 走博查，否则 stub 模式）"
-                        },
-                        {
-                          "id": "stub",
-                          "label": "stub 模式"
+                          "label": "自动（有 Key 走博查，未配置则提示去配置）"
                         },
                         {
                           "id": "bocha",
@@ -6924,19 +7328,6 @@
                   ],
                   "note": "供应商目录与可选能力实现来自能力注册表：这里列出什么，就能切成什么。",
                   "providers": [
-                    {
-                      "accepts_any_model": false,
-                      "base_url": "",
-                      "chat_models": [
-                        "stub"
-                      ],
-                      "embed_models": [],
-                      "id": "stub",
-                      "key_field": "",
-                      "label": "stub 模式",
-                      "note": "没有任何云端 Key 时的兜底实现：全链路可跑，结果用于试用与联调，不追求真实质量。",
-                      "vision_models": []
-                    },
                     {
                       "accepts_any_model": false,
                       "base_url": "https://api.deepseek.com",
@@ -7005,9 +7396,581 @@
         ]
       }
     },
+    "/api/v1/settings/providers": {
+      "post": {
+        "description": "添加一家供应商实例：目录家（千问 / DeepSeek / Kimi / 智谱 GLM / MiniMax / 豆包 / 硅基流动）只填 `provider` + `api_key`（地址与默认模型用预设）；「自定义 OpenAI 兼容服务」（`provider=custom`）另填 `label` / `base_url` / `model`。\n\n第一家添加后**自动成为全局默认**；`make_default=true` 可直接设为默认。任务级模型（`PUT /settings` 的 `task_provider_*`）指向这里返回的 `id`。\n\nKey 只在写入时接收；回读一律掩码。校验不通过 400（稳定 `code`），不落库。",
+        "operationId": "create_provider_instance_api_v1_settings_providers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderInstanceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "base_url": "https://api.deepseek.com",
+                  "id": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                  "is_default": true,
+                  "key_configured": true,
+                  "key_masked": "••••9f8a",
+                  "label": "DeepSeek",
+                  "model": "deepseek-chat",
+                  "models": [
+                    "deepseek-chat",
+                    "deepseek-reasoner"
+                  ],
+                  "models_error": "",
+                  "provider": "deepseek",
+                  "ready": true,
+                  "reason": ""
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderInstanceView"
+                }
+              }
+            },
+            "description": "添加成功的供应商实例（Key 只有掩码）"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "unknown_model",
+                    "field": "model",
+                    "message": "未知模型：gpt-4o（「DeepSeek」可选：deepseek-chat、deepseek-reasoner；目录之外的模型请用「自定义 OpenAI 兼容服务」）"
+                  }
+                }
+              }
+            },
+            "description": "供应商实例不成立：`code` 是稳定机器码（unknown_provider / missing_key / missing_base_url / missing_model / invalid_base_url / unknown_model），`message` 可直接显示给教师；本次未落库"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "添加供应商（多供应商并存）",
+        "tags": [
+          "设置"
+        ]
+      }
+    },
+    "/api/v1/settings/providers/{instance_id}": {
+      "delete": {
+        "description": "删除一条供应商实例，同时清掉指向它的全部指针（全局默认与任务级 `task_provider_*`，相应任务回落全局默认；默认被删则回落剩余第一家，没有了就回落 `.env` 引导默认）。\n\nKey 随实例行一起删除；`.env` 里的原值不动（那是引导默认，不是实例）。",
+        "operationId": "delete_provider_instance_api_v1_settings_providers__instance_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "capabilities": [
+                    {
+                      "key": "asr_provider",
+                      "label": "语音转写",
+                      "ready": false,
+                      "reason": "语音转写未配置：到「设置 → 能力实现」把语音转写指到 paraformer 并粘贴百炼 Key，或在 .env 配置 ASR_API_KEY（千问 MaaS 的 Key 不通用）。",
+                      "source": "引导默认",
+                      "value": "",
+                      "value_label": "未配置（需要百炼 paraformer Key）"
+                    },
+                    {
+                      "key": "pdf_strategy",
+                      "label": "PDF 解析",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "mineru_then_pypdf",
+                      "value_label": "mineru → pypdf 兜底（默认）"
+                    },
+                    {
+                      "key": "search_provider",
+                      "label": "网络搜索",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "auto",
+                      "value_label": "自动（有 Key 走博查，否则未配置）"
+                    },
+                    {
+                      "key": "embedding_provider",
+                      "label": "向量化",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "auto",
+                      "value_label": "自动（跟随对话供应商）"
+                    },
+                    {
+                      "key": "retrieval_strategy",
+                      "label": "检索策略",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "vector_graph",
+                      "value_label": "向量 + 图谱融合（默认）"
+                    },
+                    {
+                      "key": "chunk_strategy",
+                      "label": "分块策略",
+                      "ready": true,
+                      "reason": "",
+                      "source": "引导默认",
+                      "value": "paragraph",
+                      "value_label": "按段落与标题边界（默认）"
+                    }
+                  ],
+                  "items": [
+                    {
+                      "effective": "https://api.deepseek.com",
+                      "label": "服务商地址（base_url）",
+                      "name": "llm_base_url",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "deepseek-chat",
+                      "label": "对话模型",
+                      "name": "llm_model",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "多模态模型",
+                      "name": "llm_vision_model",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "向量化服务地址（base_url）",
+                      "name": "embedding_base_url",
+                      "source": "引导默认",
+                      "value": ""
+                    },
+                    {
+                      "effective": "",
+                      "label": "向量化模型",
+                      "name": "embedding_model",
+                      "source": "引导默认",
+                      "value": ""
+                    }
+                  ],
+                  "keys": [
+                    {
+                      "configured": false,
+                      "field": "llm_api_key",
+                      "label": "自定义服务的 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "qwen_api_key",
+                      "label": "千问 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "asr_api_key",
+                      "label": "百炼语音转写 Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": true,
+                      "field": "deepseek_api_key",
+                      "label": "DeepSeek API Key",
+                      "masked": "••••9f8a",
+                      "source": "设置页"
+                    },
+                    {
+                      "configured": false,
+                      "field": "siliconflow_api_key",
+                      "label": "硅基流动 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "embedding_api_key",
+                      "label": "向量化 API Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "mineru_token",
+                      "label": "MinerU Token",
+                      "masked": "",
+                      "source": "引导默认"
+                    },
+                    {
+                      "configured": false,
+                      "field": "bocha_api_key",
+                      "label": "博查搜索 Key",
+                      "masked": "",
+                      "source": "引导默认"
+                    }
+                  ],
+                  "note": "改动即时生效、不需要重启；Key 只在写入时接收，回读一律掩码，任何响应与表单都不回显明文。",
+                  "provider": {
+                    "key_field": "deepseek_api_key",
+                    "label": "DeepSeek",
+                    "ready": true,
+                    "reason": "",
+                    "source": "设置页",
+                    "value": "deepseek"
+                  },
+                  "provider_instances": [
+                    {
+                      "base_url": "https://api.deepseek.com",
+                      "id": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "is_default": true,
+                      "key_configured": true,
+                      "key_masked": "••••9f8a",
+                      "label": "DeepSeek",
+                      "model": "deepseek-chat",
+                      "provider": "deepseek",
+                      "ready": true,
+                      "reason": ""
+                    },
+                    {
+                      "base_url": "https://example.com/v1",
+                      "id": "8a1d5b7c-2222-4e6f-8c3b-1d4a5e6f7a8b",
+                      "is_default": false,
+                      "key_configured": false,
+                      "key_masked": "",
+                      "label": "我的中转服务",
+                      "model": "my-model",
+                      "provider": "custom",
+                      "ready": false,
+                      "reason": "「我的中转服务」还没有粘贴 API Key"
+                    }
+                  ],
+                  "tasks": [
+                    {
+                      "field": "task_model_intent",
+                      "label": "意图分析",
+                      "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_intent",
+                      "provider_label": "DeepSeek",
+                      "selected": "deepseek-chat",
+                      "selected_provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "source": "任务级",
+                      "task": "intent"
+                    },
+                    {
+                      "field": "task_model_generate",
+                      "label": "生成",
+                      "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_generate",
+                      "provider_label": "DeepSeek",
+                      "selected": "",
+                      "selected_provider": "",
+                      "source": "全局默认",
+                      "task": "generate"
+                    },
+                    {
+                      "field": "task_model_conflict",
+                      "label": "冲突比对",
+                      "model": "deepseek-chat",
+                      "provider": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                      "provider_field": "task_provider_conflict",
+                      "provider_label": "DeepSeek",
+                      "selected": "",
+                      "selected_provider": "",
+                      "source": "全局默认",
+                      "task": "conflict"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsView"
+                }
+              }
+            },
+            "description": "删除后的当前生效设置"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "provider instance not found"
+                }
+              }
+            },
+            "description": "这条供应商实例不存在（可能刚被删除）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "删除供应商（并清掉指向它的指针）",
+        "tags": [
+          "设置"
+        ]
+      },
+      "patch": {
+        "description": "改一条已添加的供应商实例：只传要改的字段；`api_key` 缺省或 `null` = 不动（回读拿不到明文），传空字符串 = 清除 Key。`make_default=true` 把它设为全局默认。\n\n改动即时生效并清掉能力缓存；正在使用它的任务下一次调用就用新配置。",
+        "operationId": "update_provider_instance_api_v1_settings_providers__instance_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderInstanceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "base_url": "https://api.deepseek.com",
+                  "id": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                  "is_default": true,
+                  "key_configured": true,
+                  "key_masked": "••••9f8a",
+                  "label": "DeepSeek",
+                  "model": "deepseek-chat",
+                  "models": [
+                    "deepseek-chat",
+                    "deepseek-reasoner"
+                  ],
+                  "models_error": "",
+                  "provider": "deepseek",
+                  "ready": true,
+                  "reason": ""
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderInstanceView"
+                }
+              }
+            },
+            "description": "改后的供应商实例（Key 只有掩码）"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "unknown_model",
+                    "field": "model",
+                    "message": "未知模型：gpt-4o（「DeepSeek」可选：deepseek-chat、deepseek-reasoner；目录之外的模型请用「自定义 OpenAI 兼容服务」）"
+                  }
+                }
+              }
+            },
+            "description": "供应商实例不成立：`code` 是稳定机器码（unknown_provider / missing_key / missing_base_url / missing_model / invalid_base_url / unknown_model），`message` 可直接显示给教师；本次未落库"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "provider instance not found"
+                }
+              }
+            },
+            "description": "这条供应商实例不存在（可能刚被删除）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "改供应商（名称 / 地址 / 模型 / Key / 设为默认）",
+        "tags": [
+          "设置"
+        ]
+      }
+    },
+    "/api/v1/settings/providers/{instance_id}/refresh-models": {
+      "post": {
+        "description": "重新调该实例的 `GET {base_url}/models` 拉取模型清单并整表替换缓存：服务商上新模型后、或上次拉取失败修正 Key / 网络后点这里。\n\n拉取失败不落半行、保持旧清单，并把原因写到实例的 `models_error`——统一模型池里这家的模型可以先「手动填写」。",
+        "operationId": "refresh_provider_models_api_v1_settings_providers__instance_id__refresh_models_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "base_url": "https://api.deepseek.com",
+                  "id": "3f2c8e6a-1111-4c3e-9d2a-6c0f1e2d3b4a",
+                  "is_default": true,
+                  "key_configured": true,
+                  "key_masked": "••••9f8a",
+                  "label": "DeepSeek",
+                  "model": "deepseek-chat",
+                  "models": [
+                    "deepseek-chat",
+                    "deepseek-reasoner"
+                  ],
+                  "models_error": "",
+                  "provider": "deepseek",
+                  "ready": true,
+                  "reason": ""
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderInstanceView"
+                }
+              }
+            },
+            "description": "刷新后的供应商实例（Key 只有掩码）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "provider instance not found"
+                }
+              }
+            },
+            "description": "这条供应商实例不存在（可能刚被删除）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "刷新这家供应商的模型清单（重新拉取 /v1/models）",
+        "tags": [
+          "设置"
+        ]
+      }
+    },
     "/health": {
       "get": {
-        "description": "返回服务状态、应用名与当前生效的对话模型供应商。前端启动自检与运维探活都读这一条；不访问数据库、不调用外部能力。`llm_provider` 为 `stub` 时表示当前无云端 Key，功能仍可全链路跑通。",
+        "description": "返回服务状态、应用名与当前生效的对话模型供应商。前端启动自检与运维探活都读这一条；不访问数据库、不调用外部能力。`llm_provider` 为空时表示尚未配置供应商：AI 相关功能返回 503 引导，本地功能（会话管理、历史查看等）不受影响。",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -7015,7 +7978,7 @@
               "application/json": {
                 "example": {
                   "app": "EduMind",
-                  "llm_provider": "stub",
+                  "llm_provider": "qwen",
                   "status": "ok"
                 },
                 "schema": {

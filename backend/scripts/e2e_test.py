@@ -1,6 +1,8 @@
-"""EduMind 端到端验收：Playwright 驱动真实 Chrome，stub 网关全链路（不触外部服务）。
+"""EduMind 端到端验收：Playwright 驱动真实 Chrome，真实后端冒烟（无假数据兜底）。
 
-前置：后端 :8000（LLM_PROVIDER=stub / ASR_PROVIDER=stub）、前端 :5173（vite dev，/api 代理）。
+前置：后端 :8000（已配置供应商或 .env Key）、前端 :5173（vite dev，/api 代理）。
+未配置后端也有意义：S3 备课对话改走「未配置」断言，验证 503 与 provider_not_configured；
+依赖真实模型的产物场景（S4–S8）在未配置时跳过。
 运行：backend 目录下 `uv run python scripts/e2e_test.py`。
 失败时截图到 e2e-artifacts/。
 """
@@ -14,8 +16,23 @@ from docx import Document
 from playwright.sync_api import expect, sync_playwright
 
 BASE = "http://localhost:5173"
+BACKEND = "http://localhost:8000"
 ARTIFACTS = Path(__file__).resolve().parent.parent.parent / "e2e-artifacts"
 RESULTS: list[tuple[str, bool, str]] = []
+CONFIGURED: bool | None = None
+
+
+def backend_configured(page) -> bool:
+    """读后端 /health 的 llm_provider 判定配置状态（缓存一次）。
+
+    空 = 未配置：涉及云端能力的操作返回 503 与 provider_not_configured 引导，不出假结果。
+    """
+    global CONFIGURED
+    if CONFIGURED is None:
+        resp = page.request.get(f"{BACKEND}/health")
+        assert resp.ok, f"/health 打不通：{resp.status}（后端没起？）"
+        CONFIGURED = bool(resp.json().get("llm_provider"))
+    return CONFIGURED
 
 
 def scenario(name: str):
@@ -64,7 +81,9 @@ def s2_upload(page):
     item = page.locator(".doc-item", has_text="edumind_e2e_tcp讲义.docx").first
     expect(item).to_be_visible(timeout=30000)
     expect(item.locator(".doc-status")).to_have_text("已完成", timeout=60000)
-    expect(page.locator(".node-item").first).to_be_visible(timeout=30000)
+    if backend_configured(page):
+        expect(page.locator(".node-item").first).to_be_visible(timeout=30000)
+    # 未配置：知识提取跳过（分块照常入库），画布不会有节点，不把「没节点」当失败。
 
 
 @scenario("S3 备课对话：追问粒度 + 生成课件/教案/提纲")
@@ -80,9 +99,23 @@ def s3_chat(page):
     # 备课完成 = 发送按钮恢复可用（sending 状态解除）
     expect(page.locator("button", has_text="备课中…")).to_have_count(0, timeout=120000)
     expect(page.locator("button", has_text="发送")).to_be_enabled()
+
+    if not backend_configured(page):
+        # 未配置：后端返回 503 与 provider_not_configured，前端给「未配置」引导，不新增假回复。
+        resp = page.request.post(
+            f"{BACKEND}/api/v1/chat",
+            data={"messages": [{"role": "user", "content": "给大二学生讲 TCP 三次握手，45 分钟，学术风格"}]},
+        )
+        assert resp.status == 503, f"未配置后端应返回 503，实际 {resp.status}"
+        detail = resp.json()["detail"]
+        assert detail.get("code") == "provider_not_configured", f"未配置错误码不符：{detail}"
+        assert "设置" in detail.get("message", ""), f"未配置引导应指向设置页：{detail}"
+        assert page.locator(".msg").count() == before, "未配置下不应新增助手假回复"
+        return
+
     assert page.locator(".msg").count() >= before + 2, "对话轮数未增加"
 
-    # 意图不完整时后端先追问：补全要素再答，直至产物下发（stub 最多两三轮）
+    # 已配置：意图不完整时后端先追问，补全要素再答，直至产物下发（最多两三轮）
     page.locator(".tabs button", has_text="产物预览").click()
     answer = "主题：TCP 三次握手；学段：大二；时长：45 分钟；风格：学术"
     for _ in range(3):
@@ -186,6 +219,10 @@ def main() -> int:
         browser = p.chromium.launch(channel="chrome", headless=True)
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.set_default_timeout(15000)
+        unconfigured = not backend_configured(page)
+        print(f"后端配置状态：{'未配置（云端操作走 503 引导断言）' if unconfigured else '已配置供应商'}")
+        # 未配置时依赖真实模型产物的场景跳过（S3 已断言 503 引导）；跳过的不计入 RESULTS。
+        needs_llm = (s4_revise_ppt, s5_revise_word, s6_exam, s7_interactive, s8_persist)
         for fn in (
             s1_smoke,
             s2_upload,
@@ -198,6 +235,9 @@ def main() -> int:
             s9_sessions,
             s10_conflicts,
         ):
+            if unconfigured and fn in needs_llm:
+                print("  SKIP  S4–S8 产物场景（未配置后端：需要真实模型）")
+                continue
             fn(page)
         browser.close()
 

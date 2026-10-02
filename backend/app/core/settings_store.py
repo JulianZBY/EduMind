@@ -87,7 +87,10 @@ def invalidate_capabilities() -> None:
 
     能力工厂按配置构造实现并缓存（票 02/03 的遗产），所以「写穿」= 写库 + 走这里清缓存。
     调用点各自的 `cache_clear()` 一律撤掉——漏清一处就会表现为「改了设置但不生效」。
+    供应商实例的解析缓存也在这里清：实例行的任何改动（增删改 Key / 地址 / 模型）都经它生效。
     """
+    from app.core.llm.provider_instances import clear_instance_cache
+
     for cached in (
         get_llm,
         get_embedder,
@@ -98,23 +101,27 @@ def invalidate_capabilities() -> None:
         get_chunker,
     ):
         cached.cache_clear()
-
+    clear_instance_cache()
 
 def apply_stored_settings() -> None:
     """把设置库的生效值同步进进程内 `settings`，并清掉能力工厂缓存。
 
     启动（`app/api/v1/settings.py` 注册的 startup 钩子）与写穿各调一次：
     没写过的项回落引导默认；存量值已不在目录里（例如目录换过）时回落引导默认并留一条告警——
-    设置项不该成为应用起不来的原因。
+    设置项不该成为应用起不来的原因。任务级模型的目录校验带实例映射（`task_provider_*`
+    指向哪家，模型就落哪家的目录）。
     """
+    from app.core.llm.provider_instances import instance_dialects
+
     stored = read_stored_fresh()
+    dialects = instance_dialects()
     for name in MANAGED_FIELDS:
         raw = stored.get(name)
         if raw is None:
             setattr(settings, name, _BOOTSTRAP[name])
             continue
         try:
-            validate_patch({name: raw}, current_values())
+            validate_patch({name: raw}, current_values(), dialects)
         except SettingsError as error:
             logger.warning(
                 "设置项 %s 的存量值不在目录里（%s），已回落引导默认", name, error.message
@@ -122,7 +129,68 @@ def apply_stored_settings() -> None:
             setattr(settings, name, _BOOTSTRAP[name])
             continue
         setattr(settings, name, normalize(name, raw))
+    _prune_stale_instance_pointers(stored)
     invalidate_capabilities()
+
+
+def _prune_stale_instance_pointers(stored: Mapping[str, str]) -> None:
+    """删掉指向已不存在实例的指针（实例被删时 API 会同步清理，这里是启动兜底）。"""
+    from app.core.catalog import FIELDS
+    from app.core.llm.provider_instances import instance_dialects
+
+    dialects = instance_dialects()
+    stale = [
+        name
+        for name, value in stored.items()
+        if FIELDS.get(name) is not None
+        and FIELDS[name].kind == "provider_instance"
+        and value.strip()
+        and value.strip() not in dialects
+    ]
+    if not stale:
+        return
+    with SessionLocal() as db:
+        for name in stale:
+            row = db.get(AppSetting, name)
+            if row is not None:
+                db.delete(row)
+                setattr(settings, name, _BOOTSTRAP[name])
+        db.commit()
+    logger.warning("清理了指向已删供应商实例的设置项：%s", "、".join(stale))
+
+
+def ensure_bootstrap_provider_instance() -> None:
+    """legacy 配置迁到实例表：表空且 `.env` 已配某方言的 Key 时，自动建一条并设为默认。
+
+    只在「实例表一条都没有」时做（不覆盖教师后来在设置页加的）；custom 不迁——
+    它本来就要填三件套。迁移后 `.env` 原值不动，删掉这条实例即回落 legacy 路径。
+    """
+    from app.core.catalog import PROVIDERS
+    from app.core.llm.provider_instances import list_instances
+
+    if list_instances():
+        return
+    provider = (settings.llm_provider or "").strip().lower()
+    spec = PROVIDERS.get(provider)
+    if spec is None or provider == "custom" or not spec.key_field:
+        return
+    api_key = value_of(spec.key_field).strip()
+    if not api_key:
+        return
+    from app.db.models import LLMProviderInstance
+
+    with SessionLocal() as db:
+        instance = LLMProviderInstance(
+            provider=provider,
+            label=spec.label,
+            api_key=api_key,
+        )
+        db.add(instance)
+        db.commit()
+        db.refresh(instance)
+        instance_id = instance.id
+        write_settings(db, {"default_provider_instance": instance_id})
+    logger.info("已把 .env 的 %s 配置迁为供应商实例 %s（默认）", provider, instance_id)
 
 
 def write_settings(db: Session, patch: Mapping[str, str]) -> None:
@@ -130,9 +198,13 @@ def write_settings(db: Session, patch: Mapping[str, str]) -> None:
 
     传入的键可以是任意子集（界面一次只改一件事）。空字符串 = 清除该项设置（回落引导默认）。
     校验不通过时抛 `SettingsError`（带稳定错误码与面向教师的信息），库内一行不动。
+    任务级模型与全局模型的目录校验都带实例映射（多供应商口径）。
     """
+    from app.core.llm.provider_instances import instance_dialects
+
     values = {name: normalize(name, value) for name, value in patch.items()}
-    validate_patch(values, current_values())
+    _check_instance_pointers(values)
+    validate_patch(values, current_values(), instance_dialects())
     for name, value in values.items():
         row = db.get(AppSetting, name)
         if not value:
@@ -145,6 +217,24 @@ def write_settings(db: Session, patch: Mapping[str, str]) -> None:
             row.value = value
     db.commit()
     apply_stored_settings()
+
+
+def _check_instance_pointers(values: Mapping[str, str]) -> None:
+    """实例指针的存在性校验：指向不存在的供应商实例 id 一律 400（stable code）。"""
+    from app.core.catalog import FIELDS
+    from app.core.llm.provider_instances import instance_dialects
+
+    dialects = instance_dialects()
+    for name, value in values.items():
+        spec = FIELDS.get(name)
+        if spec is None or spec.kind != "provider_instance":
+            continue
+        if value and value not in dialects:
+            raise SettingsError(
+                "unknown_provider_instance",
+                name,
+                f"未添加这个供应商：{value or '（空）'}（先在「添加供应商」里加上，再指给任务）",
+            )
 
 
 def clear_stored_settings() -> None:

@@ -1,4 +1,4 @@
-"""参考资料关联与溯源测试（HTTP API 主接缝：stub 网关 + 直接种子数据）。
+"""参考资料关联与溯源测试（HTTP API 主接缝：假网关 + 直接种子数据）。
 
 覆盖 ticket #4 验收项：
 - 上传支持标记参考资料；备课请求携带参考资料标识
@@ -20,13 +20,13 @@ import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
 import app.knowledge.vector_store as vector_store_module
-from app.core.embedding.stub import StubEmbedder
 from app.core.intent import TeachingIntent
 from app.core.llm.base import ChatResult, LLMProvider
 from app.db import SessionLocal, init_db
 from app.db.models import Document
 from app.knowledge.vector_store import VectorStore
 from app.main import app
+from tests.support.fakes import FakeEmbedder
 
 client = TestClient(app)
 init_db()  # 幂等：确保表、列与默认用户存在
@@ -49,7 +49,7 @@ class RecordingProvider(LLMProvider):
         return ChatResult(content=_FAKE_CHAT_JSON)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        # 与 stub 同构：以文本长度为特征，query「导数」→ [2.0]*8
+        # 与替身向量同构：以文本长度为特征，query「导数」→ [2.0]*8
         return [[float(len(t))] * 8 for t in texts]
 
 
@@ -64,7 +64,7 @@ def _install(monkeypatch, provider: RecordingProvider, store: VectorStore | None
     # 意图分析住 core 状态机（票 05 收编）：伪装意图分析 + 全部 get_llm 引用 + 向量库。
     # orchestrator 只消费累积意图，不再自带一次分析。
     monkeypatch.setattr(conversation_module, "analyze_intent", fake_analyze)
-    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
     monkeypatch.setattr(ppt_module, "get_llm", lambda: provider)
     monkeypatch.setattr(word_module, "get_llm", lambda: provider)
     monkeypatch.setattr(outline_module, "get_llm", lambda: provider)

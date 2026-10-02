@@ -1,7 +1,7 @@
 """五类生成物的「修改意见」路径（票 08）：提纲 / 试卷 / 互动内容的修改与版本留痕。
 
-只经 HTTP 缝断言**响应与数据变迁**（不断言任何内部函数调用），全链路走无 Key 的 stub 兜底
-（`StubProvider`），因此本文件在无 `.env` 的环境下同样全绿。落盘经 conftest 的
+只经 HTTP 缝断言**响应与数据变迁**（不断言任何内部函数调用），全链路走无 Key 的替身兜底
+（`FakeLLM`），因此本文件在无 `.env` 的环境下同样全绿。落盘经 conftest 的
 `isolated_output_dir` 重定向到临时目录，不写 `backend/data/output`。
 
 覆盖：
@@ -24,10 +24,10 @@ from app.main import app
 client = TestClient(app)
 init_db()  # 幂等：版本表 / 题库表在临时库里就位
 
-# stub 兜底对话的固定意图（见 core/llm/providers/stub.py），每次生成都能走完「检索 → 生成」
+# 替身兜底对话的固定意图，每次生成都能走完「检索 → 生成」
 TURN = "讲 TCP 三次握手，45 分钟，风格学术"
-# StubProvider 固定试卷中题目考查的知识点（与 test_question_bank_api.py 同一份约定）
-STUB_KNOWLEDGE_POINTS = ["TCP三次握手", "TCP四次挥手", "TCP滑动窗口"]
+# FakeLLM 固定试卷中题目考查的知识点（与 test_question_bank_api.py 同一份约定）
+FAKE_KNOWLEDGE_POINTS = ["TCP三次握手", "TCP四次挥手", "TCP滑动窗口"]
 
 
 @pytest.fixture(autouse=True)
@@ -71,11 +71,11 @@ def _download(version_id: str, **params) -> bytes:
 
 
 def _seed_all_knowledge_points() -> None:
-    """种子 stub 试卷里出现的三个考查知识点对应的图谱节点（已存在则不重复加）。"""
+    """种子替身试卷里出现的三个考查知识点对应的图谱节点（已存在则不重复加）。"""
     db = SessionLocal()
     try:
         titles = {row.title for row in db.execute(select(KnowledgeNode)).scalars().all()}
-        for title in STUB_KNOWLEDGE_POINTS:
+        for title in FAKE_KNOWLEDGE_POINTS:
             if title not in titles:
                 db.add(KnowledgeNode(user_id="default", title=title, content=f"{title}的完整描述"))
         db.commit()

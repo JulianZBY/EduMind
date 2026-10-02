@@ -1,6 +1,6 @@
 """课件主题化渲染测试（ticket #9）。
 
-主接缝：HTTP API + stub 网关——生成结构含页面角色字段，排版规则（要点数/字数上限）不变。
+主接缝：HTTP API + 假网关——生成结构含页面角色字段，排版规则（要点数/字数上限）不变。
 副接缝：渲染器纯函数——pptx 回读断言角色版式差异、配色主题映射、旧结构回退默认版式。
 """
 
@@ -18,20 +18,19 @@ import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
 import app.knowledge.vector_store as vector_store_module
-from app.core.embedding.stub import StubEmbedder
 from app.core.intent import TeachingIntent
-from app.core.llm.providers.stub import StubProvider
 from app.generate.ppt import render_ppt
 from app.knowledge.vector_store import VectorStore
 from app.main import app
+from tests.support.fakes import FakeEmbedder, FakeLLM
 
 client = TestClient(app)
 
 _ROLES = {"封面", "目录", "内容", "总结"}
 
 
-class RecordingStub(StubProvider):
-    """记录 prompt 的 stub 网关：断言 prompt 约定的同时保持 stub 响应可解析。"""
+class RecordingFake(FakeLLM):
+    """记录 prompt 的假网关：断言 prompt 约定的同时保持替身响应可解析。"""
 
     def __init__(self) -> None:
         self.prompts: list[str] = []
@@ -74,12 +73,12 @@ def _max_font_size(shape) -> int:
     return max(sizes, default=0)
 
 
-# ---- 主接缝：prompt 约定 + stub 网关下的生成结构 ----
+# ---- 主接缝：prompt 约定 + 假网关下的生成结构 ----
 
 
-async def test_prompt_declares_role_and_stub_structure_satisfies(monkeypatch):
-    """生成 prompt 约定页面角色字段；stub 网关响应满足约定（结构含合法角色字段）。"""
-    provider = RecordingStub()
+async def test_prompt_declares_role_and_fake_structure_satisfies(monkeypatch):
+    """生成 prompt 约定页面角色字段；假网关响应满足约定（结构含合法角色字段）。"""
+    provider = RecordingFake()
     monkeypatch.setattr(ppt_module, "get_llm", lambda: provider)
 
     slides = await ppt_module.generate_ppt_structure({"topic": "TCP"}, "TCP 知识")
@@ -88,15 +87,15 @@ async def test_prompt_declares_role_and_stub_structure_satisfies(monkeypatch):
     assert "role" in prompt
     for role in _ROLES:
         assert role in prompt  # 角色取值进入 prompt 约定
-    assert slides, "stub 下应返回可解析的 slides"
+    assert slides, "替身下应返回可解析的 slides"
     assert {s["role"] for s in slides} == _ROLES  # 封面/目录/内容/总结齐备且取值合法
 
 
 def test_chat_artifacts_slides_carry_roles_and_keep_typography(monkeypatch, tmp_path):
-    """stub 网关走完整备课：产物 slides 每页带合法角色；要点数与字数上限不变。
+    """假网关走完整备课：产物 slides 每页带合法角色；要点数与字数上限不变。
 
     get_llm 逐模块替换（早绑定引用）+ 检索向量化走 Embedder 工厂引用：.env 即便配置真实
-    provider 也确定性走 stub（spec：LLM 网关一律 stub 保证确定性）。
+    provider 也确定性走替身（spec：LLM 网关一律替身保证确定性）。
     """
 
     async def fake_analyze(text):
@@ -104,13 +103,13 @@ def test_chat_artifacts_slides_carry_roles_and_keep_typography(monkeypatch, tmp_
             topic="TCP", duration_minutes=45, style="学术", objectives=["a"], key_points=["b"]
         )
 
-    stub = StubProvider()
+    fake = FakeLLM()
     # 意图分析住 core 状态机（票 05 收编）：伪装意图分析；orchestrator 只消费累积意图
     monkeypatch.setattr(conversation_module, "analyze_intent", fake_analyze)
-    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
-    monkeypatch.setattr(ppt_module, "get_llm", lambda: stub)
-    monkeypatch.setattr(word_module, "get_llm", lambda: stub)
-    monkeypatch.setattr(outline_module, "get_llm", lambda: stub)
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
+    monkeypatch.setattr(ppt_module, "get_llm", lambda: fake)
+    monkeypatch.setattr(word_module, "get_llm", lambda: fake)
+    monkeypatch.setattr(outline_module, "get_llm", lambda: fake)
     monkeypatch.setattr(vector_store_module, "VectorStore", lambda: _new_store(tmp_path))
 
     r = client.post("/api/v1/chat", json={"messages": [{"role": "user", "content": "讲TCP"}]})

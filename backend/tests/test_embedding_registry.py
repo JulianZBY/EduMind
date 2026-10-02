@@ -1,4 +1,4 @@
-"""向量化能力：独立接口 + 工厂 + 配置名选择（stub 底线 / hash 兜底 / openai 与方言）。"""
+"""向量化能力：独立接口 + 工厂 + 配置名选择（替身形状 / hash 兜底 / openai 与方言）。"""
 
 import httpx
 import pytest
@@ -8,9 +8,9 @@ from app.core.embedding.base import Embedder
 from app.core.embedding.factory import get_embedder
 from app.core.embedding.hash import HashEmbedder
 from app.core.embedding.openai_compat import OpenAICompatEmbedder
-from app.core.embedding.stub import StubEmbedder
+from tests.support.fakes import FakeEmbedder
 
-DASHSCOPE_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+QWEN_BASE = "https://maas.qianwenaiapi.com/compatible-mode/v1"
 SILICONFLOW_BASE = "https://api.siliconflow.cn/v1"
 
 
@@ -27,9 +27,9 @@ def _reset_embedding_config(monkeypatch):
     get_embedder.cache_clear()
 
 
-async def test_stub_embedder_shape_and_determinism():
-    """stub：8 维、以文本长度为特征、确定性（无 Key 底线）。"""
-    embedder = StubEmbedder()
+async def test_fake_embedder_shape_and_determinism():
+    """替身：8 维、以文本长度为特征、确定性（无 Key 底线）。"""
+    embedder = FakeEmbedder()
     assert isinstance(embedder, Embedder)
     vectors = await embedder.embed(["a", "bb", "ccc"])
     assert vectors == [[1.0] * 8, [2.0] * 8, [3.0] * 8]
@@ -53,18 +53,18 @@ async def test_hash_embedder_empty_text_does_not_divide_by_zero():
 
 
 def test_factory_follows_chat_dialect_when_unset(monkeypatch):
-    """未显式配置时跟随对话方言（保持既有 .env 行为）。"""
-    monkeypatch.setattr(settings, "llm_provider", "stub")
+    """未显式配置时跟随对话方言：未配置对话供应商 → 本地 hash 兜底（真实算法，检索质量降级）。"""
+    monkeypatch.setattr(settings, "llm_provider", "")
     get_embedder.cache_clear()
-    assert isinstance(get_embedder(), StubEmbedder)
+    assert isinstance(get_embedder(), HashEmbedder)
 
-    monkeypatch.setattr(settings, "llm_provider", "dashscope")
-    monkeypatch.setattr(settings, "dashscope_api_key", "sk-d")
+    monkeypatch.setattr(settings, "llm_provider", "qwen")
+    monkeypatch.setattr(settings, "qwen_api_key", "sk-d")
     get_embedder.cache_clear()
     embedder = get_embedder()
     assert isinstance(embedder, OpenAICompatEmbedder)
     assert (embedder.base_url, embedder.model, embedder.dimensions) == (
-        DASHSCOPE_BASE,
+        QWEN_BASE,
         "text-embedding-v3",
         1024,
     )
@@ -85,8 +85,8 @@ def test_factory_follows_chat_dialect_when_unset(monkeypatch):
 
 def test_explicit_provider_overrides_dialect(monkeypatch):
     """显式配置优先：向量化与对话可以是不同服务商、不同 Key。"""
-    monkeypatch.setattr(settings, "llm_provider", "dashscope")
-    monkeypatch.setattr(settings, "dashscope_api_key", "sk-d")
+    monkeypatch.setattr(settings, "llm_provider", "qwen")
+    monkeypatch.setattr(settings, "qwen_api_key", "sk-d")
     monkeypatch.setattr(settings, "embedding_provider", "hash")
     get_embedder.cache_clear()
     assert isinstance(get_embedder(), HashEmbedder)

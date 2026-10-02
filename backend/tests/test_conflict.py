@@ -1,6 +1,6 @@
 """冲突检测与教师审核测试（ADR-0006 自述检测范围，ADR-0004 定三类别：本轮只产出定义冲突）。
 
-主接缝：HTTP API + stub 网关 + 直接种子数据（图谱表、向量库标题索引）。
+主接缝：HTTP API + 假网关 + 直接种子数据（图谱表、向量库标题索引）。
 """
 
 import uuid
@@ -13,12 +13,12 @@ import app.knowledge.conflict as conflict_module
 import app.knowledge.graph as graph_module
 import app.knowledge.parsers as parsers_module
 import app.knowledge.pipeline as pipeline_module
-from app.core.embedding.stub import StubEmbedder
-from app.core.llm.providers.stub import StubProvider
+import app.knowledge.vector_store as vector_store_module
 from app.db import SessionLocal, init_db
 from app.db.models import Document, KnowledgeEdge, KnowledgeNode
 from app.knowledge.vector_store import VectorStore
 from app.main import app
+from tests.support.fakes import FakeEmbedder, FakeLLM
 
 client = TestClient(app)
 init_db()  # 幂等：确保表和默认用户存在
@@ -36,13 +36,13 @@ class _FakeParser:
 
 
 def _patch_common(monkeypatch, store: VectorStore) -> None:
-    """stub 网关 + stub 向量化 + 隔离向量库（标题索引），所有用例共用。"""
-    monkeypatch.setattr(conflict_module, "get_llm", lambda: StubProvider())
+    """假网关 + 假向量化 + 隔离向量库（标题索引），所有用例共用。"""
+    monkeypatch.setattr(conflict_module, "get_llm", lambda: FakeLLM())
     # 向量化只依赖 Embedder 接口：冲突模块早绑定，管道晚绑定（走工厂）
-    monkeypatch.setattr(conflict_module, "get_embedder", lambda: StubEmbedder())
-    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
-    monkeypatch.setattr(conflict_module, "VectorStore", lambda: store)
-    monkeypatch.setattr(graph_module, "VectorStore", lambda: store)
+    monkeypatch.setattr(conflict_module, "get_embedder", lambda: FakeEmbedder())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
+    # VectorStore 已改为函数内延迟导入（与 pipeline 同一惯例）：只 patch 类所在模块即可全覆盖
+    monkeypatch.setattr(vector_store_module, "VectorStore", lambda: store)
 
 
 def _patch_extraction(
@@ -88,7 +88,7 @@ async def _seed_node(title: str, content: str, store: VectorStore) -> str:
         node_id = node.id
     finally:
         db.close()
-    emb = (await StubEmbedder().embed([title]))[0]
+    emb = (await FakeEmbedder().embed([title]))[0]
     store.add_node_title(node_id, title, emb)
     return node_id
 
@@ -159,7 +159,7 @@ async def test_near_name_candidates_reach_llm_compare(monkeypatch, tmp_path):
     store = VectorStore(str(tmp_path / "v.db"))
     _patch_common(monkeypatch, store)
     old_title = f"TCP三次握手_{_sfx()}"
-    new_title = f"三次握手过程_{_sfx()}"  # 字面不同；stub 向量同向 → 余弦距离 0 → 近名候选
+    new_title = f"三次握手过程_{_sfx()}"  # 字面不同；替身向量同向 → 余弦距离 0 → 近名候选
     old_content = "通过三次报文交换建立可靠连接"
     old_id = await _seed_node(old_title, old_content, store)
     new_content = "（冲突版）握手次数其实无关紧要"
@@ -207,7 +207,7 @@ async def test_review_accept_new_replaces_old(monkeypatch, tmp_path):
     finally:
         db.close()
 
-    hits = store.search_node_titles((await StubEmbedder().embed([title]))[0], k=5)
+    hits = store.search_node_titles((await FakeEmbedder().embed([title]))[0], k=5)
     hit_ids = {h["node_id"] for h in hits}
     assert old_id not in hit_ids and new_node.id in hit_ids, "标题索引应同步替换"
 

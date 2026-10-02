@@ -16,9 +16,9 @@ class Settings(BaseSettings):
     upload_dir: str = "data/uploads"
     vectors_db_path: str = "data/vectors.db"
 
-    # ---- 对话 / 多模态：OpenAI 兼容方言（M2 阶段留空走 stub）----
-    # stub / dashscope / deepseek / siliconflow；后三者为同一份实现的三种方言预设
-    llm_provider: str = "stub"
+    # ---- 对话 / 多模态：OpenAI 兼容方言（留空 = 未配置：产品不提供假数据兜底）----
+    # qwen / deepseek / moonshot / zhipu / minimax / ark / siliconflow / custom
+    llm_provider: str = ""
     # 方言预设的覆盖项：填了即为准（换服务商只改这几项配置，不动代码）
     llm_base_url: str = ""
     llm_model: str = ""
@@ -26,23 +26,28 @@ class Settings(BaseSettings):
     llm_vision_model: str = ""
 
     # ---- 向量化：独立于对话 provider ----
-    # 留空 = 跟随对话方言（保持既有 .env 行为）；stub / hash / openai / dashscope / siliconflow
+    # 留空 = 跟随对话方言（保持既有 .env 行为）；hash / openai / qwen / siliconflow
     embedding_provider: str = ""
     embedding_base_url: str = ""
     embedding_model: str = ""
     embedding_api_key: str = ""
-    embedding_dimensions: int = 0  # >0 时随请求发送（dashscope text-embedding-v3 支持）
+    embedding_dimensions: int = 0  # >0 时随请求发送（千问 text-embedding-v3 支持）
 
     # ---- 云端服务 Key ----
-    dashscope_api_key: str = ""
+    qwen_api_key: str = ""
     deepseek_api_key: str = ""
+    moonshot_api_key: str = ""
+    zhipu_api_key: str = ""
+    minimax_api_key: str = ""
+    ark_api_key: str = ""
     siliconflow_api_key: str = ""
     mineru_token: str = ""
     bocha_api_key: str = ""
-
-    # 录音转写：stub（默认，无 key 可跑）/ paraformer（阿里百炼，复用 DASHSCOPE_API_KEY）
-    asr_provider: str = "stub"
-    # 网络搜索：留空 = 有 BOCHA_API_KEY 走 bocha，否则 stub（无 key 底线）；可显式 stub / bocha
+    # 录音转写：留空 = 自动（有百炼 Key 走 paraformer，否则提示未配置；无假转写兜底）
+    asr_provider: str = ""
+    # 百炼语音转写 Key：paraformer 是阿里云百炼的服务，与千问 MaaS 的 Key 不通用
+    asr_api_key: str = ""
+    # 网络搜索：留空 = 有 BOCHA_API_KEY 走 bocha，否则提示未配置；可显式 bocha
     search_provider: str = ""
     # PDF 解析策略：mineru / pypdf / mineru_then_pypdf（默认 = mineru 失败退 pypdf）
     pdf_strategy: str = "mineru_then_pypdf"
@@ -54,11 +59,18 @@ class Settings(BaseSettings):
     retrieval_strategy: str = "vector_graph"
 
     # ---- 任务级模型（CONTEXT.md「任务级模型」）----
-    # 按任务分别选模型档位：留空 = 回落全局默认（LLM_MODEL，或当前方言预设的对话模型）。
-    # 取值由设置页写入（见 app/core/catalog.py 的 TASKS），也可用 .env 作引导默认。
+    # 按任务分别选「供应商实例 + 模型档位」：留空 = 回落全局默认。
+    # task_provider_* 是供应商实例 id（设置页「添加供应商」产生）；task_model_* 是该实例方言目录里的模型。
+    task_provider_intent: str = ""
+    task_provider_generate: str = ""
+    task_provider_conflict: str = ""
     task_model_intent: str = ""
     task_model_generate: str = ""
     task_model_conflict: str = ""
+
+    # ---- 供应商实例（多供应商并存）----
+    # 默认供应商实例 id：设置页「添加供应商」产生；留空 = 走 legacy 单供应商路径（llm_provider + 各家 Key）。
+    default_provider_instance: str = ""
 
     # ---- 冲突检测（ADR-0006）：近名预筛的余弦距离阈值，阈值内候选交 LLM 比对 ----
     conflict_distance_threshold: float = 0.3

@@ -2,13 +2,15 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
 from app.api.health import router as health_router
 from app.api.openapi_examples import internal_error, json_response
 from app.api.v1.router import router as v1_router
 from app.config import settings
+from app.core.errors import ProviderNotConfigured
 from app.db import init_db
 
 # 端点分组：面向教师的术语与 CONTEXT.md 一致，Swagger / ReDoc 按此导航。
@@ -48,12 +50,12 @@ DESCRIPTION = """多模态 AI 备课智能体后端。
 
 OpenAPI 是本服务接口文档的**唯一事实源**：每个端点都带 `summary`、描述、
 请求/响应示例、错误码与分组 tag；前端 TypeScript 类型由本 schema 生成，禁止手抄。
-
 * **界面**：Swagger UI `/docs`，ReDoc `/redoc`。
 * **分组**：系统 / 备课会话 / 知识库 / 知识图谱 / 生成物 / 冲突审核 / 题库。
 * **单用户**：固定 `user_id="default"`，本服务不含登录与多租户。
-* **能力切换**：对话模型、向量化、语音转写、PDF 解析、网络搜索均按配置选择，
-  无 Key 时回落 stub，全链路仍可跑（协议语义见 `docs/api/`）。
+* **能力切换**：对话模型、向量化、语音转写、PDF 解析、网络搜索均按配置选择。
+  云端能力未配置时相关端点返回 `503`（`code: provider_not_configured`，`message` 面向教师，
+  指到设置页）——产品不返回任何「看起来像真结果的占位内容」。
 * **版本策略**：只有破坏性变更才升 `/api/v2`。
 """
 
@@ -71,6 +73,16 @@ app = FastAPI(
     openapi_tags=TAGS_METADATA,
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(ProviderNotConfigured)
+async def _provider_not_configured_handler(_: Request, exc: ProviderNotConfigured) -> JSONResponse:
+    """未配置云端能力：503 + 稳定 code + 面向教师的一句话（引导去设置页，而不是假成功）。"""
+    return JSONResponse(
+        status_code=503,
+        content={"detail": {"code": "provider_not_configured", "message": str(exc)}},
+    )
+
 
 app.include_router(health_router)
 app.include_router(v1_router, prefix="/api/v1")

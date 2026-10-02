@@ -42,16 +42,13 @@ _CACHED_FACTORIES = (get_llm, get_embedder, get_search, get_pdf_parser, get_tran
 # 调用方（app/ 下除各能力自身包以外的模块）不得出现的具体实现 import
 CONCRETE_IMPLEMENTATIONS = (
     "app.core.llm.providers",
-    "app.core.embedding.stub",
     "app.core.embedding.hash",
     "app.core.embedding.openai_compat",
     "app.core.search.bocha",
-    "app.core.search.stub",
     "app.core.parser.mineru",
     "app.core.parser.pypdf",
     "app.core.parser.fallback",
     "app.core.asr.paraformer",
-    "app.core.asr.stub",
 )
 # 实现允许被 import 的位置：各能力自己的包（工厂 + 实现同处一层）
 _CAPABILITY_PACKAGES = (

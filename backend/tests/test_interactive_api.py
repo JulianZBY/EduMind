@@ -1,7 +1,7 @@
-"""互动内容按需生成与自动触发测试（HTTP API 主接缝：stub 网关 + 直接种子数据）。
+"""互动内容按需生成与自动触发测试（HTTP API 主接缝：假网关 + 直接种子数据）。
 
 覆盖 ticket #8 验收项：
-- 新的按需生成端点在 stub 模式下返回可解析的单文件 HTML
+- 新的按需生成端点在假网关下返回可解析的单文件 HTML
 - 意图互动诉求命中时，备课流程自动附带互动内容产物（集成测试）
 - 未命中互动诉求时不自动生成
 """
@@ -19,12 +19,11 @@ import app.generate.outline as outline_module
 import app.generate.ppt as ppt_module
 import app.generate.word as word_module
 import app.knowledge.vector_store as vector_store_module
-from app.core.embedding.stub import StubEmbedder
 from app.core.llm.base import ChatResult, LLMProvider
-from app.core.llm.providers.stub import StubProvider
 from app.db import init_db
 from app.knowledge.vector_store import VectorStore
 from app.main import app
+from tests.support.fakes import FakeEmbedder, FakeLLM
 
 client = TestClient(app)
 init_db()  # 幂等：确保表、列与默认用户存在
@@ -77,27 +76,27 @@ class ScriptedProvider(LLMProvider):
         return ChatResult(content=_FAKE_CHAT_JSON)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        # 与 stub 同构：以文本长度为特征
+        # 与替身向量同构：以文本长度为特征
         return [[float(len(t))] * 8 for t in texts]
 
 
 def _install(monkeypatch, provider: LLMProvider, tmp_path) -> None:
-    """替换全部 get_llm 早绑定引用（意图/PPT/Word/提纲/创意）+ stub 向量化 + 空向量库。"""
+    """替换全部 get_llm 早绑定引用（意图/PPT/Word/提纲/创意）+ 替身向量化 + 空向量库。"""
     monkeypatch.setattr(intent_module, "get_llm", lambda: provider)
     monkeypatch.setattr(ppt_module, "get_llm", lambda: provider)
     monkeypatch.setattr(word_module, "get_llm", lambda: provider)
     monkeypatch.setattr(outline_module, "get_llm", lambda: provider)
     monkeypatch.setattr(creative_module, "get_llm", lambda: provider)
     # 检索向量化只依赖 Embedder 接口（orchestrator 晚绑定，替换工厂即可）
-    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
     monkeypatch.setattr(
         vector_store_module, "VectorStore", lambda: VectorStore(str(tmp_path / "v.db"))
     )
 
 
 def test_generate_endpoint_returns_parseable_single_file_html(monkeypatch, tmp_path):
-    """验收 1：stub 模式下按需生成端点返回可解析的单文件 HTML，且可经文件接口取回。"""
-    _install(monkeypatch, StubProvider(), tmp_path)
+    """验收 1：假网关下按需生成端点返回可解析的单文件 HTML，且可经文件接口取回。"""
+    _install(monkeypatch, FakeLLM(), tmp_path)
 
     r = client.post(
         "/api/v1/interactive/generate",

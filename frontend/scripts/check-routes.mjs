@@ -132,7 +132,7 @@ try {
   const renderCases = [
     ...EXPECTED_AREAS.map((area) => ({ path: area.path, expect: area.label })),
     { path: '/lesson-prep/session-abc', expect: 'session-abc' },
-    { path: '/settings', expect: '供应商目录' },
+    { path: '/settings', expect: '供应商' },
     // 冲突审核的队列是服务端数据（票 11 起按类别取数），SSR 渲染时停在取数态，
     // 故这里断言面板自己的文案（带类别名）而不是空状态标题——它同样证明 ?category= 选中了该分区。
     { path: '/conflicts?category=structure', expect: '正在取「结构冲突」队列' },

@@ -51,7 +51,7 @@ class SearchResponse(BaseModel):
     summary="知识库语义检索",
     description=(
         "在本地知识库里做语义检索，返回最相近的段落（`distance` 越小越相近，`doc_id` 可回溯来源文档）。\n\n"
-        "检索用向量由当前配置的向量化能力生成；无云端 Key 时由 stub 提供与宿主无关的兜底向量，"
+        "检索用向量由当前配置的向量化能力生成；未配置云端 Key 时用本地 hash 兜底向量（真实算法），"
         "因此无 Key 时排序不具语义意义，仅供链路联调。"
     ),
     responses={
@@ -191,7 +191,7 @@ class WebSearchResult(BaseModel):
 
 
 class WebSearchResponse(BaseModel):
-    """网络搜索响应：结果列表（无 Key 时由 stub 返回带标记的占位结果）。"""
+    """网络搜索响应：结果列表（未配置博查 Key 时返回 503 引导，不返回占位结果）。"""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -217,8 +217,8 @@ class WebSearchResponse(BaseModel):
     summary="网络搜索",
     description=(
         "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n"
-        "实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则回落 stub，"
-        "返回带「（stub 网络搜索）」标记的占位结果（无 Key 全链路可跑的又一条路径）。"
+        "实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则返回 503 引导（code: provider_not_configured），"
+        "不返回任何占位结果——拿假结果当教学依据比明确报错更糟。"
         "显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时请求失败（`500`，`detail` 为 "
         "`BOCHA_API_KEY 未配置`），而不是静默返回空结果。"
     ),

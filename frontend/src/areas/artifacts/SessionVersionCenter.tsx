@@ -17,6 +17,8 @@ import { GenerateInteractiveDialog } from './GenerateInteractiveDialog'
 import { ArtifactPreview, VersionUnavailable } from './ArtifactPreview'
 import { ReviseDialog } from './ReviseDialog'
 import { artifactDownloadUrl, useArtifactSessions, useArtifactVersion, useSessionArtifacts } from './queries'
+import { ProviderMissingNotice } from '../settings/ProviderMissingNotice'
+import { useProviderMissingState } from '../settings/queries'
 import type { ArtifactVersion } from './queries'
 import { versionLabel, versionOf } from './narrowing'
 import { VersionTimeline } from './VersionTimeline'
@@ -92,6 +94,7 @@ export function SessionVersionCenter({ sessionId }: { sessionId: string }) {
   const [reviseTarget, setReviseTarget] = useState<ArtifactVersion | null>(null)
   const [examOpen, setExamOpen] = useState(false)
   const [interactiveOpen, setInteractiveOpen] = useState(false)
+  const missing = useProviderMissingState()
 
   const selectedVersionId = searchParams.get('v')
   const groups = listing.data?.groups ?? []
@@ -132,6 +135,9 @@ export function SessionVersionCenter({ sessionId }: { sessionId: string }) {
           </Button>
         </div>
       </header>
+      {missing.providersMissing ? (
+        <ProviderMissingNotice message="还没有配置供应商：生成试卷、互动内容都需要对话模型，先添加一家再回来生成。" />
+      ) : null}
 
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 min-w-0 flex-1 overflow-auto">

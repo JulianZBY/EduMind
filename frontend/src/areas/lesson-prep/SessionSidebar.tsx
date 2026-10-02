@@ -31,21 +31,29 @@ import { LESSON_PREP_PATH, sessionPath } from './routes'
 /** 检索输入停顿多久后才落到地址上（地址即检索条件，但不逐键改 URL）。 */
 const SEARCH_DEBOUNCE_MS = 250
 
-/** 一行会话：标题 + 消息数 / 追问粒度 / 最近使用时间；当前行是黑白反色 + 强调色左边线。 */
+/** 一行会话：一体式条目——整行是同一个矩形（没有左信息 / 右操作的竖线分割），选中时整行黑白反色。 */
 function SessionRow({
   session,
   search,
+  active,
   onRenameRequest,
   onDeleteRequest,
 }: {
   session: SessionSummary
   /** 选中会话时保留的检索条件（进会话不丢筛选，与题库区同一口径）。 */
   search: string
+  /** 这条是否是当前打开的会话：整行反色，而不是只反色左侧链接。 */
+  active: boolean
   onRenameRequest: (session: SessionSummary) => void
   onDeleteRequest: (session: SessionSummary) => void
 }) {
   return (
-    <li className="border-b-2 border-black">
+    <li
+      className={cn(
+        'border-b-2 border-black transition-colors duration-150',
+        active ? 'bg-black text-white' : 'bg-white text-black',
+      )}
+    >
       <div className="flex items-stretch">
         <NavLink
           to={{ pathname: sessionPath(session.id), search }}
@@ -53,7 +61,7 @@ function SessionRow({
             cn(
               'flex min-w-0 flex-1 flex-col gap-1 border-l-4 px-3 py-2 outline-none transition-colors duration-150',
               'hover:bg-black hover:text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black',
-              isActive ? 'border-l-[#ff3366] bg-black text-white' : 'border-l-transparent',
+              isActive ? 'border-l-[#ff3366]' : 'border-l-transparent',
             )
           }
         >
@@ -66,7 +74,7 @@ function SessionRow({
           </span>
           <span className="text-xs">最近使用 {formatTimestamp(session.updated_at)}</span>
         </NavLink>
-        <div className="flex shrink-0 items-center border-l-2 border-black px-1">
+        <div className="flex shrink-0 items-center px-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" aria-label={`更多操作：${session.title}`}>
@@ -308,6 +316,7 @@ export function SessionSidebar() {
                 key={session.id}
                 session={session}
                 search={listSearch}
+                active={session.id === currentSessionId}
                 onRenameRequest={setRenameTarget}
                 onDeleteRequest={setDeleteTarget}
               />

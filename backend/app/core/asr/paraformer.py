@@ -45,7 +45,7 @@ class ParaformerTranscriber(Transcriber):
         self, file_path: str, poll_interval: float = 3.0, timeout: float = 600.0
     ) -> str:
         if not self.api_key:
-            raise ValueError("DASHSCOPE_API_KEY 未配置")
+            raise ValueError("ASR_API_KEY 未配置（需要阿里云百炼的 Key，千问 Key 不通用）")
         async with httpx.AsyncClient(timeout=120, transport=self._transport) as client:
             file_url = await self._upload_oss(client, file_path)
             task_id = await self._create_task(client, file_url)

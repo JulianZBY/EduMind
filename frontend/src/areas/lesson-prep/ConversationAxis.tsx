@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ApiError } from '../../api/client'
+import { ApiError, apiErrorMessage } from '../../api/client'
 import { Button } from '../../components/ui/Button'
 import { Dialog } from '../../components/ui/Dialog'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -19,8 +19,9 @@ import { GranularityPicker } from './GranularityPicker'
 import { ReferencePicker } from './ReferencePicker'
 import type { Granularity, SessionHistoryBody } from './queries'
 import { useAttachReference, useSendTurn, useSessionHistory, useUpdateSession } from './queries'
+import { ProviderMissingNotice } from '../settings/ProviderMissingNotice'
+import { useProviderMissingState } from '../settings/queries'
 import { LESSON_PREP_PATH } from './routes'
-
 /** 上传失败的说法：后端明确拒绝与「上传成功但没算作参考资料」分开讲，教师才知道重试有没有意义。 */
 function uploadFailureMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -175,11 +176,18 @@ export function ConversationAxis({ sessionId }: { sessionId: string }) {
   const attach = useAttachReference(sessionId)
   const [failedUtterance, setFailedUtterance] = useState<string | null>(null)
   const [referencesOpen, setReferencesOpen] = useState(false)
-
+  const missing = useProviderMissingState()
   const runTurn = (utterance: string) => {
     setFailedUtterance(null)
     send.mutate(utterance, {
-      onError: () => setFailedUtterance(utterance),
+      onError: (failure) => {
+        setFailedUtterance(utterance)
+        toast({
+          title: '这一轮没发出去',
+          description: apiErrorMessage(failure, '后端暂时没接住这一轮，点重试即可。'),
+          tone: 'accent',
+        })
+      },
     })
   }
 
@@ -264,6 +272,9 @@ export function ConversationAxis({ sessionId }: { sessionId: string }) {
         />
       </div>
 
+      {missing.providersMissing ? (
+        <ProviderMissingNotice message="还没有配置供应商：这一轮对话、跳过追问与生成都会返回「未配置」提示，先到「设置 → 供应商」添加一家。" />
+      ) : null}
       <ConversationComposer
         onSend={runTurn}
         onSkip={runTurn}

@@ -50,7 +50,7 @@ export function ServiceStatusDrawer() {
         </dl>
 
         <p className="text-xs leading-5 text-black/60">
-          后端未启动时，各区只显示空状态。stub 模式下没有云端 Key 也能全链路跑通，结果用于试用与联调。
+          后端未启动时，各区只显示空状态。云端能力未配置时，相关操作会返回「未配置」提示并引导到「设置 → 供应商 / 能力实现」，不返回演示用假结果。
         </p>
 
         <div className="flex items-center gap-2">

@@ -1,7 +1,7 @@
-"""试卷按需生成与题库入库测试（HTTP API 主接缝：stub 网关 + 直接种子数据）。
+"""试卷按需生成与题库入库测试（HTTP API 主接缝：假网关 + 直接种子数据）。
 
 覆盖 ticket #7 验收项：
-- 按需生成端点在 stub 模式下返回可解析的题目数组（题型覆盖选择/填空/简答）
+- 按需生成端点在假网关下返回可解析的题目数组（题型覆盖选择/填空/简答）
 - 每题含考查知识点标注；产物回读含试题与答案解析两部分
 - 生成题目写入题库（来源=自编）并关联知识点（数据库状态断言）
 """
@@ -16,29 +16,28 @@ from sqlalchemy import select
 import app.core.embedding.factory as embedding_factory_module
 import app.generate.exam as exam_module
 import app.knowledge.vector_store as vector_store_module
-from app.core.embedding.stub import StubEmbedder
 from app.core.llm.base import ChatResult, LLMProvider
-from app.core.llm.providers.stub import StubProvider
 from app.db import SessionLocal, init_db
 from app.db.models import KnowledgeNode, Question, QuestionKnowledge
 from app.knowledge.vector_store import VectorStore
 from app.main import app
+from tests.support.fakes import FakeEmbedder, FakeLLM
 
 client = TestClient(app)
 init_db()  # 幂等：确保表、列与默认用户存在
 
 OUTPUT_DIR = Path("data/output")
 
-# StubProvider 固定试卷中题目考查的知识点（与 stub 响应约定一致，供种子节点对齐）
-STUB_KNOWLEDGE_POINTS = ["TCP三次握手", "TCP四次挥手", "TCP滑动窗口"]
+# FakeLLM 固定试卷中题目考查的知识点（与替身响应约定一致，供种子节点对齐）
+FAKE_KNOWLEDGE_POINTS = ["TCP三次握手", "TCP四次挥手", "TCP滑动窗口"]
 
 
-def _install_stub(monkeypatch, tmp_path) -> None:
-    """stub 网关 + 空向量库：端点全链路不触外部服务，检索降级为空上下文。"""
+def _install_fake(monkeypatch, tmp_path) -> None:
+    """假网关 + 空向量库：端点全链路不触外部服务，检索降级为空上下文。"""
     # exam.py 顶层绑定 get_llm（早绑定），factory 引用需逐模块替换
-    monkeypatch.setattr(exam_module, "get_llm", lambda: StubProvider())
+    monkeypatch.setattr(exam_module, "get_llm", lambda: FakeLLM())
     # 检索向量化只依赖 Embedder 接口（orchestrator 晚绑定，替换工厂即可）
-    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: StubEmbedder())
+    monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
     monkeypatch.setattr(
         vector_store_module, "VectorStore", lambda: VectorStore(str(tmp_path / "v.db"))
     )
@@ -61,9 +60,9 @@ def _generate(**overrides):
     return client.post("/api/v1/exam/generate", json=payload)
 
 
-def test_generate_returns_parseable_questions_in_stub_mode(monkeypatch, tmp_path):
-    """验收 1：stub 模式下按需生成端点返回可解析题目数组，题型覆盖选择/填空/简答。"""
-    _install_stub(monkeypatch, tmp_path)
+def test_generate_returns_parseable_questions_in_fake_mode(monkeypatch, tmp_path):
+    """验收 1：假网关下按需生成端点返回可解析题目数组，题型覆盖选择/填空/简答。"""
+    _install_fake(monkeypatch, tmp_path)
     r = _generate()
 
     assert r.status_code == 200
@@ -81,7 +80,7 @@ def test_generate_returns_parseable_questions_in_stub_mode(monkeypatch, tmp_path
 
 def test_exam_docx_readback_has_questions_and_analysis_parts(monkeypatch, tmp_path):
     """验收 2：产物回读含试题与答案解析两部分，试题行带考查知识点标注。"""
-    _install_stub(monkeypatch, tmp_path)
+    _install_fake(monkeypatch, tmp_path)
     body = _generate().json()
 
     texts = [p.text for p in DocxDocument(OUTPUT_DIR / body["filename"]).paragraphs]
@@ -98,8 +97,8 @@ def test_exam_docx_readback_has_questions_and_analysis_parts(monkeypatch, tmp_pa
 
 def test_questions_saved_to_bank_and_linked_to_knowledge(monkeypatch, tmp_path):
     """验收 3：生成题目写入题库（来源=自编）并关联知识点（数据库状态断言）。"""
-    _install_stub(monkeypatch, tmp_path)
-    seeded = {title: _seed_node(title) for title in STUB_KNOWLEDGE_POINTS}
+    _install_fake(monkeypatch, tmp_path)
+    seeded = {title: _seed_node(title) for title in FAKE_KNOWLEDGE_POINTS}
 
     # 断言只针对本轮新生成的题目：同文件前序用例已往同一题库写过同 content 的行，
     # 按题目 id 排除存量行，测试不依赖库内历史状态（顺序无关、可重复跑）。
@@ -149,8 +148,8 @@ def test_generate_returns_502_when_llm_output_unparseable(monkeypatch, tmp_path)
         async def embed(self, texts):
             return [[0.0] * 8 for _ in texts]
 
-    # exam.py 顶层早绑定 get_llm，需逐模块替换（与 _install_stub 同理），
-    # 否则试卷生成仍走真实工厂返回的 StubProvider，拿不到不可解析输出。
+    # exam.py 顶层早绑定 get_llm，需逐模块替换（与 _install_fake 同理），
+    # 否则试卷生成仍走真实工厂返回的 FakeLLM，拿不到不可解析输出。
     monkeypatch.setattr(exam_module, "get_llm", lambda: BadProvider())
     monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: BadProvider())
     monkeypatch.setattr(

@@ -1,31 +1,62 @@
+/**
+ * 设置区：单页表单、编辑密度（一次只做一件事）。
+ *
+ * 四张卡各管一段：供应商（多供应商并存，只加家不选模型）/ 全局默认（从统一模型池选一个
+ * 具体模型）/ 任务级模型（每个任务从统一模型池选模型，默认跟随全局）/ 能力实现。
+ * 模型清单在添加供应商时自动拉取并缓存，设置页展示的统一模型池 = 所有已添加供应商的
+ * 模型合并（每条标注来自哪家）。Key 只有掩码会出现在响应里，输入框里的明文只来自教师粘贴。
+ */
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { MainPanel } from '../../components/layout/Workbench'
+import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card, CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
+import { Dialog } from '../../components/ui/Dialog'
 import { Field } from '../../components/ui/Field'
 import { Input } from '../../components/ui/Input'
 import { useToast } from '../../components/ui/useToast'
+import { AddProviderDialog } from './AddProviderDialog'
 import { OptionPicker } from './OptionPicker'
 import type { PickerOption } from './OptionPicker'
 import {
   settingsErrorMessage,
   settingsPatch,
+  useDeleteProviderInstance,
+  useRefreshProviderModels,
   useSettingsCatalogQuery,
   useSettingsQuery,
+  useUpdateProviderInstance,
   useUpdateSettings,
 } from './queries'
 import type { SettingsCatalogBody, SettingsViewBody } from './queries'
 
-/**
- * 设置区：单页表单、编辑密度（一次只做一件事）。
- *
- * 四张卡各管一段：供应商目录 / 任务级模型 / 能力实现 / 自定义 OpenAI 兼容服务。
- * 每张卡只写自己那几个设置项，写入后服务端返回的就是新的生效配置，界面随之刷新——
- * 「改动即时生效、不需要重启」在界面上表现为没有「重启生效」这类提示。
- * Key 只有掩码会出现在响应里，输入框里的明文只来自教师自己粘贴。
- */
+/** 统一模型池里的一条：模型 + 来自哪家（同名不同家 = 两条独立条目，走各家的 Key）。 */
+interface PoolEntry {
+  instanceId: string
+  instanceLabel: string
+  model: string
+}
+
+/** 选择器的取值编码：`<实例id>::<模型>`；「跟随全局」与「手动填写」是保留值。 */
+const FOLLOW_GLOBAL = 'follow-global'
+const MANUAL_MODEL = 'manual-model'
+
+function poolOf(view: SettingsViewBody): PoolEntry[] {
+  return view.provider_instances.flatMap((instance) =>
+    instance.models.map((model) => ({
+      instanceId: instance.id,
+      instanceLabel: instance.label,
+      model,
+    })),
+  )
+}
+
+function poolOption(entry: PoolEntry): PickerOption {
+  return { id: `${entry.instanceId}::${entry.model}`, label: entry.model, note: entry.instanceLabel }
+}
+
 export function SettingsArea() {
   const settings = useSettingsQuery()
   const catalog = useSettingsCatalogQuery()
@@ -36,7 +67,7 @@ export function SettingsArea() {
       <MainPanel title="设置" tagline="云端能力与模型档位的配置页">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-6 py-8">
           <Card>
-            <CardHeader title="供应商目录" meta="选一家，粘贴 Key 即可用" />
+            <CardHeader title="供应商" meta="可同时添加多家" />
             <CardBody className="flex items-center gap-3">
               <span
                 aria-hidden="true"
@@ -79,10 +110,10 @@ export function SettingsArea() {
   return (
     <MainPanel title="设置" tagline="云端能力与模型档位的配置页">
       <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-6 py-8">
-        <ProviderPanel view={settings.data} catalog={catalog.data} />
-        <TaskModelPanel view={settings.data} catalog={catalog.data} />
+        <ProviderListPanel view={settings.data} catalog={catalog.data} />
+        <GlobalDefaultPanel view={settings.data} />
+        <TaskModelPanel view={settings.data} />
         <CapabilityPanel view={settings.data} catalog={catalog.data} />
-        <CustomServicePanel view={settings.data} />
         <p className="text-xs leading-5 text-black/60">{settings.data.note}</p>
       </div>
     </MainPanel>
@@ -140,189 +171,425 @@ function useSaveFeedback() {
   return { save, submit, error: save.isError ? settingsErrorMessage(save.error) : '' }
 }
 
-// ---- 供应商目录 ----
+// ---- 供应商（多供应商并存，只加家不选模型）----
 
-function ProviderPanel({ view, catalog }: { view: SettingsViewBody; catalog: SettingsCatalogBody }) {
-  const drafts = useDrafts(view)
-  const { save, submit, error } = useSaveFeedback()
+type InstanceView = SettingsViewBody['provider_instances'][number]
 
-  const provider = drafts.valueOf('llm_provider', view.provider.value)
-  const selected = catalog.providers.find((item) => item.id === provider)
-  const keyField = selected?.key_field ?? ''
-  const keyState = view.keys.find((item) => item.field === keyField)
-  const keyDraft = keyField ? drafts.valueOf(keyField, '') : ''
-  const dirty =
-    provider !== view.provider.value || (keyDraft.trim() !== '' && keyField !== '')
+function ProviderListPanel({ view, catalog }: { view: SettingsViewBody; catalog: SettingsCatalogBody }) {
+  const [addOpen, setAddOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<InstanceView | null>(null)
+  const setDefault = useUpdateProviderInstance()
+  const refresh = useRefreshProviderModels()
+  const remove = useDeleteProviderInstance()
+  const { toast } = useToast()
+  const instances = view.provider_instances
+
+  const dialectLabel = (instance: InstanceView) =>
+    instance.provider === 'custom'
+      ? '自定义 OpenAI 兼容服务'
+      : (catalog.providers.find((provider) => provider.id === instance.provider)?.label ??
+        instance.provider)
+
+  const makeDefault = (instance: InstanceView) => {
+    setDefault.mutate(
+      { instanceId: instance.id, patch: { make_default: true } },
+      {
+        onSuccess: () =>
+          toast({ title: '已设为默认供应商', description: instance.label, tone: 'default' }),
+        onError: (failure) =>
+          toast({
+            title: '没设上',
+            description: settingsErrorMessage(failure),
+            tone: 'accent',
+          }),
+      },
+    )
+  }
+
+  const refreshModels = (instance: InstanceView) => {
+    refresh.mutate(instance.id, {
+      onSuccess: (next) =>
+        toast({
+          title: '模型清单已刷新',
+          description:
+            next.models.length > 0 ? `${next.label}：${next.models.length} 个模型。` : next.models_error,
+          tone: 'default',
+        }),
+      onError: (failure) =>
+        toast({ title: '没刷新成', description: settingsErrorMessage(failure), tone: 'accent' }),
+    })
+  }
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    remove.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        toast({
+          title: '已删除供应商',
+          description: `${deleteTarget.label}；使用它的任务已回落全局默认。`,
+          tone: 'accent',
+        })
+        setDeleteTarget(null)
+      },
+      onError: (failure) =>
+        toast({ title: '没删掉', description: settingsErrorMessage(failure), tone: 'accent' }),
+    })
+  }
 
   return (
     <Card>
-      <CardHeader title="供应商目录" meta="选一家，粘贴 Key 即可用" />
+      <CardHeader
+        title="供应商"
+        meta={instances.length > 0 ? `已添加 ${instances.length} 家` : '只加家，模型清单自动拉取'}
+      />
       <CardBody className="flex flex-col gap-3">
-        <Field htmlFor="settings-provider" label="供应商" hint={selected?.note}>
+        {instances.length === 0 ? (
+          <p className="text-sm leading-6 text-black/60">
+            还没有添加供应商：对话、生成、检索等云端能力都处于「未配置」，相关操作会给出指向本页的
+            引导而不是假结果。添加一家并粘贴 Key 后，它的模型清单会自动拉取进统一模型池；第一家自动成为全局默认。
+          </p>
+        ) : (
+          instances.map((instance) => (
+            <div
+              key={instance.id}
+              className="flex flex-col gap-2 rounded-none border-2 border-black px-3 py-2"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+                  <span className="text-sm font-bold">{instance.label}</span>
+                  {instance.is_default ? <Badge tone="solid">默认</Badge> : null}
+                  <span className="text-xs text-black/60">{dialectLabel(instance)}</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {instance.is_default ? null : (
+                    <Button
+                      size="sm"
+                      disabled={setDefault.isPending}
+                      onClick={() => makeDefault(instance)}
+                    >
+                      设为默认
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={() => refreshModels(instance)}>
+                    刷新模型
+                  </Button>
+                  <Button size="sm" onClick={() => setDeleteTarget(instance)}>
+                    删除
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs leading-5 text-black/60">
+                {instance.base_url || '（无地址）'} · 模型 {instance.models.length} 个 · Key{' '}
+                {instance.key_configured ? instance.key_masked : '未配置'}
+              </p>
+              {instance.models_error ? (
+                <p className="text-xs leading-5 text-[#ff3366]">
+                  模型清单没拉到：{instance.models_error}（可点刷新重试，或在下拉里手动填写模型）
+                </p>
+              ) : null}
+              <ReadyNote ready={instance.ready} reason={instance.reason}>
+                {instance.ready ? '已就绪：地址、Key 齐全，可被任务指派。' : '这一家还不能用：'}
+              </ReadyNote>
+            </div>
+          ))
+        )}
+      </CardBody>
+      <CardFooter>
+        <Button variant="accent" onClick={() => setAddOpen(true)}>
+          添加供应商
+        </Button>
+      </CardFooter>
+
+      {addOpen ? (
+        <AddProviderDialog
+          catalog={catalog}
+          onClose={() => setAddOpen(false)}
+          onAdded={() => undefined}
+        />
+      ) : null}
+      {deleteTarget ? (
+        <Dialog
+          open
+          onOpenChange={(next) => {
+            if (!next) setDeleteTarget(null)
+          }}
+          title="删除供应商"
+          description={deleteTarget.label}
+          size="sm"
+          footer={
+            <>
+              <Button size="sm" onClick={() => setDeleteTarget(null)}>
+                取消
+              </Button>
+              <Button
+                variant="accent"
+                size="sm"
+                disabled={remove.isPending}
+                onClick={confirmDelete}
+              >
+                {remove.isPending ? '正在删除…' : '删除'}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm leading-6">
+            删除后这家不再可用；指到它的任务会回落全局默认（默认被删则回落剩余第一家）。
+            Key 随这一条删除，{'.env'} 里的原值不受影响。
+          </p>
+        </Dialog>
+      ) : null}
+    </Card>
+  )
+}
+
+// ---- 全局默认（从统一模型池选一个具体模型）----
+
+function GlobalDefaultPanel({ view }: { view: SettingsViewBody }) {
+  const drafts = useDrafts(view)
+  const { save, submit, error } = useSaveFeedback()
+  const pool = poolOf(view)
+  const defaultInstanceId =
+    view.provider_instances.find((instance) => instance.is_default)?.id ?? ''
+
+  /** 当前全局默认模型：编码成选择器取值（实例::模型），不在池里的按手动填写处理。 */
+  const currentModel = view.items.find((item) => item.name === 'llm_model')?.value ?? ''
+  const composite = currentModel
+    ? pool.some((entry) => entry.instanceId === defaultInstanceId && entry.model === currentModel)
+      ? `${defaultInstanceId}::${currentModel}`
+      : MANUAL_MODEL
+    : defaultInstanceId
+      ? FOLLOW_GLOBAL
+      : ''
+
+  const draft = drafts.valueOf('global-model', composite)
+  const [manualInstance, setManualInstance] = useState(defaultInstanceId)
+  const manualModelDraft = drafts.valueOf('global-manual-model', currentModel)
+
+  const pickProviderOptions: PickerOption[] = view.provider_instances.map((instance) => ({
+    id: instance.id,
+    label: instance.label,
+  }))
+
+  const dirty = draft !== composite
+
+  const saveGlobal = () => {
+    if (draft === FOLLOW_GLOBAL) {
+      // 全局默认不选具体模型：清除显式模型，调用时回落默认供应商的预设
+      submit(settingsPatch({ llm_model: '' }), '全局默认已保存')
+      return
+    }
+    const [instanceId, model] =
+      draft === MANUAL_MODEL
+        ? [manualInstance || defaultInstanceId, manualModelDraft]
+        : draft.split('::')
+    submit(
+      settingsPatch({
+        default_provider_instance: instanceId,
+        llm_model: model,
+      }),
+      '全局默认已保存',
+    )
+  }
+
+  const pickerOptions: PickerOption[] = [
+    { id: FOLLOW_GLOBAL, label: '跟随默认供应商的预设模型' },
+    ...pool.map(poolOption),
+    { id: MANUAL_MODEL, label: '手动填写模型 ID…' },
+  ]
+
+  if (view.provider_instances.length === 0) {
+    return (
+      <Card>
+        <CardHeader title="全局默认" meta="先添加供应商" />
+        <CardBody>
+          <p className="text-sm leading-6 text-black/60">
+            全局默认 = 一个具体的「供应商 + 模型」；任务级没单独指派的都跟随它。先在上方添加
+            至少一家供应商。
+          </p>
+        </CardBody>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader
+        title="全局默认"
+        meta={draft === FOLLOW_GLOBAL ? '未单独选模型：回落默认供应商的预设' : '一个具体模型'}
+      />
+      <CardBody className="flex flex-col gap-3">
+        <Field
+          htmlFor="settings-global-model"
+          label="默认模型"
+          hint="统一模型池：所有已添加供应商的模型合并在一起，每条标注来自哪家。"
+        >
           <OptionPicker
-            id="settings-provider"
-            aria-label="供应商"
-            value={provider}
-            onChange={(id) => drafts.setValue('llm_provider', id)}
-            options={catalog.providers.map<PickerOption>((item) => ({
-              id: item.id,
-              label: item.label,
-              note: item.base_url || (item.accepts_any_model ? '自行填地址与模型 ID' : undefined),
-            }))}
+            id="settings-global-model"
+            aria-label="全局默认模型"
+            menuLabel="全局默认模型"
+            value={draft}
+            onChange={(next) => drafts.setValue('global-model', next)}
+            options={pickerOptions}
           />
         </Field>
-        {keyField ? (
-          <Field
-            htmlFor={`settings-${keyField}`}
-            label={keyState?.label ?? 'API Key'}
-            hint={
-              keyState?.configured
-                ? `已配置（回读只显示掩码 ${keyState.masked}）；要换 Key 直接粘贴新的。`
-                : '从服务商后台复制 Key 粘贴到这里；没有 Key 也能跑（stub 模式）。'
-            }
-          >
-            <Input
-              id={`settings-${keyField}`}
-              type="password"
-              autoComplete="off"
-              placeholder={keyState?.masked || '粘贴 Key'}
-              value={keyDraft}
-              onChange={(event) => drafts.setValue(keyField, event.target.value)}
-            />
-          </Field>
-        ) : (
-          <p className="text-xs leading-5 text-black/60">
-            stub 模式不需要 Key：没有任何云端 Key 时全链路可跑，结果用于试用与联调。
-          </p>
-        )}
-        <ReadyNote ready={view.provider.ready} reason={view.provider.reason}>
-          当前生效：{view.provider.label}（{view.provider.source}）
-        </ReadyNote>
+        {draft === MANUAL_MODEL ? (
+          <>
+            <Field htmlFor="settings-global-manual-instance" label="用哪一家">
+              <OptionPicker
+                id="settings-global-manual-instance"
+                aria-label="全局默认的供应商"
+                menuLabel="供应商"
+                value={manualInstance}
+                onChange={setManualInstance}
+                options={pickProviderOptions}
+              />
+            </Field>
+            <Field htmlFor="settings-global-manual-model" label="模型 ID">
+              <Input
+                id="settings-global-manual-model"
+                value={manualModelDraft}
+                placeholder="例如 deepseek-chat"
+                onChange={(event) => drafts.setValue('global-manual-model', event.target.value)}
+              />
+            </Field>
+          </>
+        ) : null}
         <SaveError message={error} />
       </CardBody>
       <CardFooter>
-        {keyField && keyState?.configured ? (
-          <Button
-            disabled={save.isPending}
-            onClick={() => submit(settingsPatch({ [keyField]: '' }), 'Key 已清除')}
-          >
-            清除 Key
-          </Button>
-        ) : null}
-        <Button
-          variant="accent"
-          disabled={!dirty || save.isPending}
-          onClick={() =>
-            submit(
-              settingsPatch({
-                llm_provider: provider,
-                [keyField]: keyField && keyDraft.trim() ? keyDraft : undefined,
-              }),
-              '供应商已切换',
-            )
-          }
-        >
-          保存供应商
+        <Button variant="accent" disabled={!dirty || save.isPending} onClick={saveGlobal}>
+          保存全局默认
         </Button>
       </CardFooter>
     </Card>
   )
 }
 
-// ---- 任务级模型 ----
+// ---- 任务级模型（每个任务从统一模型池选模型，默认跟随全局）----
 
-function TaskModelPanel({ view, catalog }: { view: SettingsViewBody; catalog: SettingsCatalogBody }) {
+function TaskModelPanel({ view }: { view: SettingsViewBody }) {
   const drafts = useDrafts(view)
   const { save, submit, error } = useSaveFeedback()
+  const pool = poolOf(view)
 
-  const provider = catalog.providers.find((item) => item.id === view.provider.value)
-  const preset = provider?.chat_models[0] ?? ''
-  const freeText = provider?.accepts_any_model ?? false
-  const globalItem = view.items.find((item) => item.name === 'llm_model')
-  const globalModel = drafts.valueOf('llm_model', globalItem?.value ?? '')
+  const pickProviderOptions: PickerOption[] = view.provider_instances.map((instance) => ({
+    id: instance.id,
+    label: instance.label,
+  }))
 
-  const modelOptions = (emptyLabel: string): PickerOption[] => [
-    { id: '', label: emptyLabel },
-    ...(provider?.chat_models ?? []).map<PickerOption>((model) => ({ id: model, label: model })),
-  ]
+  /** 任务当前取值 → 选择器取值。 */
+  const currentValueOf = (task: SettingsViewBody['tasks'][number]): string => {
+    if (task.selected_provider && task.selected) return `${task.selected_provider}::${task.selected}`
+    if (task.selected_provider && !task.selected) return MANUAL_MODEL
+    return FOLLOW_GLOBAL
+  }
 
-  const renderModelField = (id: string, label: string, value: string, fallback: string, emptyLabel: string) =>
-    freeText ? (
-      <Input
-        id={id}
-        autoComplete="off"
-        placeholder="模型 ID"
-        value={value}
-        onChange={(event) => drafts.setValue(fallback, event.target.value)}
-      />
-    ) : (
-      <OptionPicker
-        id={id}
-        aria-label={label}
-        menuLabel={label}
-        value={value}
-        onChange={(next) => drafts.setValue(fallback, next)}
-        options={modelOptions(emptyLabel)}
-      />
+  const pickerValueOf = (task: SettingsViewBody['tasks'][number]) =>
+    drafts.valueOf(`task-pick-${task.task}`, currentValueOf(task))
+  const manualInstanceOf = (task: SettingsViewBody['tasks'][number]) =>
+    drafts.valueOf(`task-manual-instance-${task.task}`, task.selected_provider || task.provider)
+  const manualModelOf = (task: SettingsViewBody['tasks'][number]) =>
+    drafts.valueOf(`task-manual-model-${task.task}`, task.selected)
+
+  const dirtyEntries = view.tasks.map((task) => ({
+    draft: pickerValueOf(task),
+    server: currentValueOf(task),
+  }))
+  const dirty = isDirty(dirtyEntries)
+
+  const saveTasks = () => {
+    const patch: Record<string, string> = {}
+    for (const task of view.tasks) {
+      const pick = pickerValueOf(task)
+      if (pick === FOLLOW_GLOBAL) {
+        patch[task.provider_field] = ''
+        patch[task.field] = ''
+      } else if (pick === MANUAL_MODEL) {
+        patch[task.provider_field] = manualInstanceOf(task)
+        patch[task.field] = manualModelOf(task)
+      } else {
+        const [instanceId, model] = pick.split('::')
+        patch[task.provider_field] = instanceId
+        patch[task.field] = model
+      }
+    }
+    submit(settingsPatch(patch), '任务级模型已生效')
+  }
+
+  if (view.provider_instances.length === 0) {
+    return (
+      <Card>
+        <CardHeader title="任务级模型" meta="先添加供应商，再按任务指定" />
+        <CardBody>
+          <p className="text-sm leading-6 text-black/60">
+            每个任务（意图分析 / 生成 / 冲突比对）可以从统一模型池里各选一个模型；没选的跟随
+            全局默认。便宜的任务用便宜档位，生成要「写得好」。先在上方添加至少一家供应商。
+          </p>
+        </CardBody>
+      </Card>
     )
-
-  const selectedOf = (field: string) => view.tasks.find((task) => task.field === field)?.selected ?? ''
-  const patch = settingsPatch({
-    llm_model: globalModel,
-    task_model_intent: drafts.valueOf('task_model_intent', selectedOf('task_model_intent')),
-    task_model_generate: drafts.valueOf('task_model_generate', selectedOf('task_model_generate')),
-    task_model_conflict: drafts.valueOf('task_model_conflict', selectedOf('task_model_conflict')),
-  })
-
-  const dirty = isDirty([
-    { draft: globalModel, server: globalItem?.value ?? '' },
-    ...view.tasks.map((task) => ({ draft: drafts.valueOf(task.field, task.selected), server: task.selected })),
-  ])
+  }
 
   return (
     <Card>
-      <CardHeader title="任务级模型" meta="按任务选档位，未设置的任务回落全局默认" />
-      <CardBody className="flex flex-col gap-3">
-        <Field
-          htmlFor="settings-llm_model"
-          label="全局默认"
-          hint={`实际用：${globalItem?.effective || '—'}（${globalItem?.source ?? ''}）`}
-        >
-          {renderModelField(
-            'settings-llm_model',
-            '全局默认模型',
-            globalModel,
-            'llm_model',
-            preset ? `未设置（用预设 ${preset}）` : '未设置',
-          )}
-        </Field>
-        {view.tasks.map((task) => (
-          <Field
-            key={task.field}
-            htmlFor={`settings-${task.field}`}
-            label={task.label}
-            hint={`实际用：${task.model || '尚未确定'}（${task.source}）`}
-          >
-            {renderModelField(
-              `settings-${task.field}`,
-              task.label,
-              drafts.valueOf(task.field, task.selected),
-              task.field,
-              '未设置（回落全局默认）',
-            )}
-          </Field>
-        ))}
+      <CardHeader title="任务级模型" meta="每个任务选一个模型，留空跟随全局默认" />
+      <CardBody className="flex flex-col gap-4">
+        {view.tasks.map((task) => {
+          const pick = pickerValueOf(task)
+          return (
+            <div key={task.task} className="flex flex-col gap-2">
+              <Field
+                htmlFor={`settings-task-${task.task}`}
+                label={task.label}
+                hint={`实际用：${task.provider_label || '（未配置）'} · ${task.model || '—'}（${task.source}）`}
+              >
+                <OptionPicker
+                  id={`settings-task-${task.task}`}
+                  aria-label={`${task.label}的模型`}
+                  menuLabel={`${task.label}的模型`}
+                  value={pick}
+                  onChange={(next) => drafts.setValue(`task-pick-${task.task}`, next)}
+                  options={[
+                    { id: FOLLOW_GLOBAL, label: '跟随全局默认' },
+                    ...pool.map(poolOption),
+                    { id: MANUAL_MODEL, label: '手动填写模型 ID…' },
+                  ]}
+                />
+              </Field>
+              {pick === MANUAL_MODEL ? (
+                <>
+                  <Field htmlFor={`settings-task-${task.task}-instance`} label="用哪一家">
+                    <OptionPicker
+                      id={`settings-task-${task.task}-instance`}
+                      aria-label={`${task.label}的供应商`}
+                      menuLabel="供应商"
+                      value={manualInstanceOf(task)}
+                      onChange={(next) => drafts.setValue(`task-manual-instance-${task.task}`, next)}
+                      options={pickProviderOptions}
+                    />
+                  </Field>
+                  <Field htmlFor={`settings-task-${task.task}-model`} label="模型 ID">
+                    <Input
+                      id={`settings-task-${task.task}-model`}
+                      value={manualModelOf(task)}
+                      placeholder="例如 deepseek-reasoner"
+                      onChange={(event) =>
+                        drafts.setValue(`task-manual-model-${task.task}`, event.target.value)
+                      }
+                    />
+                  </Field>
+                </>
+              ) : null}
+            </div>
+          )
+        })}
         <p className="text-xs leading-5 text-black/60">
           便宜的任务用便宜档位：意图分析与冲突比对多数时候只要「读懂」，生成要「写得好」。
         </p>
         <SaveError message={error} />
       </CardBody>
       <CardFooter>
-        <Button
-          variant="accent"
-          disabled={!dirty || save.isPending}
-          onClick={() => submit(patch, '任务级模型已生效')}
-        >
+        <Button variant="accent" disabled={!dirty || save.isPending} onClick={saveTasks}>
           保存模型档位
         </Button>
       </CardFooter>
@@ -337,7 +604,7 @@ function TaskModelPanel({ view, catalog }: { view: SettingsViewBody; catalog: Se
  * 没选到的不显示——设置页一次只做一件事，不把七个 Key 堆在一起。
  */
 const KEY_BY_IMPLEMENTATION: Record<string, Record<string, string>> = {
-  asr_provider: { paraformer: 'dashscope_api_key' },
+  asr_provider: { auto: 'asr_api_key', paraformer: 'asr_api_key' },
   pdf_strategy: { mineru: 'mineru_token', mineru_then_pypdf: 'mineru_token' },
   search_provider: { auto: 'bocha_api_key', bocha: 'bocha_api_key' },
   embedding_provider: { openai: 'embedding_api_key' },
@@ -413,7 +680,7 @@ function CapabilityPanel({ view, catalog }: { view: SettingsViewBody; catalog: S
                   hint={
                     keyState?.configured
                       ? `已配置（回读只显示掩码 ${keyState.masked}）。`
-                      : '这一档需要 Key 才能用；没有 Key 时请选 stub 模式。'
+                      : '这一档需要 Key 才能用；没有 Key 时该能力保持未配置，相关操作会提示到这里来配置。'
                   }
                 >
                   <Input
@@ -461,100 +728,6 @@ function CapabilityPanel({ view, catalog }: { view: SettingsViewBody; catalog: S
           onClick={() => submit(settingsPatch(patch), '能力实现已切换')}
         >
           保存能力实现
-        </Button>
-      </CardFooter>
-    </Card>
-  )
-}
-
-// ---- 自定义 OpenAI 兼容服务 ----
-
-function CustomServicePanel({ view }: { view: SettingsViewBody }) {
-  const drafts = useDrafts(view)
-  const { save, submit, error } = useSaveFeedback()
-
-  const itemValue = (name: string) => view.items.find((item) => item.name === name)?.value ?? ''
-  const keyState = view.keys.find((item) => item.field === 'llm_api_key')
-  const baseUrl = drafts.valueOf('llm_base_url', itemValue('llm_base_url'))
-  const model = drafts.valueOf('llm_model', itemValue('llm_model'))
-  const keyDraft = drafts.valueOf('llm_api_key', '')
-
-  const dirty =
-    isDirty([
-      { draft: baseUrl, server: itemValue('llm_base_url') },
-      { draft: model, server: itemValue('llm_model') },
-    ]) || keyDraft.trim() !== ''
-
-  return (
-    <Card>
-      <CardHeader title="自定义 OpenAI 兼容服务" meta="供应商目录之外" />
-      <CardBody className="flex flex-col gap-3">
-        <p className="text-xs leading-5 text-black/60">
-          目录里没有的服务商走这里：填 base_url + 模型 ID + Key 即可用，模型 ID 不受目录限制。
-          保存后供应商会切到「自定义 OpenAI 兼容服务」。
-        </p>
-        <Field
-          htmlFor="settings-llm_base_url"
-          label="服务商地址（base_url）"
-          hint={`当前生效：${itemValue('llm_base_url') || view.provider.value}（留空即用供应商预设/不生效）`}
-        >
-          <Input
-            id="settings-llm_base_url"
-            placeholder="https://example.com/v1"
-            value={baseUrl}
-            onChange={(event) => drafts.setValue('llm_base_url', event.target.value)}
-          />
-        </Field>
-        <Field htmlFor="settings-llm_model" label="模型 ID" hint="写在服务商文档里的模型名，原样填。">
-          <Input
-            id="settings-llm_model"
-            placeholder="例如 my-model"
-            value={model}
-            onChange={(event) => drafts.setValue('llm_model', event.target.value)}
-          />
-        </Field>
-        <Field
-          htmlFor="settings-llm_api_key"
-          label={keyState?.label ?? 'API Key'}
-          hint={
-            keyState?.configured
-              ? `已配置（回读只显示掩码 ${keyState.masked}）。`
-              : '自定义服务没有 stub 兜底，必须填 Key 才能用。'
-          }
-        >
-          <Input
-            id="settings-llm_api_key"
-            type="password"
-            autoComplete="off"
-            placeholder={keyState?.masked || '粘贴 Key'}
-            value={keyDraft}
-            onChange={(event) => drafts.setValue('llm_api_key', event.target.value)}
-          />
-        </Field>
-        {view.provider.value === 'custom' ? (
-          <ReadyNote ready={view.provider.ready} reason={view.provider.reason}>
-            当前生效：自定义 OpenAI 兼容服务
-          </ReadyNote>
-        ) : null}
-        <SaveError message={error} />
-      </CardBody>
-      <CardFooter>
-        <Button
-          variant="accent"
-          disabled={!dirty || save.isPending}
-          onClick={() =>
-            submit(
-              settingsPatch({
-                llm_provider: 'custom',
-                llm_base_url: baseUrl,
-                llm_model: model,
-                llm_api_key: keyDraft.trim() ? keyDraft : undefined,
-              }),
-              '自定义服务已生效',
-            )
-          }
-        >
-          保存并启用
         </Button>
       </CardFooter>
     </Card>

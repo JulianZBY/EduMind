@@ -1,4 +1,4 @@
-"""文档上传接口测试（stub 隔离，不触发真实解析）。"""
+"""文档上传接口测试（替身隔离，不触发真实解析）。"""
 
 from fastapi.testclient import TestClient
 

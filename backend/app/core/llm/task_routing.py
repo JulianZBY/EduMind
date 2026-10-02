@@ -1,18 +1,18 @@
-"""任务级模型（CONTEXT.md「任务级模型」）：意图分析 / 生成 / 冲突比对各选一个档位。
+"""任务级模型（CONTEXT.md「任务级模型」）：意图分析 / 生成 / 冲突比对各选「供应商实例 + 模型」。
 
-三个任务各有一个设置项（`TASK_MODEL_*`），留空 = **回落全局默认**（`LLM_MODEL`，或当前方言预设的
-对话模型）。调用方只换工厂入口（`get_llm()` → `get_llm_for("generate")`），其余一行不用改：
+三个任务各有两个设置项：`task_provider_*`（供应商实例 id，设置页「添加供应商」产生）与
+`task_model_*`（该实例方言目录里的模型）。留空回落：模型留空 = 实例的默认模型；实例留空 =
+全局默认（默认实例，没有实例则 legacy 单供应商）。调用方只换工厂入口
+（`get_llm()` → `get_llm_for("generate")`），其余一行不用改。
 
-- 没设任务档位时直接返回全局默认 provider，行为与收编前完全一致；
-- 设了任务档位时返回一个把 `model` 注入每次 `chat` 的代理——各家 OpenAI 兼容实现都认这个入参。
-
-「该任务实际用的模型」由 `model_for()` 给出，设置页的查询接口据此回读（行为可见）。
+「该任务实际用的是哪家哪个模型」由 `routing_for()` 给出，设置页的查询接口据此回读。
 """
 
 from app.config import settings
 from app.core.catalog import SOURCE_DEFAULT, SOURCE_TASK, TASKS, TASKS_BY_ID, TaskSpec
 from app.core.dialects import DIALECTS
 from app.core.llm import factory as llm_factory
+from app.core.llm import provider_instances
 from app.core.llm.base import ChatMessage, ChatResult, LLMProvider
 
 
@@ -24,11 +24,20 @@ def task_spec(task: str) -> TaskSpec:
     return spec
 
 
-def global_default_model() -> str:
-    """全局默认对话模型：显式 `LLM_MODEL` 优先，否则取当前方言预设的对话模型。
+def instance_for_task(spec: TaskSpec):
+    """该任务指向的供应商实例行；没指（或指向的行没了）返回 None，调用方回落全局默认。"""
+    instance_id = (getattr(settings, spec.provider_field) or "").strip()
+    if not instance_id:
+        return None
+    return provider_instances.get_instance(instance_id)
 
-    stub 模式没有模型档位（返回空），此时任务级模型也无从谈起——不会凭空造一个模型名出来。
-    """
+
+def global_default_model() -> str:
+    """全局默认对话模型：默认实例的默认模型优先，否则 legacy 口径
+    （显式 `LLM_MODEL`，或当前方言预设的对话模型）。"""
+    instance = provider_instances.default_instance()
+    if instance is not None:
+        return provider_instances.effective_model(instance)
     provider = (settings.llm_provider or "").strip().lower()
     preset = DIALECTS.get(provider)
     return (settings.llm_model or (preset.chat_model if preset else "")).strip()
@@ -40,7 +49,28 @@ def model_for(task: str) -> tuple[str, str]:
     chosen = (getattr(settings, spec.field) or "").strip()
     if chosen:
         return chosen, SOURCE_TASK
+    instance = instance_for_task(spec)
+    if instance is not None:
+        # 指了实例但没选模型：用实例的默认模型（仍是任务级口径，来源标任务级）
+        model = provider_instances.effective_model(instance)
+        if model:
+            return model, SOURCE_TASK
     return global_default_model(), SOURCE_DEFAULT
+
+
+def routing_for(task: str) -> tuple[str, str, str, str]:
+    """该任务的路由回读：实例 id、实例名、模型、来源（设置页 TaskModelView 据此装配）。"""
+    spec = task_spec(task)
+    instance = instance_for_task(spec)
+    model, source = model_for(task)
+    if instance is not None:
+        return instance.id, instance.label, model, source
+    default = provider_instances.default_instance()
+    if default is not None:
+        return default.id, default.label, model, source
+    provider = (settings.llm_provider or "").strip().lower()
+    preset = DIALECTS.get(provider)
+    return "", preset.name if preset else provider, model, source
 
 
 class TaskModelProvider(LLMProvider):
@@ -60,9 +90,14 @@ class TaskModelProvider(LLMProvider):
 
 
 def get_llm_for(task: str) -> LLMProvider:
-    """按任务取对话能力：设了任务档位就注入它，没设则直接用全局默认 provider。"""
-    provider = llm_factory.get_llm()  # 经模块属性取，保住既有测试替换工厂的接缝
+    """按任务取对话能力：指了实例就连供应商带模型一起用实例的；否则用全局默认。"""
+    spec = task_spec(task)
+    instance = instance_for_task(spec)
     model, source = model_for(task)
+    if instance is not None:
+        # 指定实例：地址 / Key 来自实例行，模型注入每次 chat（模型可能回落实例默认）
+        return provider_instances.provider_of_instance(instance.id, model)  # type: ignore[return-value]
+    provider = llm_factory.get_llm()  # 经模块属性取，保住既有测试替换工厂的接缝
     if source != SOURCE_TASK or not model:
         return provider
     return TaskModelProvider(provider, model)

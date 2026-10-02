@@ -130,6 +130,35 @@ class AppSetting(Base):
         DateTime, default=datetime.now, onupdate=datetime.now
     )
 
+class LLMProviderInstance(Base):
+    """已添加的供应商实例（多供应商并存；CONTEXT.md「供应商目录」的多供应商形态）。
+
+    一行 = 设置页「添加供应商」产生的一条：目录家（千问 / DeepSeek / Kimi / GLM / MiniMax /
+    豆包 / 硅基流动）或「自定义 OpenAI 兼容服务」。任务级模型按 `task_provider_*` 指到这里；
+    `default_provider_instance` 设置项指到默认那一条。
+    API Key 存原文（与 app_settings 同口径），回读一律掩码、响应与表单都不回显明文。
+    """
+
+    __tablename__ = "llm_provider_instances"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    # 方言 id（catalog PROVIDERS 的取值；custom = 自定义 OpenAI 兼容服务）
+    provider: Mapped[str] = mapped_column(String(50))
+    # 面向教师的名称：目录家用方言 label；自定义服务由教师命名
+    label: Mapped[str] = mapped_column(String(100))
+    # 覆盖预设地址（空 = 用方言预设；自定义服务必填）
+    base_url: Mapped[str] = mapped_column(String(500), default="")
+    # 覆盖默认模型（空 = 用方言默认；兼容旧行，新添加不再选模型）
+    model: Mapped[str] = mapped_column(String(200), default="")
+    # 该实例的 API Key（只入库；回读走掩码）
+    api_key: Mapped[str] = mapped_column(Text, default="")
+    # 上次模型拉取失败的原因（空 = 拉取成功或尚未拉取；模型清单存 provider_models 表）
+    models_error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
+
 
 class Question(Base):
     __tablename__ = "questions"
@@ -228,4 +257,24 @@ class ArtifactVersion(Base):
     # 版本内容快照（课件 slides / 教案结构 / 提纲正文 / 题目 / 互动内容 HTML），
     # 供版本详情直接回看；落盘文件仍是下载与预览的字节源
     content: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class ProviderModel(Base):
+    """供应商实例的模型清单（添加/刷新时从服务商 `GET /v1/models` 拉取并缓存）。
+
+    设置页的统一模型池由此表组装：每条模型带它属于哪个实例（哪家供应商）。
+    拉取失败时不落行——该家模型池为空，界面走「手动填写」兜底，稍后可点刷新重试。
+    """
+
+    __tablename__ = "provider_models"
+    __table_args__ = (
+        UniqueConstraint("instance_id", "model_id", name="uq_provider_instance_model"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    instance_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("llm_provider_instances.id"), index=True
+    )
+    model_id: Mapped[str] = mapped_column(String(200))  # 服务商返回的模型 id
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

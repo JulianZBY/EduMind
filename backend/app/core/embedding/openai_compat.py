@@ -22,7 +22,7 @@ class OpenAICompatEmbedder(Embedder):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.api_key = api_key
-        # >0 时随请求发送（dashscope text-embedding-v3 支持 1024/768/512）
+        # >0 时随请求发送（千问 text-embedding-v3 支持 1024/768/512）
         self.dimensions = dimensions
         self.timeout = timeout
         # 测试注入点（httpx.MockTransport）；生产恒为 None

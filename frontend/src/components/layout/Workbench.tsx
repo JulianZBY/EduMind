@@ -48,7 +48,7 @@ export interface MainPanelProps {
 
 export function MainPanel({ title, tagline, actions, children, className }: MainPanelProps) {
   return (
-    <section className={cn('flex min-w-0 flex-1 flex-col', className)}>
+    <section className={cn('flex min-h-0 min-w-0 flex-1 flex-col', className)}>
       <header className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black px-3 py-2">
         <div className="flex flex-wrap items-baseline gap-2">
           <h1 className="text-sm font-bold">{title}</h1>

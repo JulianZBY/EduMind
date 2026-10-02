@@ -1,5 +1,5 @@
 import { Outlet, useSearchParams } from 'react-router'
-import { AreaStub } from '../../components/layout/AreaStub'
+import { AreaPlaceholder } from '../../components/layout/AreaPlaceholder'
 import { MainPanel } from '../../components/layout/Workbench'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { ConflictQueuePanel } from './ConflictQueuePanel'
@@ -80,7 +80,7 @@ export function ConflictsQueue() {
 
 export function ConflictsDetail() {
   return (
-    <AreaStub
+    <AreaPlaceholder
       title="冲突已选中"
       description="新旧知识对照与裁决动作在队列卡片里展开；这里只保证路由可寻址。"
       paramKey="conflictId"

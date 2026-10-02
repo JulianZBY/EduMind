@@ -96,7 +96,7 @@ def _write_points(text_frame, points: list, *, size: Pt, bold: bool, color: RGBC
 
 
 def _slide_size(prs: Presentation) -> tuple[int, int]:
-    """幻灯片宽高（EMU），取自演示文稿模板；Length 为 int 子类，stub 允许 None 故按 0 兜底。"""
+    """幻灯片宽高（EMU），取自演示文稿模板；Length 为 int 子类，测试替身允许 None 故按 0 兜底。"""
     width = prs.slide_width or 0
     height = prs.slide_height or 0
     return width, height
