@@ -1538,6 +1538,53 @@
               }
             ],
             "title": "Model"
+          },
+          "model_capabilities": {
+            "anyOf": [
+              {
+                "patternProperties": {
+                  "^\\S(?:.*\\S)?$": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "enum": [
+                            "text",
+                            "vision",
+                            "embedding"
+                          ],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "propertyNames": {
+                  "maxLength": 200,
+                  "minLength": 1
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "按模型标注 text / vision / embedding；未知模型不猜测能力。null 清除该模型的手动标注，刷新模型清单保留标注。",
+            "examples": [
+              {
+                "my-embed-model": [
+                  "embedding"
+                ],
+                "my-vision-model": [
+                  "text",
+                  "vision"
+                ]
+              }
+            ],
+            "title": "Model Capabilities"
           }
         },
         "title": "ProviderInstanceUpdate",
@@ -1574,6 +1621,13 @@
             "title": "Model",
             "type": "string"
           },
+          "model_details": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderModelView"
+            },
+            "title": "Model Details",
+            "type": "array"
+          },
           "models": {
             "items": {
               "type": "string"
@@ -1606,6 +1660,7 @@
           "model",
           "models",
           "models_error",
+          "model_details",
           "is_default",
           "ready",
           "reason",
@@ -1613,6 +1668,43 @@
           "key_masked"
         ],
         "title": "ProviderInstanceView",
+        "type": "object"
+      },
+      "ProviderModelView": {
+        "description": "模型能力来自目录或手动标注；服务商仅返回 ID 时保持 unknown。",
+        "properties": {
+          "capabilities": {
+            "items": {
+              "enum": [
+                "text",
+                "vision",
+                "embedding"
+              ],
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "catalog",
+              "manual",
+              "unknown"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "capabilities",
+          "source"
+        ],
+        "title": "ProviderModelView",
         "type": "object"
       },
       "ProviderView": {
@@ -3730,6 +3822,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "服务信息",
@@ -3819,6 +3937,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "取某个生成物版本的详情",
@@ -3908,6 +4052,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "下载某个生成物版本的文件",
@@ -4021,6 +4191,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "备课对话",
@@ -4282,6 +4478,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "冲突列表",
@@ -4406,6 +4628,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "裁决冲突",
@@ -4456,6 +4704,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "教学资料列表",
@@ -4524,6 +4798,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "上传教学资料",
@@ -4606,6 +4906,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "教学资料详情",
@@ -4697,6 +5023,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "切换参考资料标记",
@@ -4800,6 +5152,19 @@
               }
             },
             "description": "试卷生成失败：模型未返回可解析的题目"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "一键生成试卷",
@@ -4889,6 +5254,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "下载生成物文件",
@@ -4977,6 +5368,19 @@
               }
             },
             "description": "互动内容生成失败：模型未返回单文件 HTML"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "生成互动内容",
@@ -5075,6 +5479,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "知识图谱数据",
@@ -5153,6 +5583,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "知识点详情",
@@ -5264,6 +5720,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "邻域子图",
@@ -5347,6 +5829,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "按检索策略观察命中",
@@ -5418,6 +5926,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "知识库语义检索",
@@ -5488,6 +6022,32 @@
               }
             },
             "description": "网络搜索（BOCHA_API_KEY）未配置:该能力缺 Key 且当前配置未指向可用实现,请在 .env 或设置中补齐(票 13 落地前只能改配置后重启)。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "网络搜索",
@@ -5524,6 +6084,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "v1 存活探测",
@@ -5656,6 +6242,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "题目列表（按考查知识点筛选）",
@@ -5743,6 +6355,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "题目详情",
@@ -5829,6 +6467,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "按修改意见重做课件",
@@ -5920,6 +6584,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "按修改意见重做试卷",
@@ -5998,6 +6688,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "按修改意见重做互动内容",
@@ -6076,6 +6792,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "按修改意见重做提纲",
@@ -6167,6 +6909,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "按修改意见重做教案",
@@ -6242,6 +7010,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "备课会话列表",
@@ -6312,6 +7106,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "新建备课会话",
@@ -6381,6 +7201,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "删除备课会话",
@@ -6472,6 +7318,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "备课会话历史",
@@ -6565,6 +7437,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "重命名备课会话",
@@ -6720,6 +7618,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "列出某次备课的生成物历史版本",
@@ -6978,6 +7902,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "读取当前生效设置",
@@ -7277,6 +8227,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "写入设置（即时生效，不需要重启）",
@@ -7388,6 +8364,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "可选目录（供应商 / 能力实现 / 任务）",
@@ -7421,10 +8423,20 @@
                   "key_configured": true,
                   "key_masked": "••••9f8a",
                   "label": "DeepSeek",
-                  "model": "deepseek-chat",
+                  "model": "deepseek-flash",
+                  "model_details": [
+                    {
+                      "capabilities": [
+                        "text",
+                        "vision"
+                      ],
+                      "model_id": "deepseek-flash",
+                      "source": "catalog"
+                    }
+                  ],
                   "models": [
-                    "deepseek-chat",
-                    "deepseek-reasoner"
+                    "deepseek-flash",
+                    "deepseek-v4-pro"
                   ],
                   "models_error": "",
                   "provider": "deepseek",
@@ -7480,6 +8492,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "添加供应商（多供应商并存）",
@@ -7769,6 +8807,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "删除供应商（并清掉指向它的指针）",
@@ -7811,10 +8875,20 @@
                   "key_configured": true,
                   "key_masked": "••••9f8a",
                   "label": "DeepSeek",
-                  "model": "deepseek-chat",
+                  "model": "deepseek-flash",
+                  "model_details": [
+                    {
+                      "capabilities": [
+                        "text",
+                        "vision"
+                      ],
+                      "model_id": "deepseek-flash",
+                      "source": "catalog"
+                    }
+                  ],
                   "models": [
-                    "deepseek-chat",
-                    "deepseek-reasoner"
+                    "deepseek-flash",
+                    "deepseek-v4-pro"
                   ],
                   "models_error": "",
                   "provider": "deepseek",
@@ -7880,6 +8954,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "改供应商（名称 / 地址 / 模型 / Key / 设为默认）",
@@ -7914,10 +9014,20 @@
                   "key_configured": true,
                   "key_masked": "••••9f8a",
                   "label": "DeepSeek",
-                  "model": "deepseek-chat",
+                  "model": "deepseek-flash",
+                  "model_details": [
+                    {
+                      "capabilities": [
+                        "text",
+                        "vision"
+                      ],
+                      "model_id": "deepseek-flash",
+                      "source": "catalog"
+                    }
+                  ],
                   "models": [
-                    "deepseek-chat",
-                    "deepseek-reasoner"
+                    "deepseek-flash",
+                    "deepseek-v4-pro"
                   ],
                   "models_error": "",
                   "provider": "deepseek",
@@ -7960,6 +9070,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "刷新这家供应商的模型清单（重新拉取 /v1/models）",
@@ -7997,6 +9133,32 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务调用失败或生成内容不可用"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。"
+                  }
+                }
+              }
+            },
+            "description": "模型服务响应超时"
           }
         },
         "summary": "健康检查",

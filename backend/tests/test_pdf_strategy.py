@@ -8,6 +8,7 @@ import pytest
 
 import app.core.parser.factory as pdf_factory_module
 from app.config import settings
+from app.core.errors import ProviderNotConfigured
 from app.core.parser.base import PdfParser
 from app.core.parser.factory import get_pdf_parser
 from app.core.parser.fallback import FallbackPdfParser
@@ -136,7 +137,7 @@ async def test_mineru_strategy_without_token_fails_loudly(monkeypatch):
     """策略 mineru 且无 token：明确报错（该策略没有兜底）。"""
     monkeypatch.setattr(settings, "pdf_strategy", "mineru")
     get_pdf_parser.cache_clear()
-    with pytest.raises(ValueError, match="MINERU_TOKEN"):
+    with pytest.raises(ProviderNotConfigured, match="MINERU_TOKEN"):
         get_pdf_parser()
 
 

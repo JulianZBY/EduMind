@@ -20,7 +20,7 @@ from app.core import artifacts as artifact_service
 from app.core.intent import intent_from_payload
 from app.db import get_session
 from app.db.artifacts import ArtifactStore
-from app.generate.creative import generate_html_creative, save_html
+from app.generate.creative import generate_html_creative, is_single_file_html, save_html
 from app.knowledge.retrieval.factory import get_retriever
 
 router = APIRouter()
@@ -57,8 +57,7 @@ class InteractiveGenerateResponse(BaseModel):
 
 def _is_single_file_html(html: str) -> bool:
     """单文件 HTML 最小校验：文档结构完整（doctype 或 html 标签，且有闭合）。"""
-    lowered = html.lower()
-    return lowered.lstrip().startswith("<!doctype") or "<html" in lowered
+    return is_single_file_html(html)
 
 
 @router.post(

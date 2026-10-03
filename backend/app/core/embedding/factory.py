@@ -16,6 +16,8 @@ from app.core.dialects import DIALECTS
 from app.core.embedding.base import Embedder
 from app.core.embedding.hash import HashEmbedder
 from app.core.embedding.openai_compat import OpenAICompatEmbedder
+from app.core.errors import ProviderNotConfigured
+from app.core.llm.model_capabilities import capability_map
 from app.core.registry import build, register
 
 EMBEDDING_BUILDERS: dict[str, Callable[[Settings], Embedder]] = {}
@@ -23,9 +25,9 @@ EMBEDDING_BUILDERS: dict[str, Callable[[Settings], Embedder]] = {}
 def _explicit(cfg: Settings) -> Embedder:
     """显式 openai 口径：换服务商只需填 EMBEDDING_BASE_URL / MODEL / API_KEY。"""
     if not cfg.embedding_base_url or not cfg.embedding_model:
-        raise ValueError("EMBEDDING_BASE_URL / EMBEDDING_MODEL 未配置")
+        raise ProviderNotConfigured("EMBEDDING_BASE_URL / EMBEDDING_MODEL 未配置：请到设置页配置向量化。")
     if not cfg.embedding_api_key:
-        raise ValueError("EMBEDDING_API_KEY 未配置")
+        raise ProviderNotConfigured("EMBEDDING_API_KEY 未配置：请到设置页配置向量化 Key。")
     return OpenAICompatEmbedder(
         base_url=cfg.embedding_base_url,
         model=cfg.embedding_model,
@@ -42,10 +44,14 @@ def _from_dialect(name: str, cfg: Settings) -> Embedder:
     api_key = cfg.embedding_api_key or field_key or provider_config.env_api_key(dialect)
     if not api_key:
         hint = dialect.api_key_field.upper() if dialect.api_key_field else (dialect.api_key_env or "API Key")
-        raise ValueError(f"{hint} 未配置")
+        raise ProviderNotConfigured(f"{hint} 未配置：请到设置页配置向量化 Key。")
+    model = cfg.embedding_model or dialect.embed_model
+    caps = capability_map(name).get(model, ())
+    if caps and "embedding" not in caps:
+        raise ProviderNotConfigured(f"模型「{model}」未标注向量化能力：请到设置页选择向量化模型。")
     return OpenAICompatEmbedder(
         base_url=cfg.embedding_base_url or dialect.base_url,
-        model=cfg.embedding_model or dialect.embed_model,
+        model=model,
         api_key=api_key,
         dimensions=cfg.embedding_dimensions or dialect.embed_dimensions,
     )

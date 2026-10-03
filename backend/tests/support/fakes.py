@@ -147,6 +147,20 @@ class FakeLLM(LLMProvider):
             return ChatResult(content=FAKE_HTML)
         if "你是教学课件设计师" in last:
             return ChatResult(content=json.dumps({"slides": FAKE_PPT_SLIDES}, ensure_ascii=False))
+        if "你是教学设计专家" in last:
+            return ChatResult(
+                content=json.dumps(
+                    {
+                        "objectives": {"knowledge": ["理解测试课程"], "ability": ["完成课堂练习"]},
+                        "key_points": ["TCP三次握手"],
+                        "difficult_points": ["连接状态"],
+                        "process": [{"stage": "讲授", "minutes": 20, "content": "测试教案正文"}],
+                        "activities": ["课堂练习"],
+                        "homework": ["复习知识点"],
+                    },
+                    ensure_ascii=False,
+                )
+            )
         if "你是出题专家" in last:
             return ChatResult(
                 content=json.dumps({"questions": FAKE_EXAM_QUESTIONS}, ensure_ascii=False)

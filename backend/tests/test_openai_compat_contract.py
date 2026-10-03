@@ -16,6 +16,7 @@ import pytest
 from app.config import settings
 from app.core.embedding.factory import get_embedder
 from app.core.embedding.openai_compat import OpenAICompatEmbedder
+from app.core.errors import ProviderNotConfigured
 from app.core.llm.base import ChatMessage
 from app.core.llm.factory import get_llm
 from app.core.llm.providers.openai_compat import OpenAICompatProvider
@@ -223,7 +224,7 @@ def test_missing_api_key_is_reported(monkeypatch):
     monkeypatch.setattr(settings, "llm_api_key", "")
     get_llm.cache_clear()
 
-    with pytest.raises(ValueError, match="QWEN_API_KEY"):
+    with pytest.raises(ProviderNotConfigured, match="QWEN_API_KEY"):
         get_llm()
 
 

@@ -62,6 +62,8 @@ def _generate_reply(topic: str, result: dict) -> str:
         content += f" 本次命中的来源文档：{'、'.join(references)}。"
     if result.get("interactive"):
         content += " 已按你的互动诉求自动生成互动内容（HTML），可在生成物区打开。"
+    for warning in result.get("warnings") or []:
+        content += f" {warning}"
     return content
 
 

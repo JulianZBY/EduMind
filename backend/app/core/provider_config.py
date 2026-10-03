@@ -44,6 +44,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from dotenv import dotenv_values
+
+from app.config import Settings
 from app.core.dialects import DIALECTS, Dialect
 
 logger = logging.getLogger(__name__)
@@ -56,9 +59,23 @@ _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 _merged = False
 
 
+def _environment_value(name: str) -> str | None:
+    """进程环境优先（包括显式清空），其次读取与 Settings 相同的 .env 文件。"""
+    if name in os.environ:
+        return os.environ[name]
+    paths = Settings.model_config.get("env_file") or ()
+    if isinstance(paths, (str, Path)):
+        paths = (paths,)
+    values = {}
+    for path in paths:
+        if Path(path).is_file():
+            values.update(dotenv_values(path, encoding="utf-8"))
+    return values.get(name)
+
+
 def _config_path() -> Path | None:
     """配置文件路径：`PROVIDERS_CONFIG` 说了算；设成空字符串 = 明确关闭扩展。"""
-    raw = os.environ.get(ENV_VAR)
+    raw = _environment_value(ENV_VAR)
     if raw is None:
         return Path(DEFAULT_CONFIG_PATH)
     raw = raw.strip()
@@ -84,7 +101,11 @@ def _normalize(item: Any, index: int, taken: set[str]) -> dict[str, Any] | None:
     label = _text(item.get("label"))
     base_url = _text(item.get("base_url")).rstrip("/")
     if not provider_id or not _ID_PATTERN.match(provider_id):
-        logger.warning("供应商配置第 %d 条缺 id 或 id 不合法（只要小写字母/数字/._-）：%r", index + 1, item.get("id"))
+        logger.warning(
+            "供应商配置第 %d 条缺 id 或 id 不合法（只要小写字母/数字/._-）：%r",
+            index + 1,
+            item.get("id"),
+        )
         return None
     if provider_id in taken:
         logger.warning("供应商配置里 id 重复：%s（第 %d 条已跳过）", provider_id, index + 1)
@@ -94,7 +115,9 @@ def _normalize(item: Any, index: int, taken: set[str]) -> dict[str, Any] | None:
         return None
     parsed = urlparse(base_url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
-        logger.warning("供应商配置 %s 的 base_url 不是 http(s) 完整地址，已跳过：%r", provider_id, base_url)
+        logger.warning(
+            "供应商配置 %s 的 base_url 不是 http(s) 完整地址，已跳过：%r", provider_id, base_url
+        )
         return None
     chat_models = _text_list(item.get("chat_models"))
     vision_models = _text_list(item.get("vision_models"))
@@ -106,7 +129,8 @@ def _normalize(item: Any, index: int, taken: set[str]) -> dict[str, Any] | None:
         "base_url": base_url,
         "api_key_env": _text(item.get("api_key_env")),
         "chat_model": _text(item.get("chat_model")) or (chat_models[0] if chat_models else ""),
-        "vision_model": _text(item.get("vision_model")) or (vision_models[0] if vision_models else ""),
+        "vision_model": _text(item.get("vision_model"))
+        or (vision_models[0] if vision_models else ""),
         "embed_model": _text(item.get("embed_model")) or (embed_models[0] if embed_models else ""),
         "chat_models": chat_models,
         "vision_models": vision_models,
@@ -129,7 +153,7 @@ def load_entries(path: Path | None = None) -> list[dict[str, Any]]:
         return []
     try:
         raw = json.loads(target.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         logger.warning("供应商配置文件读不动（%s）：%s", target, error)
         return []
     items = raw.get("providers") if isinstance(raw, dict) else raw
@@ -159,6 +183,9 @@ def dialect_of(entry: dict[str, Any]) -> Dialect:
         embed_dimensions=entry["embed_dimensions"],
         extra_chat_models=tuple(entry["chat_models"]),
         extra_vision_models=tuple(entry["vision_models"]),
+        extra_embed_models=tuple(entry["embed_models"]),
+        accepts_any_model=entry["accepts_any_model"],
+        configured=True,
         label=entry["label"],
         note=entry["note"],
     )
@@ -197,7 +224,7 @@ def env_api_key(dialect: Dialect) -> str:
     """配置声明的家的 Key：从 `api_key_env` 指向的环境变量读；没声明或没设就是空串。"""
     if not dialect.api_key_env:
         return ""
-    return os.environ.get(dialect.api_key_env, "").strip()
+    return (_environment_value(dialect.api_key_env) or "").strip()
 
 
 def ensure_merged() -> None:

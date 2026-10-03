@@ -31,6 +31,12 @@ def _extract_html(text: str) -> str:
     return text[start:] if start != -1 else text
 
 
+def is_single_file_html(html: str) -> bool:
+    """最小文档完整性校验；脚本行为与教学质量仍需在浏览器验收。"""
+    lowered = html.lower()
+    return "<html" in lowered and "</html>" in lowered
+
+
 async def generate_html_creative(knowledge: str) -> str:
     llm = get_llm()
     prompt = _CREATIVE_PROMPT.replace("__KNOWLEDGE__", knowledge[:4000])

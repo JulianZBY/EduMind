@@ -8,6 +8,7 @@ from collections.abc import Callable
 from functools import lru_cache
 
 from app.config import Settings, settings
+from app.core.errors import ProviderNotConfigured
 from app.core.parser.base import PdfParser
 from app.core.parser.fallback import FallbackPdfParser
 from app.core.parser.mineru import MinerUParser
@@ -19,7 +20,7 @@ PDF_BUILDERS: dict[str, Callable[[Settings], PdfParser]] = {}
 
 def _mineru_only(cfg: Settings) -> PdfParser:
     if not cfg.mineru_token:
-        raise ValueError("MINERU_TOKEN 未配置，且 PDF_STRATEGY=mineru 无兜底策略")
+        raise ProviderNotConfigured("MINERU_TOKEN 未配置：请到设置页配置 PDF 解析，或选用本地解析。")
     return MinerUParser(token=cfg.mineru_token)
 
 
