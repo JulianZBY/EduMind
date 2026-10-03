@@ -11,6 +11,7 @@ from functools import partial
 from app.core.llm.base import ChatMessage
 from app.core.llm.parsing import parse_json
 from app.core.llm.task_routing import get_llm_for
+from app.generate.creative import is_single_file_html
 
 # 「生成」任务：模型档位在设置页按任务选，未设置回落全局默认（CONTEXT.md「任务级模型」）。
 # 入口仍叫 get_llm：既有测试用它替换对话能力（monkeypatch.setattr(本模块, "get_llm", ...)）。
@@ -89,9 +90,7 @@ __FEEDBACK__
 async def revise_outline(text: str, feedback: str) -> str:
     """根据修改意见调整提纲正文；模型没给出可解析正文时保留基线正文。"""
     llm = get_llm()
-    prompt = _REVISE_OUTLINE_PROMPT.replace("__CURRENT__", text).replace(
-        "__FEEDBACK__", feedback
-    )
+    prompt = _REVISE_OUTLINE_PROMPT.replace("__CURRENT__", text).replace("__FEEDBACK__", feedback)
     result = await llm.chat([ChatMessage(role="user", content=prompt)])
     data = parse_json(result.content)
     revised = data.get("outline")
@@ -168,13 +167,10 @@ def _extract_html(text: str) -> str:
 async def revise_creative(html: str, feedback: str) -> str:
     """根据修改意见调整互动内容 HTML；模型没给出单文件 HTML 时保留基线 HTML。"""
     llm = get_llm()
-    prompt = _REVISE_CREATIVE_PROMPT.replace("__CURRENT__", html).replace(
-        "__FEEDBACK__", feedback
-    )
+    prompt = _REVISE_CREATIVE_PROMPT.replace("__CURRENT__", html).replace("__FEEDBACK__", feedback)
     result = await llm.chat([ChatMessage(role="user", content=prompt)])
     revised = _extract_html(result.content)
-    lowered = revised.lower()
     # 与生成路径同一判据：不是完整单文件 HTML 就退回基线内容（不落半成品）
-    if not (lowered.lstrip().startswith("<!doctype") or "<html" in lowered):
+    if not is_single_file_html(revised):
         return html
     return revised

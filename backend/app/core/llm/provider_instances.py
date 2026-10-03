@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dialects import DIALECTS
 from app.core.errors import ProviderNotConfigured
+from app.core.http import tls_context
 from app.core.llm.model_capabilities import (
     capability_map,
     model_info,
@@ -183,6 +184,7 @@ def fetch_model_ids(instance: LLMProviderInstance) -> list[str]:
         url,
         headers={"Authorization": f"Bearer {instance.api_key}"},
         timeout=FETCH_TIMEOUT_SECONDS,
+        verify=tls_context(),
     )
     response.raise_for_status()
     payload = response.json()

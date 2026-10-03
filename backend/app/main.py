@@ -10,7 +10,7 @@ from app.api.health import router as health_router
 from app.api.openapi_examples import internal_error, json_response
 from app.api.v1.router import router as v1_router
 from app.config import settings
-from app.core.errors import ProviderNotConfigured
+from app.core.errors import ProviderNotConfigured, ProviderRequestFailed
 from app.db import init_db
 
 # 端点分组：面向教师的术语与 CONTEXT.md 一致，Swagger / ReDoc 按此导航。
@@ -72,6 +72,26 @@ app = FastAPI(
     description=DESCRIPTION,
     openapi_tags=TAGS_METADATA,
     lifespan=lifespan,
+    responses={
+        502: json_response(
+            "模型服务调用失败或生成内容不可用",
+            {
+                "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务暂时不可用，请稍后重试。",
+                }
+            },
+        ),
+        504: json_response(
+            "模型服务响应超时",
+            {
+                "detail": {
+                    "code": "provider_request_failed",
+                    "message": "模型服务响应超时，请稍后重试。",
+                }
+            },
+        ),
+    },
 )
 
 
@@ -86,6 +106,14 @@ async def _provider_not_configured_handler(_: Request, exc: ProviderNotConfigure
 
 app.include_router(health_router)
 app.include_router(v1_router, prefix="/api/v1")
+
+
+@app.exception_handler(ProviderRequestFailed)
+async def _provider_request_failed_handler(_: Request, exc: ProviderRequestFailed) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": {"code": exc.code, "message": str(exc)}},
+    )
 
 
 class RootResponse(BaseModel):

@@ -2320,6 +2320,14 @@ export type RootGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type RootGetResponses = {
@@ -2358,6 +2366,14 @@ export type GetArtifactVersionApiV1ArtifactsVersionIdGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type GetArtifactVersionApiV1ArtifactsVersionIdGetError = GetArtifactVersionApiV1ArtifactsVersionIdGetErrors[keyof GetArtifactVersionApiV1ArtifactsVersionIdGetErrors];
@@ -2409,6 +2425,14 @@ export type DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetError = DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetErrors[keyof DownloadArtifactVersionApiV1ArtifactsVersionIdDownloadGetErrors];
@@ -2440,6 +2464,14 @@ export type ChatApiV1ChatPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ChatApiV1ChatPostResponses = {
@@ -2480,6 +2512,14 @@ export type ListConflictsApiV1ConflictsGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ListConflictsApiV1ConflictsGetError = ListConflictsApiV1ConflictsGetErrors[keyof ListConflictsApiV1ConflictsGetErrors];
@@ -2524,6 +2564,14 @@ export type ReviewConflictApiV1ConflictsConflictIdReviewPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ReviewConflictApiV1ConflictsConflictIdReviewPostResponses = {
@@ -2547,6 +2595,14 @@ export type ListDocumentsApiV1DocumentsGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ListDocumentsApiV1DocumentsGetResponses = {
@@ -2574,6 +2630,14 @@ export type UploadDocumentApiV1DocumentsUploadPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type UploadDocumentApiV1DocumentsUploadPostResponses = {
@@ -2612,6 +2676,14 @@ export type GetDocumentApiV1DocumentsDocumentIdGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type GetDocumentApiV1DocumentsDocumentIdGetError = GetDocumentApiV1DocumentsDocumentIdGetErrors[keyof GetDocumentApiV1DocumentsDocumentIdGetErrors];
@@ -2652,6 +2724,14 @@ export type SetReferenceApiV1DocumentsDocumentIdReferencePatchErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type SetReferenceApiV1DocumentsDocumentIdReferencePatchResponses = {
@@ -2687,6 +2767,10 @@ export type GenerateExamPaperApiV1ExamGeneratePostErrors = {
      * 试卷生成失败：模型未返回可解析的题目
      */
     502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type GenerateExamPaperApiV1ExamGeneratePostResponses = {
@@ -2736,6 +2820,14 @@ export type DownloadFileApiV1FilesFilenameGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type DownloadFileApiV1FilesFilenameGetError = DownloadFileApiV1FilesFilenameGetErrors[keyof DownloadFileApiV1FilesFilenameGetErrors];
@@ -2771,6 +2863,10 @@ export type GenerateInteractiveApiV1InteractiveGeneratePostErrors = {
      * 互动内容生成失败：模型未返回单文件 HTML
      */
     502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type GenerateInteractiveApiV1InteractiveGeneratePostResponses = {
@@ -2811,6 +2907,14 @@ export type GetGraphApiV1KnowledgeGraphGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type GetGraphApiV1KnowledgeGraphGetError = GetGraphApiV1KnowledgeGraphGetErrors[keyof GetGraphApiV1KnowledgeGraphGetErrors];
@@ -2849,6 +2953,14 @@ export type GetKnowledgePointApiV1KnowledgeNodesNodeIdGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type GetKnowledgePointApiV1KnowledgeNodesNodeIdGetError = GetKnowledgePointApiV1KnowledgeNodesNodeIdGetErrors[keyof GetKnowledgePointApiV1KnowledgeNodesNodeIdGetErrors];
@@ -2894,6 +3006,14 @@ export type GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponses = {
@@ -2921,6 +3041,14 @@ export type RetrieveApiV1KnowledgeRetrievePostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type RetrieveApiV1KnowledgeRetrievePostResponses = {
@@ -2948,6 +3076,14 @@ export type SearchApiV1KnowledgeSearchPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type SearchApiV1KnowledgeSearchPostResponses = {
@@ -2975,6 +3111,14 @@ export type WebSearchApiV1KnowledgeWebSearchPostErrors = {
      * 网络搜索（BOCHA_API_KEY）未配置:该能力缺 Key 且当前配置未指向可用实现,请在 .env 或设置中补齐(票 13 落地前只能改配置后重启)。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type WebSearchApiV1KnowledgeWebSearchPostResponses = {
@@ -2998,6 +3142,14 @@ export type PingApiV1PingGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type PingApiV1PingGetResponses = {
@@ -3044,6 +3196,14 @@ export type ListQuestionsApiV1QuestionsGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ListQuestionsApiV1QuestionsGetResponses = {
@@ -3080,6 +3240,14 @@ export type GetQuestionApiV1QuestionsQuestionIdGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type GetQuestionApiV1QuestionsQuestionIdGetResponses = {
@@ -3111,6 +3279,14 @@ export type ReviseApiV1RevisePostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ReviseApiV1RevisePostResponses = {
@@ -3142,6 +3318,14 @@ export type ReviseExamEndpointApiV1ReviseExamPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ReviseExamEndpointApiV1ReviseExamPostResponses = {
@@ -3173,6 +3357,14 @@ export type ReviseInteractiveEndpointApiV1ReviseInteractivePostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ReviseInteractiveEndpointApiV1ReviseInteractivePostResponses = {
@@ -3204,6 +3396,14 @@ export type ReviseOutlineEndpointApiV1ReviseOutlinePostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ReviseOutlineEndpointApiV1ReviseOutlinePostResponses = {
@@ -3235,6 +3435,14 @@ export type ReviseWordEndpointApiV1ReviseWordPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ReviseWordEndpointApiV1ReviseWordPostResponses = {
@@ -3269,6 +3477,14 @@ export type ListSessionsApiV1SessionsGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ListSessionsApiV1SessionsGetError = ListSessionsApiV1SessionsGetErrors[keyof ListSessionsApiV1SessionsGetErrors];
@@ -3298,6 +3514,14 @@ export type CreateSessionApiV1SessionsPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type CreateSessionApiV1SessionsPostResponses = {
@@ -3336,6 +3560,14 @@ export type DeleteSessionApiV1SessionsSessionIdDeleteErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type DeleteSessionApiV1SessionsSessionIdDeleteError = DeleteSessionApiV1SessionsSessionIdDeleteErrors[keyof DeleteSessionApiV1SessionsSessionIdDeleteErrors];
@@ -3376,6 +3608,14 @@ export type SessionHistoryApiV1SessionsSessionIdGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type SessionHistoryApiV1SessionsSessionIdGetError = SessionHistoryApiV1SessionsSessionIdGetErrors[keyof SessionHistoryApiV1SessionsSessionIdGetErrors];
@@ -3416,6 +3656,14 @@ export type RenameSessionApiV1SessionsSessionIdPatchErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type RenameSessionApiV1SessionsSessionIdPatchResponses = {
@@ -3461,6 +3709,14 @@ export type ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ListArtifactVersionsApiV1SessionsSessionIdArtifactsGetResponses = {
@@ -3484,6 +3740,14 @@ export type ReadSettingsApiV1SettingsGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ReadSettingsApiV1SettingsGetResponses = {
@@ -3515,6 +3779,14 @@ export type UpdateSettingsApiV1SettingsPutErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type UpdateSettingsApiV1SettingsPutResponses = {
@@ -3538,6 +3810,14 @@ export type ReadCatalogApiV1SettingsCatalogGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type ReadCatalogApiV1SettingsCatalogGetResponses = {
@@ -3569,6 +3849,14 @@ export type CreateProviderInstanceApiV1SettingsProvidersPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type CreateProviderInstanceApiV1SettingsProvidersPostResponses = {
@@ -3605,6 +3893,14 @@ export type DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteErrors =
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteError = DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteErrors[keyof DeleteProviderInstanceApiV1SettingsProvidersInstanceIdDeleteErrors];
@@ -3647,6 +3943,14 @@ export type UpdateProviderInstanceApiV1SettingsProvidersInstanceIdPatchErrors = 
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type UpdateProviderInstanceApiV1SettingsProvidersInstanceIdPatchResponses = {
@@ -3683,6 +3987,14 @@ export type RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPo
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostError = RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostErrors[keyof RefreshProviderModelsApiV1SettingsProvidersInstanceIdRefreshModelsPostErrors];
@@ -3708,6 +4020,14 @@ export type HealthHealthGetErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 模型服务调用失败或生成内容不可用
+     */
+    502: unknown;
+    /**
+     * 模型服务响应超时
+     */
+    504: unknown;
 };
 
 export type HealthHealthGetResponses = {

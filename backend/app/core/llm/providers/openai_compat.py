@@ -9,7 +9,8 @@ import mimetypes
 
 import httpx
 
-from app.core.errors import ProviderNotConfigured
+from app.core.errors import ProviderNotConfigured, ProviderRequestFailed
+from app.core.http import tls_context
 from app.core.llm.base import ChatMessage, ChatResult, LLMProvider
 from app.core.llm.model_capabilities import require_capability
 
@@ -21,6 +22,8 @@ def content_of(data: dict) -> str:
     content = data["choices"][0]["message"]["content"]
     if isinstance(content, list):
         return "".join(part.get("text", "") for part in content if isinstance(part, dict))
+    if content is not None and not isinstance(content, str):
+        raise TypeError("message.content must be text")
     return content or ""
 
 
@@ -63,13 +66,42 @@ class OpenAICompatProvider(LLMProvider):
         return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
     def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(timeout=self.timeout, transport=self._transport)
+        return httpx.AsyncClient(
+            timeout=self.timeout, transport=self._transport, verify=tls_context()
+        )
 
     async def _post(self, path: str, payload: dict) -> dict:
-        async with self._client() as client:
-            r = await client.post(f"{self.base_url}{path}", headers=self._headers(), json=payload)
-            r.raise_for_status()
-            return r.json()
+        try:
+            async with self._client() as client:
+                r = await client.post(
+                    f"{self.base_url}{path}", headers=self._headers(), json=payload
+                )
+                r.raise_for_status()
+                data = r.json()
+                # 供应商返回 200 也可能没有正常对话结构，不能当作有效生成。
+                if not isinstance(data, dict) or not data.get("choices"):
+                    raise ValueError("missing choices")
+                content_of(data)
+                return data
+        except httpx.TimeoutException as exc:
+            raise ProviderRequestFailed("模型服务响应超时，请稍后重试。", status_code=504) from exc
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if status in (401, 403):
+                message = "模型服务拒绝访问，请到设置页检查 Key 与模型权限。"
+            elif status == 429:
+                message = "模型服务额度不足或请求过于频繁，请检查余额或稍后重试。"
+            elif status in (400, 404, 422):
+                message = "模型服务不接受当前请求，请到设置页检查服务地址、模型与能力配置。"
+            else:
+                message = "模型服务暂时不可用，请稍后重试。"
+            raise ProviderRequestFailed(message) from exc
+        except httpx.RequestError as exc:
+            raise ProviderRequestFailed(
+                "无法连接模型服务，请检查网络、代理与证书配置后重试。"
+            ) from exc
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise ProviderRequestFailed("模型服务返回的内容无法读取，请稍后重试。") from exc
 
     @staticmethod
     def _text_payload(model: str, messages: list[ChatMessage]) -> dict:

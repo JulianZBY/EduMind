@@ -69,6 +69,7 @@ name = "edumind-backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "certifi" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "opencv-python-headless" },
@@ -93,6 +94,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "certifi", specifier = ">=2024.2.2" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "opencv-python-headless", specifier = ">=5.0.0.93" },

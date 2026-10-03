@@ -13,7 +13,8 @@ def parse_json(text: str) -> dict:
     if start != -1 and end != -1 and end > start:
         text = text[start : end + 1]
     try:
-        return json.loads(text)
+        value = json.loads(text)
+        return value if isinstance(value, dict) else {}
     except json.JSONDecodeError:
         # LLM 偶发输出格式错误，返回空 dict 让调用方降级，避免整个请求 500
         return {}
