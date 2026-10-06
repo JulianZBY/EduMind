@@ -44,12 +44,14 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from app.config import BASE_DIR
 from app.core.dialects import DIALECTS, Dialect
 
 logger = logging.getLogger(__name__)
 
 ENV_VAR = "PROVIDERS_CONFIG"
-DEFAULT_CONFIG_PATH = "providers.json"
+# 默认扩展文件名锚定 backend/（同样不随启动目录漂移，M3）
+DEFAULT_CONFIG_PATH = str(BASE_DIR / "providers.json")
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 

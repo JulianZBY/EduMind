@@ -95,37 +95,44 @@ async def handle_turn(
     prep = store.get(session_id)
     if prep is None:
         raise LookupError(f"会话不存在: {session_id}")
+    previous_title = prep.title
     if prep.title == SESSION_TITLE_PLACEHOLDER:
         prep.title = utterance[:AUTO_TITLE_LENGTH]  # 首轮需求充当会话标题
-    store.append_message(prep, role="user", content=utterance)
+    teacher_message = store.append_message(prep, role="user", content=utterance)
 
-    intent = await accumulate_intent(load_intent(prep), utterance)
-    outcome = await run_turn(
-        utterance,
-        intent=intent,
-        granularity=prep.granularity,
-        # 会话上的参考资料为准；请求里的显式标识仅在不带会话时生效
-        reference_doc_ids=reference_doc_ids or prep.reference_doc_ids,
-    )
-
-    # 生成即入库（ADR-0002）：本轮产出逐件落版本记录，并把版本标识回填进产物
-    if outcome.artifacts:
-        recorded = register_generated_artifacts(
-            ArtifactStore(store.db),
-            session_id=prep.id,
-            artifacts=outcome.artifacts,
-            topic=outcome.intent.topic,
+    try:
+        intent = await accumulate_intent(load_intent(prep), utterance)
+        outcome = await run_turn(
+            utterance,
+            intent=intent,
+            granularity=prep.granularity,
+            # 会话上的参考资料为准；请求里的显式标识仅在不带会话时生效
+            reference_doc_ids=reference_doc_ids or prep.reference_doc_ids,
         )
-        attach_version_refs(outcome.artifacts, recorded)
 
-    store.append_message(
-        prep,
-        role="assistant",
-        content=outcome.content,
-        kind=outcome.reply_kind,
-        artifacts=outcome.artifacts,
-    )
-    store.save_intent(prep, outcome.intent.model_dump())
+        # 生成即入库（ADR-0002）：本轮产出逐件落版本记录，并把版本标识回填进产物
+        if outcome.artifacts:
+            recorded = register_generated_artifacts(
+                ArtifactStore(store.db),
+                session_id=prep.id,
+                artifacts=outcome.artifacts,
+                topic=outcome.intent.topic,
+            )
+            attach_version_refs(outcome.artifacts, recorded)
+
+        store.append_message(
+            prep,
+            role="assistant",
+            content=outcome.content,
+            kind=outcome.reply_kind,
+            artifacts=outcome.artifacts,
+        )
+        store.save_intent(prep, outcome.intent.model_dump())
+    except Exception:
+        # 这一轮没成（例如生成失败 502）：撤掉刚落的教师消息，让「失败不留痕」在库里也成立——
+        # 前端发送失败会回滚这条并让教师重发，留着它重发后会变成两条一模一样的。
+        store.discard_message(prep, teacher_message, restore_title=previous_title)
+        raise
     return outcome
 
 

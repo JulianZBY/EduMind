@@ -5,6 +5,7 @@
 列表与详情端点跟到终态，不需要教师手动刷新（`docs/architecture.md`「一份资料从上传到入库」）。
 """
 
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal, cast
@@ -30,6 +31,7 @@ from app.api.openapi_examples import (
     internal_error,
     json_response,
 )
+from app.config import settings
 from app.db import get_session
 from app.db.models import Document
 from app.knowledge.pipeline import parse_document
@@ -139,6 +141,7 @@ def _document_or_404(db: Session, document_id: str) -> Document:
                 "is_reference": True,
             },
         ),
+        413: error_response("文件过大：超过单次上传上限（默认 200 MB）", "文件过大"),
         422: VALIDATION_ERROR,
         500: internal_error(),
     },
@@ -154,9 +157,17 @@ async def upload_document(
         bool, Form(description="是否标记为参考资料：影响备课检索加权与生成物溯源")
     ] = False,
 ):
+    # 上传大小上限：超出即 413，避免整份超大文件先吃内存再被拒（M4）。
+    # `file.size` 由 multipart 解析填入；读后再断一次，兜底 size 缺失的情形。
+    limit_mb = settings.max_upload_bytes // (1024 * 1024)
+    if file.size is not None and file.size > settings.max_upload_bytes:
+        raise HTTPException(status_code=413, detail=f"文件过大：超过 {limit_mb} MB 上限")
     content = await file.read()
+    if len(content) > settings.max_upload_bytes:
+        raise HTTPException(status_code=413, detail=f"文件过大：超过 {limit_mb} MB 上限")
     filename = file.filename or "upload.bin"
-    file_path = save_upload(content, filename)
+    # 同步落盘：放线程池，不阻塞事件循环（M1）
+    file_path = await asyncio.to_thread(save_upload, content, filename)
     ext = Path(filename).suffix.lstrip(".").lower()
 
     # 录音资料唯一解析路径是百炼 paraformer：未配置时立刻给教师 503 引导，

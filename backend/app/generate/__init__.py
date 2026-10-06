@@ -3,11 +3,15 @@
 import uuid
 from pathlib import Path
 
-OUTPUT_DIR = Path("data/output")
+from app.config import settings
+
+# 生成物落盘目录：唯一事实源是 settings.output_dir（默认 backend/data/output）。
+# 测试用 conftest 的 isolated_output_dir 重定向本模块属性；生产从配置读（M3）。
+OUTPUT_DIR = Path(settings.output_dir)
 
 
 def output_dir() -> Path:
-    """生成物落盘目录（调用时读取模块属性，测试可重定向；生产下即 `data/output`）。"""
+    """生成物落盘目录（调用时读取模块属性，测试可重定向；生产下即 settings.output_dir）。"""
     return OUTPUT_DIR
 
 

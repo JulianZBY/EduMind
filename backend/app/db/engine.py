@@ -1,6 +1,6 @@
 """数据库引擎与初始化。"""
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
@@ -10,6 +10,25 @@ engine = create_engine(
     settings.database_url,
     connect_args={"check_same_thread": False},
 )
+
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
+    """每条连接落地并发相关的 SQLite PRAGMA（默认库为 SQLite，M2）。
+
+    - WAL：读写不互相阻塞——后台解析（`pipeline.py` 自建连接的写）与请求线程并发时
+      不再“写锁住读”；单库多连接只有 WAL 能给出这个并发度；
+    - busy_timeout：被短事务抢占时最多等 5s 再报错，吸收瞬时争用，而不是立刻抛
+      `database is locked`。
+    """
+    if engine.dialect.name != "sqlite":
+        return
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+    finally:
+        cursor.close()
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 

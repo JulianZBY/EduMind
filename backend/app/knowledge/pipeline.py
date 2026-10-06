@@ -1,5 +1,6 @@
 """解析管道：分发解析 → 分段 → 向量化入库 → 知识提取与冲突检测 → 更新 Document 状态（后台任务入口）。"""
 
+import asyncio
 import logging
 from datetime import datetime
 
@@ -7,6 +8,27 @@ from app.db import SessionLocal
 from app.db.models import Document
 
 logger = logging.getLogger(__name__)
+
+
+def fail_stuck_documents() -> int:
+    """启动清扫：把上次进程残留的「处理中」资料标记为「失败」，返回清扫条数。
+
+    后台解析任务随进程消亡——进程重启后被中断的解析再没有任何任务推进它，
+    若不清扫会永远停在「处理中」，前端会一直轮询（不会自愈）。这里统一标记为
+    「失败」（与解析异常同一终态），教师可按原文重新上传；不自动重排解析：
+    坏文件会在每次启动时反复失败、形成启动循环。
+    """
+    db = SessionLocal()
+    try:
+        stuck = db.query(Document).filter(Document.status == "处理中").all()
+        for doc in stuck:
+            doc.status = "失败"
+        if stuck:
+            db.commit()
+            logger.warning("启动清扫：%d 份「处理中」资料标记为失败", len(stuck))
+        return len(stuck)
+    finally:
+        db.close()
 
 
 async def parse_document(doc_id: str) -> str:
@@ -48,7 +70,8 @@ async def index_chunks(doc_id: str, chunks: list[str]) -> None:
     from app.knowledge.vector_store import VectorStore
 
     embeddings = await get_embedder().embed(chunks)
-    VectorStore().add(doc_id, chunks, embeddings)
+    # sqlite-vec 同步写：放线程池，解析后台任务不阻塞事件循环（M1）
+    await asyncio.to_thread(VectorStore().add, doc_id, chunks, embeddings)
 
 
 async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
@@ -71,7 +94,8 @@ async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
         if to_save:
             titles = sorted({(n.get("title") or "").strip() for n in to_save} - {""})
             embeddings = await get_embedder().embed(titles)
-            save_knowledge(
+            await asyncio.to_thread(
+                save_knowledge,
                 "default",
                 to_save,
                 edges,

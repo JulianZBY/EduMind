@@ -9,3 +9,12 @@
 
 class ProviderNotConfigured(RuntimeError):
     """云端能力未配置：不是故障，是引导教师去「设置」页配置供应商与 Key。"""
+
+
+class GenerationFailed(RuntimeError):
+    """本轮备课生成失败：课件 / 教案 / 提纲任一路没生成出来。
+
+    与 `ProviderNotConfigured` 的区别：后者是「没配置」（引导去设置页），这里
+    是「配好了但生成没成功」（可重试）。产品不用空课件 / 空教案冒充成功——
+    由 FastAPI 全局处理器转成 `502 {"code": "generation_failed", "message": …}`。
+    """

@@ -113,3 +113,17 @@ class ConversationStore:
         """把按会话累积的意图落库，供下一轮增量累积（不重析全部历史）。"""
         prep.intent = intent
         self.db.commit()
+
+    def discard_message(
+        self, prep: PrepSession, message: SessionMessage, *, restore_title: str | None = None
+    ) -> None:
+        """撤掉一轮没成的教师消息：本轮失败不留痕。
+
+        前端在发送失败时会回滚乐观追加的教师气泡并让教师重发；服务端若留着这条，
+        重发成功后同一句话会出现两条。`restore_title` 用于把首轮失败时抢先取的
+        会话标题恢复成占位标题，使「失败 = 没发生过」在库里也成立。
+        """
+        if restore_title is not None:
+            prep.title = restore_title
+        self.db.delete(message)
+        self.db.commit()

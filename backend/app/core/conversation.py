@@ -62,6 +62,9 @@ def _generate_reply(topic: str, result: dict) -> str:
         content += f" 本次命中的来源文档：{'、'.join(references)}。"
     if result.get("interactive"):
         content += " 已按你的互动诉求自动生成互动内容（HTML），可在生成物区打开。"
+    elif result.get("interactive_failed"):
+        # 互动内容是可选附加项：没生成出来不拖垮备课，但必须让教师知道（不静默丢弃）
+        content += " 互动内容这次没能生成，其余生成物不受影响；需要的话可以稍后重试。"
     return content
 
 

@@ -1,20 +1,30 @@
 """应用配置：pydantic-settings 读取环境变量 / .env。"""
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# 相对路径一律锚定 backend/ 目录（本文件在 backend/app/ 下），不再随启动目录漂移：
+# 从仓库根还是 backend/ 启动，库、上传目录、生成物目录都落在同一处（M3）。
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(BASE_DIR / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
     app_name: str = "EduMind"
     debug: bool = True
-    database_url: str = "sqlite:///./edumind.db"
-    upload_dir: str = "data/uploads"
-    vectors_db_path: str = "data/vectors.db"
+    database_url: str = f"sqlite:///{(BASE_DIR / 'edumind.db').as_posix()}"
+    upload_dir: str = str(BASE_DIR / "data" / "uploads")
+    vectors_db_path: str = str(BASE_DIR / "data" / "vectors.db")
+    # 生成物落盘目录的唯一事实源：generate/ 与 files 下载接口都从这里取（M3）
+    output_dir: str = str(BASE_DIR / "data" / "output")
+    # 单次上传大小上限（字节）：默认 200 MB，保护进程内存与磁盘（M4）
+    max_upload_bytes: int = 200 * 1024 * 1024
 
     # ---- 对话 / 多模态：OpenAI 兼容方言（留空 = 未配置：产品不提供假数据兜底）----
     # qwen / deepseek / moonshot / zhipu / minimax / ark / siliconflow / custom

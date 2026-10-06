@@ -10,8 +10,9 @@ from app.api.health import router as health_router
 from app.api.openapi_examples import internal_error, json_response
 from app.api.v1.router import router as v1_router
 from app.config import settings
-from app.core.errors import ProviderNotConfigured
+from app.core.errors import GenerationFailed, ProviderNotConfigured
 from app.db import init_db
+from app.knowledge.pipeline import fail_stuck_documents
 
 # 端点分组：面向教师的术语与 CONTEXT.md 一致，Swagger / ReDoc 按此导航。
 TAGS_METADATA = [
@@ -53,9 +54,13 @@ OpenAPI 是本服务接口文档的**唯一事实源**：每个端点都带 `sum
 * **界面**：Swagger UI `/docs`，ReDoc `/redoc`。
 * **分组**：系统 / 备课会话 / 知识库 / 知识图谱 / 生成物 / 冲突审核 / 题库。
 * **单用户**：固定 `user_id="default"`，本服务不含登录与多租户。
+* **启动清扫**：进程重启时，上一轮被中断的「处理中」资料不会有后台任务再推进，
+  服务启动时统一标记为「失败」，避免前端无限轮询（教师可按原文重新上传）。
 * **能力切换**：对话模型、向量化、语音转写、PDF 解析、网络搜索均按配置选择。
   云端能力未配置时相关端点返回 `503`（`code: provider_not_configured`，`message` 面向教师，
   指到设置页）——产品不返回任何「看起来像真结果的占位内容」。
+* **生成失败**：配好了但生成没成功时返回 `502`（`code: generation_failed`），
+  教师可重试——不落一份空课件 / 空教案冒充成功。
 * **版本策略**：只有破坏性变更才升 `/api/v2`。
 """
 
@@ -63,6 +68,7 @@ OpenAPI 是本服务接口文档的**唯一事实源**：每个端点都带 `sum
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()  # 幂等：空库/缺表缺列时自动建，保证全新克隆启动即可用
+    fail_stuck_documents()  # 清扫上次进程残留的「处理中」资料（没有任务再推进，避免永久轮询）
     yield
 
 
@@ -81,6 +87,15 @@ async def _provider_not_configured_handler(_: Request, exc: ProviderNotConfigure
     return JSONResponse(
         status_code=503,
         content={"detail": {"code": "provider_not_configured", "message": str(exc)}},
+    )
+
+
+@app.exception_handler(GenerationFailed)
+async def _generation_failed_handler(_: Request, exc: GenerationFailed) -> JSONResponse:
+    """本轮备课生成失败：502 + 稳定 code + 面向教师的一句话（可重试，不返回空壳生成物）。"""
+    return JSONResponse(
+        status_code=502,
+        content={"detail": {"code": "generation_failed", "message": str(exc)}},
     )
 
 

@@ -145,6 +145,16 @@ def _full_history_text(messages: list[Message]) -> str:
             },
         ),
         404: error_response("备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
+        502: error_response(
+            "本轮备课生成失败：课件 / 教案 / 提纲任一路没生成出来，未产出任何生成物，可重试",
+            {
+                "code": "generation_failed",
+                "message": (
+                    "课件生成失败，本轮备课未完成。请稍后重试；若持续失败，"
+                    "请到「设置」页检查对话模型的配置。"
+                ),
+            },
+        ),
         422: VALIDATION_ERROR,
         500: internal_error(),
     },

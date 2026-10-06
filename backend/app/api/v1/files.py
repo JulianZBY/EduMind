@@ -1,16 +1,14 @@
 """课件文件下载接口。"""
 
-import pathlib
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import FileResponse
 
 from app.api.openapi_examples import error_response, internal_error
+from app.generate import output_dir
 
 router = APIRouter()
-
-OUTPUT_DIR = pathlib.Path("data/output")
 
 
 @router.get(
@@ -52,7 +50,7 @@ async def download_file(
     """inline=true 时不附下载头：互动内容 HTML 可在浏览器直接打开互动（内联预览）。"""
     if ".." in filename or "/" in filename or "\\" in filename:
         raise HTTPException(status_code=400, detail="非法文件名")
-    path = OUTPUT_DIR / filename
+    path = output_dir() / filename
     if not path.is_file():
         raise HTTPException(status_code=404, detail="文件不存在")
     return FileResponse(path, filename=None if inline else filename)
