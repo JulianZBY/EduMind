@@ -1,5 +1,10 @@
-import { LessonPrepArea, LessonPrepIndex, LessonPrepSession } from './LessonPrepArea'
+import { lazyAreaModule } from '../lazy'
 import type { AreaModule } from '../types'
+
+// 区实现按需加载（M6）：三个入口来自同一个 chunk，翻到本区才拉取。
+const LessonPrepArea = lazyAreaModule(() => import('./LessonPrepArea'), 'LessonPrepArea')
+const LessonPrepIndex = lazyAreaModule(() => import('./LessonPrepArea'), 'LessonPrepIndex')
+const LessonPrepSession = lazyAreaModule(() => import('./LessonPrepArea'), 'LessonPrepSession')
 
 /**
  * 备课会话区注册：导航条目（label / path / order）+ 本区路由。

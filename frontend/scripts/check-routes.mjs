@@ -9,13 +9,39 @@
  */
 import { createServer } from 'vite'
 import { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { renderToPipeableStream } from 'react-dom/server'
 import { RouterProvider, createMemoryRouter, matchRoutes } from 'react-router'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { PassThrough } from 'node:stream'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const frontendDir = resolve(scriptDir, '..')
+
+/**
+ * 把一段 JSX 渲染成完整 HTML 字符串。
+ *
+ * 区是 React.lazy 拆分的（M6）：懒组件首帧处于挂起态，`renderToStaticMarkup` 只能渲染
+ * 同步可完成的部分，会停在外壳/加载态上。这里改用流式渲染并等 `onAllReady`——等所有懒
+ * 组件就绪后再收完整 HTML，所以下面的文案断言校验的仍是各区的真实内容。
+ */
+function renderToHtml(element) {
+  return new Promise((resolveHtml, rejectHtml) => {
+    let html = ''
+    const sink = new PassThrough()
+    sink.setEncoding('utf8')
+    sink.on('data', (chunk) => {
+      html += chunk
+    })
+    sink.on('end', () => resolveHtml(html))
+    sink.on('error', rejectHtml)
+    const stream = renderToPipeableStream(element, {
+      onShellError: rejectHtml,
+      onError: rejectHtml,
+      onAllReady: () => stream.pipe(sink),
+    })
+  })
+}
 
 /** 票 04 的验收口径：六区 + 设置共七条一级路由，默认落在备课会话区。 */
 const EXPECTED_AREAS = [
@@ -141,7 +167,7 @@ try {
   console.log('逐条渲染（react-dom/server，无浏览器；默认路由 / 的重定向已在上面的 loader 断言里跑过）：')
   for (const item of renderCases) {
     const router = createMemoryRouter(routeObjects, { initialEntries: [item.path] })
-    const html = renderToStaticMarkup(
+    const html = await renderToHtml(
       createElement(AppProviders, null, createElement(RouterProvider, { router })),
     )
     check(html.includes(item.expect), `${item.path} 渲染出「${item.expect}」`)

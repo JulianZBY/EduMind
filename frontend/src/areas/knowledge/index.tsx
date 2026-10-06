@@ -1,5 +1,10 @@
-import { KnowledgeArea, KnowledgeDocument, KnowledgeIndex } from './KnowledgeArea'
+import { lazyAreaModule } from '../lazy'
 import type { AreaModule } from '../types'
+
+// 区实现按需加载（M6）：三个入口来自同一个 chunk，翻到本区才拉取。
+const KnowledgeArea = lazyAreaModule(() => import('./KnowledgeArea'), 'KnowledgeArea')
+const KnowledgeIndex = lazyAreaModule(() => import('./KnowledgeArea'), 'KnowledgeIndex')
+const KnowledgeDocument = lazyAreaModule(() => import('./KnowledgeArea'), 'KnowledgeDocument')
 
 /** 知识库区注册。 */
 export const knowledgeArea: AreaModule = {

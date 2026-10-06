@@ -14,10 +14,11 @@ import {
 } from '../../components/ui'
 import { GraphCanvas } from './GraphCanvas'
 import { KnowledgePointDrawer } from './KnowledgePointDrawer'
+import { KNOWLEDGE_GRAPH_PATH } from './paths'
 import { collectFacets, useGraph, useNeighborhood } from './queries'
 
-/** 本区一级路由：路由注册（index.tsx）与画布内的跳转都用它，改路径只改这里。 */
-export const KNOWLEDGE_GRAPH_PATH = '/knowledge-graph'
+// 本区一级路由：路由注册（index.tsx）与画布内的跳转都用它；改路径只改 ./paths.ts
+// （单独成文件是为了让注册表同步拿到路径，又不把本文件的重依赖拽进 index chunk）。
 
 const SUBJECT_PARAM = 'subject'
 const CHAPTER_PARAM = 'chapter'

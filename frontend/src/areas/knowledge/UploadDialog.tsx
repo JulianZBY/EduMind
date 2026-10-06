@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button'
 import { Dialog } from '../../components/ui/Dialog'
 import { Field } from '../../components/ui/Field'
 import { useToast } from '../../components/ui/useToast'
+import { MAX_UPLOAD_LABEL, formatFileSize, isWithinUploadLimit } from '../../lib/upload'
 import { documentErrorMessage, useUploadDocument } from './queries'
 import { useKnowledgeUi } from './store'
 
@@ -35,8 +36,17 @@ export function UploadDialog() {
     closeUpload()
   }
 
+  // 本地体积预检（B3）：上限与后端 `settings.max_upload_bytes` 同源，
+  // 超限直接提示并禁用提交，不再整份文件传完才吃后端 413。
+  const tooLarge = file !== null && !isWithinUploadLimit(file.size)
+  const sizeError = tooLarge
+    ? `文件有 ${formatFileSize(file.size)}，超过单份 ${MAX_UPLOAD_LABEL} 的上限，请换一个更小的文件。`
+    : undefined
+  const fileError =
+    sizeError ?? (upload.isError ? documentErrorMessage(upload.error) : undefined)
+
   function submit() {
-    if (!file) return
+    if (!file || tooLarge) return
     upload.mutate(
       { file, isReference },
       {
@@ -65,7 +75,11 @@ export function UploadDialog() {
           <Button onClick={close} disabled={upload.isPending}>
             取消
           </Button>
-          <Button variant="accent" onClick={submit} disabled={!file || upload.isPending}>
+          <Button
+            variant="accent"
+            onClick={submit}
+            disabled={!file || tooLarge || upload.isPending}
+          >
             {upload.isPending ? '上传中…' : '上传'}
           </Button>
         </>
@@ -76,7 +90,7 @@ export function UploadDialog() {
           htmlFor="knowledge-upload-file"
           label="选择文件"
           hint="解析会经过分块与入库；标记为参考资料后，备课检索会加权并在生成物中溯源。"
-          error={upload.isError ? documentErrorMessage(upload.error) : undefined}
+          error={fileError}
         >
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -95,7 +109,7 @@ export function UploadDialog() {
               </label>
             </Button>
             <span className="min-w-0 flex-1 truncate text-xs text-black/60">
-              {file ? file.name : '还没有选择文件'}
+              {file ? `${file.name}（${formatFileSize(file.size)}）` : '还没有选择文件'}
             </span>
           </div>
         </Field>

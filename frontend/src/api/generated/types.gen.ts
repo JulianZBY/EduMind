@@ -2408,6 +2408,10 @@ export type ChatApiV1ChatPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 本轮备课生成失败：课件 / 教案 / 提纲任一路没生成出来，未产出任何生成物，可重试
+     */
+    502: unknown;
 };
 
 export type ChatApiV1ChatPostResponses = {
@@ -2534,6 +2538,10 @@ export type UploadDocumentApiV1DocumentsUploadPostData = {
 };
 
 export type UploadDocumentApiV1DocumentsUploadPostErrors = {
+    /**
+     * 文件过大：超过单次上传上限（默认 200 MB）
+     */
+    413: unknown;
     /**
      * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
