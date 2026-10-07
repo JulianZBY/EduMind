@@ -36,3 +36,8 @@ ignore = ["ASYNC230"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.pyright]
+# LSP/类型检查环境:钉住 uv 管理的虚拟环境,避免依赖解析失败产生级联假报
+venvPath = "."
+venv = ".venv"
