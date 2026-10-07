@@ -309,4 +309,8 @@ async def download_artifact_version(
     path = generate.output_dir() / filename
     if not pathlib.Path(path).is_file():
         raise HTTPException(status_code=404, detail="文件不存在")
-    return FileResponse(path, filename=None if inline else filename)
+    return FileResponse(
+        path,
+        filename=None if inline else filename,
+        headers=generate.isolation_headers(filename),
+    )

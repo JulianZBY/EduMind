@@ -4875,7 +4875,7 @@
     },
     "/api/v1/files/{filename}": {
       "get": {
-        "description": "按文件名取回落盘的生成物（课件 pptx / 教案与提纲 docx / 试卷 docx / 互动内容 html）。\n\n* `inline=false`（默认）：附下载头，浏览器保存文件；\n* `inline=true`：不附下载头，互动内容 HTML 可直接在浏览器内联打开试用。\n\n文件名由生成接口返回，不接受目录与路径分隔符；生成物与版本记录的一一对应关系见 `docs/api/`。",
+        "description": "按文件名取回落盘的生成物（课件 pptx / 教案与提纲 docx / 试卷 docx / 互动内容 html）。\n\n* `inline=false`（默认）：附下载头，浏览器保存文件；\n* `inline=true`：不附下载头，互动内容 HTML 可直接在浏览器内联打开试用。\n\n互动内容 HTML 一律带 `Content-Security-Policy: sandbox …` 响应头：页面里的脚本照常运行，但运行在与本应用隔离的源里，不能调用本应用的接口。\n\n文件名由生成接口返回，不接受目录与路径分隔符；生成物与版本记录的一一对应关系见 `docs/api/`。",
         "operationId": "download_file_api_v1_files__filename__get",
         "parameters": [
           {

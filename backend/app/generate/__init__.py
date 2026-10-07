@@ -15,6 +15,23 @@ def output_dir() -> Path:
     return OUTPUT_DIR
 
 
+# 互动内容是模型生成的整页 HTML（含脚本）。直接以应用同源打开时，它能调用本应用的全部接口
+# （接口没有认证），而脚本内容由模型决定、模型的输入又包含教师上传的资料。
+# `sandbox` 不带 `allow-same-origin`：页面在独立的不透明源里运行，脚本照常可用，
+# 但读不到本应用的存储、也发不出同源请求。弹窗 / 表单 / 指针锁是小游戏常用的能力，保留。
+HTML_ISOLATION_HEADERS = {
+    "Content-Security-Policy": "sandbox allow-scripts allow-modals allow-forms allow-pointer-lock",
+    "X-Content-Type-Options": "nosniff",
+}
+
+
+def isolation_headers(filename: str) -> dict[str, str]:
+    """按生成物文件名给出响应头：HTML 生成物加隔离头，其余格式不需要。"""
+    if filename.lower().endswith((".html", ".htm")):
+        return dict(HTML_ISOLATION_HEADERS)
+    return {}
+
+
 def remove_output_files(filenames: list[str]) -> int:
     """删除落盘的生成物文件，返回实际删掉的个数。
 

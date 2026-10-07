@@ -206,6 +206,9 @@ def test_download_supports_inline_for_interactive_content():
     assert opened.text.lstrip().startswith("<!DOCTYPE")
     assert "互动学习小游戏" in opened.text
     assert "attachment" not in (opened.headers.get("content-disposition") or "")
+    # 按版本取回与按文件名取回同一口径：互动内容在隔离的源里运行
+    csp = opened.headers["content-security-policy"]
+    assert csp.startswith("sandbox") and "allow-same-origin" not in csp
 
 
 def test_artifact_type_filter_and_unknown_versions():

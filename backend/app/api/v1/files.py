@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import FileResponse
 
 from app.api.openapi_examples import error_response, internal_error
-from app.generate import output_dir
+from app.generate import isolation_headers, output_dir
 
 router = APIRouter()
 
@@ -19,6 +19,8 @@ router = APIRouter()
         "按文件名取回落盘的生成物（课件 pptx / 教案与提纲 docx / 试卷 docx / 互动内容 html）。\n\n"
         "* `inline=false`（默认）：附下载头，浏览器保存文件；\n"
         "* `inline=true`：不附下载头，互动内容 HTML 可直接在浏览器内联打开试用。\n\n"
+        "互动内容 HTML 一律带 `Content-Security-Policy: sandbox …` 响应头：页面里的脚本照常运行，"
+        "但运行在与本应用隔离的源里，不能调用本应用的接口。\n\n"
         "文件名由生成接口返回，不接受目录与路径分隔符；生成物与版本记录的一一对应关系见 `docs/api/`。"
     ),
     responses={
@@ -53,4 +55,6 @@ async def download_file(
     path = output_dir() / filename
     if not path.is_file():
         raise HTTPException(status_code=404, detail="文件不存在")
-    return FileResponse(path, filename=None if inline else filename)
+    return FileResponse(
+        path, filename=None if inline else filename, headers=isolation_headers(filename)
+    )
