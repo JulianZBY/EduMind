@@ -46,7 +46,7 @@ export function DocumentDetail() {
   return (
     <article className="flex flex-col">
       <DetailHeader document={data} />
-      <StatusBlock status={data.status} />
+      <StatusBlock status={data.status} failureReason={data.failure_reason ?? ''} />
       <Facts document={data} />
       <ChunkList
         chunks={data.chunks}
@@ -99,7 +99,7 @@ function DetailHeader({ document }: { document: DocumentDetailPayload }) {
 }
 
 /** 状态块：一句口径 + 该状态下的出路（等待解析 / 去裁决 / 重新上传）。 */
-function StatusBlock({ status }: { status: ParseStatus }) {
+function StatusBlock({ status, failureReason }: { status: ParseStatus; failureReason: string }) {
   const openUpload = useKnowledgeUi((state) => state.openUpload)
   const attention = status === '有冲突' || status === '失败'
 
@@ -111,6 +111,9 @@ function StatusBlock({ status }: { status: ParseStatus }) {
       )}
     >
       <p className="text-sm">{STATUS_NOTE[status]}</p>
+      {status === '失败' && failureReason ? (
+        <p className="text-sm font-bold">原因：{failureReason}</p>
+      ) : null}
       {isProcessing(status) ? (
         <div aria-hidden="true" className="h-2 w-full max-w-sm rounded-none border-2 border-black">
           <div className="h-full w-1/2 bg-[#ff3366]" />

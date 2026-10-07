@@ -70,6 +70,8 @@ class DocumentView(BaseModel):
     file_type: str  # 扩展名，决定走哪个解析器（pdf / docx / pptx / png / mp4 / mp3 …）
     status: ParseStatus
     is_reference: bool
+    # 解析失败的原因（面向教师的一句话）；状态不是「失败」时为空
+    failure_reason: str = ""
 
 
 class DocumentListResponse(BaseModel):
@@ -106,6 +108,7 @@ def _view(doc: Document) -> DocumentView:
         file_type=doc.file_type,
         status=cast(ParseStatus, doc.status),
         is_reference=doc.is_reference,
+        failure_reason=doc.failure_reason or "",
     )
 
 
@@ -128,7 +131,11 @@ def _document_or_404(db: Session, document_id: str) -> Document:
         "`有冲突` / `失败`），不要靠等待本请求变慢来判断进度。\n\n"
         "`is_reference=true` 把文档标记为参考资料：发起备课时勾选其 id 会提高检索权重，"
         "并在生成物中溯源。后续可用 `PATCH /api/v1/documents/{document_id}/reference` "
-        "随时切换该标记。"
+        "随时切换该标记。\n\n"
+        "**入口即拒绝的两种情况**：扩展名不在可解析清单内返回 `415`（清单见错误说明）；"
+        "空文件返回 `400`。这两种情况不落盘、不建记录——收下再让后台解析失败，"
+        "教师只会看到一个没有原因的「失败」。\n\n"
+        "解析失败时资料的 `failure_reason` 给出面向教师的一句原因（文件损坏 / 能力未配置 / 被中断）。"
     ),
     responses={
         200: json_response(
@@ -141,7 +148,12 @@ def _document_or_404(db: Session, document_id: str) -> Document:
                 "is_reference": True,
             },
         ),
+        400: error_response("空文件：没有可解析的内容", "文件是空的，请确认后重新选择"),
         413: error_response("文件过大：超过单次上传上限（默认 200 MB）", "文件过大"),
+        415: error_response(
+            "不支持的资料格式：扩展名不在可解析清单内",
+            "不支持的资料格式「exe」。可上传：pdf、doc、docx、ppt、pptx、png、jpg …",
+        ),
         422: VALIDATION_ERROR,
         500: internal_error(),
     },
@@ -166,20 +178,26 @@ async def upload_document(
     if len(content) > settings.max_upload_bytes:
         raise HTTPException(status_code=413, detail=f"文件过大：超过 {limit_mb} MB 上限")
     filename = file.filename or "upload.bin"
+    ext = Path(filename).suffix.lstrip(".").lower()
+    from app.knowledge.parsers import get_parser, supported_file_types  # 延迟导入避免循环
+
+    # 入口校验（先于落盘）：不支持的格式与空文件当场拒绝，不留一条没有原因的「失败」
+    if ext not in supported_file_types():
+        shown = ext or "无扩展名"
+        raise HTTPException(
+            status_code=415,
+            detail=f"不支持的资料格式「{shown}」。可上传：{'、'.join(supported_file_types())}",
+        )
+    if not content:
+        raise HTTPException(status_code=400, detail="文件是空的，请确认后重新选择")
     # 同步落盘：放线程池，不阻塞事件循环（M1）
     file_path = await asyncio.to_thread(save_upload, content, filename)
-    ext = Path(filename).suffix.lstrip(".").lower()
 
     # 录音资料唯一解析路径是百炼 paraformer：未配置时立刻给教师 503 引导，
     # 而不是收下文件再落一个没有原因的「失败」（产品没有假转写兜底）。
-    from app.knowledge.parsers import get_parser
     from app.knowledge.parsers.audio import AudioParser
 
-    try:
-        parser = get_parser(ext)
-    except ValueError:
-        parser = None
-    if isinstance(parser, AudioParser):
+    if isinstance(get_parser(ext), AudioParser):
         from app.core.asr.factory import get_transcriber
 
         get_transcriber()  # 未配置抛 ProviderNotConfigured → 全局 503 处理器给引导

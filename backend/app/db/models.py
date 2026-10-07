@@ -198,6 +198,8 @@ class Document(Base):
     is_reference: Mapped[bool] = mapped_column(Boolean, default=False)
     parsed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     conflict_count: Mapped[int] = mapped_column(Integer, default=0)
+    # 解析失败的原因（面向教师的一句话；非「失败」状态为空）：让教师知道该重传、换格式还是去配置
+    failure_reason: Mapped[str] = mapped_column(Text, default="")
 
 
 class Conflict(Base):

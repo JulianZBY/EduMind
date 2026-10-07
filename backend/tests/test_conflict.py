@@ -133,7 +133,7 @@ async def test_same_name_contradiction_pends_and_stays_out_of_graph(monkeypatch,
         [],
         detected,
     )
-    doc_id = _upload(monkeypatch, tmp_path, f"矛盾材料_{_sfx()}.txt")
+    doc_id = _upload(monkeypatch, tmp_path, f"矛盾材料_{_sfx()}.docx")
 
     pending = _pending_by_new_title(title)
     assert len(pending) == 1
@@ -165,7 +165,7 @@ async def test_near_name_candidates_reach_llm_compare(monkeypatch, tmp_path):
     new_content = "（冲突版）握手次数其实无关紧要"
     detected: list[tuple[str, str]] = []
     _patch_extraction(monkeypatch, [{"title": new_title, "content": new_content}], [], detected)
-    _upload(monkeypatch, tmp_path, f"近名材料_{_sfx()}.txt")
+    _upload(monkeypatch, tmp_path, f"近名材料_{_sfx()}.docx")
 
     pending = _pending_by_new_title(new_title)
     assert len(pending) == 1
@@ -186,7 +186,7 @@ async def test_review_accept_new_replaces_old(monkeypatch, tmp_path):
     _seed_edge(old_id, helper_id)
     detected: list[tuple[str, str]] = []
     _patch_extraction(monkeypatch, [{"title": title, "content": new_content}], [], detected)
-    _upload(monkeypatch, tmp_path, f"替换材料_{_sfx()}.txt")
+    _upload(monkeypatch, tmp_path, f"替换材料_{_sfx()}.docx")
 
     conflict_id = _pending_by_new_title(title)[0]["id"]
     r = client.post(f"/api/v1/conflicts/{conflict_id}/review", json={"action": "接受新"})
@@ -223,7 +223,7 @@ async def test_review_keep_old_discards_new(monkeypatch, tmp_path):
     _patch_extraction(
         monkeypatch, [{"title": title, "content": "（冲突版）两次报文即可建立连接"}], [], detected
     )
-    _upload(monkeypatch, tmp_path, f"丢弃材料_{_sfx()}.txt")
+    _upload(monkeypatch, tmp_path, f"丢弃材料_{_sfx()}.docx")
 
     conflict_id = _pending_by_new_title(title)[0]["id"]
     r = client.post(f"/api/v1/conflicts/{conflict_id}/review", json={"action": "保留旧"})
@@ -247,7 +247,7 @@ async def test_review_coexist_keeps_both(monkeypatch, tmp_path):
     new_content = "（冲突版）握手次数其实无关紧要"
     detected: list[tuple[str, str]] = []
     _patch_extraction(monkeypatch, [{"title": new_title, "content": new_content}], [], detected)
-    _upload(monkeypatch, tmp_path, f"并存材料_{_sfx()}.txt")
+    _upload(monkeypatch, tmp_path, f"并存材料_{_sfx()}.docx")
 
     pending = _pending_by_new_title(new_title)[0]
     r = client.post(f"/api/v1/conflicts/{pending['id']}/review", json={"action": "并存"})
@@ -291,7 +291,7 @@ async def test_non_conflicting_knowledge_saves_directly(monkeypatch, tmp_path):
         [],
         detected,
     )
-    doc_id = _upload(monkeypatch, tmp_path, f"一致材料_{_sfx()}.txt")
+    doc_id = _upload(monkeypatch, tmp_path, f"一致材料_{_sfx()}.docx")
 
     assert _pending_by_new_title(old_title) == []
     assert _pending_by_new_title(near_title) == []

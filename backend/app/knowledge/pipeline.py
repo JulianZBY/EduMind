@@ -4,10 +4,28 @@ import asyncio
 import logging
 from datetime import datetime
 
+from app.core.errors import ProviderNotConfigured
 from app.db import SessionLocal
 from app.db.models import Document
 
 logger = logging.getLogger(__name__)
+
+# 面向教师的失败原因（资料详情里展示）。不回显内部异常文本：那里可能带本机路径。
+REASON_INTERRUPTED = "解析被中断（服务重启），请重新上传这份资料。"
+REASON_PARSE_ERROR = (
+    "资料解析没有成功：文件可能已损坏、被加密，或内容无法识别。请检查文件后重新上传。"
+)
+
+
+def failure_reason_for(exc: Exception) -> str:
+    """把解析异常翻译成给教师看的一句话。
+
+    未配置云端能力时沿用能力工厂给出的引导原文（它本来就是写给教师的）；
+    其余异常一律用通用说法，细节只进日志。
+    """
+    if isinstance(exc, ProviderNotConfigured):
+        return str(exc)
+    return REASON_PARSE_ERROR
 
 
 def fail_stuck_documents() -> int:
@@ -23,6 +41,7 @@ def fail_stuck_documents() -> int:
         stuck = db.query(Document).filter(Document.status == "处理中").all()
         for doc in stuck:
             doc.status = "失败"
+            doc.failure_reason = REASON_INTERRUPTED
         if stuck:
             db.commit()
             logger.warning("启动清扫：%d 份「处理中」资料标记为失败", len(stuck))
@@ -48,14 +67,16 @@ async def parse_document(doc_id: str) -> str:
             if chunks:
                 await index_chunks(doc_id, chunks)
             conflict_count = await extract_and_save_knowledge(doc_id, result)
-        except Exception:
+        except Exception as exc:
             # 后台任务入口：吞掉异常仅记日志——失败经 doc.status=「失败」观测即可，
             # 重抛只会打断 FastAPI 后台任务且无所收益（ticket #11：失败不拖垮其他格式解析）
             doc.status = "失败"
+            doc.failure_reason = failure_reason_for(exc)
             db.commit()
             logger.exception("文档解析失败 doc=%s file=%s", doc_id, doc.filename)
             return ""
         doc.status = "有冲突" if conflict_count else "已完成"
+        doc.failure_reason = ""
         doc.conflict_count = conflict_count
         doc.parsed_at = datetime.now()  # noqa: DTZ005 - SQLite 存 naive 时间
         db.commit()

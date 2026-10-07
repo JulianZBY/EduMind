@@ -34,6 +34,11 @@ _PARSERS: dict[str, type[Parser]] = {
 }
 
 
+def supported_file_types() -> list[str]:
+    """可解析的资料扩展名（注册表即事实源；上传入口据此拒绝不支持的格式）。"""
+    return sorted(_PARSERS)
+
+
 def get_parser(file_type: str) -> Parser:
     cls = _PARSERS.get(file_type.lower())
     if cls is None:

@@ -26,7 +26,7 @@ def test_under_limit_still_accepted(monkeypatch):
 
     monkeypatch.setattr(documents_module, "parse_document", fake_parse)
     monkeypatch.setattr(documents_module.settings, "max_upload_bytes", 1024)
-    files = {"file": ("small.txt", b"hello", "text/plain")}
+    files = {"file": ("small.pdf", b"hello", "application/pdf")}
     r = client.post("/api/v1/documents/upload", files=files)
     assert r.status_code == 200
     assert r.json()["status"] == "处理中"

@@ -701,6 +701,11 @@
             "title": "Conflict Count",
             "type": "integer"
           },
+          "failure_reason": {
+            "default": "",
+            "title": "Failure Reason",
+            "type": "string"
+          },
           "file_type": {
             "title": "File Type",
             "type": "string"
@@ -780,6 +785,11 @@
           "status": "处理中"
         },
         "properties": {
+          "failure_reason": {
+            "default": "",
+            "title": "Failure Reason",
+            "type": "string"
+          },
           "file_type": {
             "title": "File Type",
             "type": "string"
@@ -4491,7 +4501,7 @@
     },
     "/api/v1/documents/upload": {
       "post": {
-        "description": "上传一份教学资料并**立即返回**：文件落盘 + 建文档记录 + 交后台解析（解析完成前`status` 为 `处理中`）。\n\n上传后请轮询 `GET /api/v1/documents` 直到状态从 `处理中` 变为 `已完成`（或 `有冲突` / `失败`），不要靠等待本请求变慢来判断进度。\n\n`is_reference=true` 把文档标记为参考资料：发起备课时勾选其 id 会提高检索权重，并在生成物中溯源。后续可用 `PATCH /api/v1/documents/{document_id}/reference` 随时切换该标记。",
+        "description": "上传一份教学资料并**立即返回**：文件落盘 + 建文档记录 + 交后台解析（解析完成前`status` 为 `处理中`）。\n\n上传后请轮询 `GET /api/v1/documents` 直到状态从 `处理中` 变为 `已完成`（或 `有冲突` / `失败`），不要靠等待本请求变慢来判断进度。\n\n`is_reference=true` 把文档标记为参考资料：发起备课时勾选其 id 会提高检索权重，并在生成物中溯源。后续可用 `PATCH /api/v1/documents/{document_id}/reference` 随时切换该标记。\n\n**入口即拒绝的两种情况**：扩展名不在可解析清单内返回 `415`（清单见错误说明）；空文件返回 `400`。这两种情况不落盘、不建记录——收下再让后台解析失败，教师只会看到一个没有原因的「失败」。\n\n解析失败时资料的 `failure_reason` 给出面向教师的一句原因（文件损坏 / 能力未配置 / 被中断）。",
         "operationId": "upload_document_api_v1_documents_upload_post",
         "requestBody": {
           "content": {
@@ -4521,6 +4531,16 @@
             },
             "description": "已接收并交后台解析（`status` 为 `处理中`）"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "文件是空的，请确认后重新选择"
+                }
+              }
+            },
+            "description": "空文件：没有可解析的内容"
+          },
           "413": {
             "content": {
               "application/json": {
@@ -4530,6 +4550,16 @@
               }
             },
             "description": "文件过大：超过单次上传上限（默认 200 MB）"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "不支持的资料格式「exe」。可上传：pdf、doc、docx、ppt、pptx、png、jpg …"
+                }
+              }
+            },
+            "description": "不支持的资料格式：扩展名不在可解析清单内"
           },
           "422": {
             "content": {

@@ -40,6 +40,7 @@ _LEGACY_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("conflicts", "revised_content", "TEXT"),
     ("conflicts", "review_action", "VARCHAR(20)"),
     ("llm_provider_instances", "models_error", "TEXT DEFAULT ''"),
+    ("documents", "failure_reason", "TEXT DEFAULT ''"),
 )
 
 def _ensure_sqlite_columns(bind=None) -> None:

@@ -440,6 +440,10 @@ export type DocumentDetail = {
      */
     conflict_count: number;
     /**
+     * Failure Reason
+     */
+    failure_reason?: string;
+    /**
      * File Type
      */
     file_type: string;
@@ -481,6 +485,10 @@ export type DocumentListResponse = {
  * 一份教学资料：上传响应与列表项共用的形状。
  */
 export type DocumentView = {
+    /**
+     * Failure Reason
+     */
+    failure_reason?: string;
     /**
      * File Type
      */
@@ -2539,9 +2547,17 @@ export type UploadDocumentApiV1DocumentsUploadPostData = {
 
 export type UploadDocumentApiV1DocumentsUploadPostErrors = {
     /**
+     * 空文件：没有可解析的内容
+     */
+    400: unknown;
+    /**
      * 文件过大：超过单次上传上限（默认 200 MB）
      */
     413: unknown;
+    /**
+     * 不支持的资料格式：扩展名不在可解析清单内
+     */
+    415: unknown;
     /**
      * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
