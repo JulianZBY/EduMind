@@ -4,10 +4,10 @@
 （`core/conversation.py` 状态机、`core/session_service.py` 一轮对话的落地）。
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
@@ -17,6 +17,7 @@ from app.api.openapi_examples import (
     json_response_examples,
     named,
 )
+from app.api.v1.sessions import Granularity
 from app.core import session_service
 from app.db import get_session
 from app.db.sessions import ConversationStore
@@ -27,7 +28,7 @@ router = APIRouter()
 class Message(BaseModel):
     """一轮对话：role 为 user / assistant，content 为教师或助手的原话。"""
 
-    role: str
+    role: Literal["user", "assistant"]
     content: str
 
 
@@ -49,8 +50,10 @@ class ChatRequest(BaseModel):
         }
     )
 
-    messages: list[Message]
-    granularity: str = "标准"
+    # 至少一条消息：空对话没有可分析的需求，在请求校验阶段拒绝
+    messages: list[Message] = Field(min_length=1)
+    # 追问粒度三档，与新建 / 修改备课会话同一口径（此前这里是任意字符串，写错也不会报错）
+    granularity: Granularity = "标准"
     # 本次备课的参考资料（文档 id）：检索加权 + 回复/教案溯源；不传则行为与现状一致
     reference_doc_ids: list[str] = []
     # 可选：备课会话 id（取自会话列表）。携带后会话成为事实源；不传保持无状态既有行为

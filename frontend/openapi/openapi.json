@@ -455,6 +455,11 @@
         "properties": {
           "granularity": {
             "default": "标准",
+            "enum": [
+              "快速",
+              "标准",
+              "精细"
+            ],
             "title": "Granularity",
             "type": "string"
           },
@@ -462,6 +467,7 @@
             "items": {
               "$ref": "#/components/schemas/Message"
             },
+            "minItems": 1,
             "title": "Messages",
             "type": "array"
           },
@@ -830,6 +836,8 @@
           },
           "n": {
             "default": 5,
+            "maximum": 50,
+            "minimum": 1,
             "title": "N",
             "type": "integer"
           },
@@ -1324,6 +1332,10 @@
             "type": "string"
           },
           "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
             "title": "Role",
             "type": "string"
           }
@@ -4730,7 +4742,7 @@
     },
     "/api/v1/exam/generate": {
       "post": {
-        "description": "按备课意图出题并同侧入库：生成 `n` 道题（默认 5）→ 题目写入题库（来源=`自编`）→ 按考查知识点关联知识图谱节点 → 渲染 Word 试卷。\n\n返回的 `questions` 供生成物区直接预览，`bank_saved` 为实际入题库的题目数，`filename` 可用于 `GET /api/v1/files/{filename}` 下载，也可以按版本下载（见 `download_url` 体系：`GET /api/v1/artifacts/{version_id}/download`）。\n\n`intent` 可直接透传上次备课的意图对象；结构不完整时退化为仅凭 `topic` 出题，不会因为字段缺失卡住一键生成。\n\n**带上 `session_id` 时本张试卷落一条新版本**（版本号在会话内单调递增，旧的试卷版本保持可回看、可下载）；会话不存在返回 `404`。",
+        "description": "按备课意图出题并同侧入库：生成 `n` 道题（默认 5，取值 1～50，越界返回 `422`）→ 题目写入题库（来源=`自编`）→ 按考查知识点关联知识图谱节点 → 渲染 Word 试卷。\n\n返回的 `questions` 供生成物区直接预览，`bank_saved` 为实际入题库的题目数，`filename` 可用于 `GET /api/v1/files/{filename}` 下载，也可以按版本下载（见 `download_url` 体系：`GET /api/v1/artifacts/{version_id}/download`）。\n\n`intent` 可直接透传上次备课的意图对象；结构不完整时退化为仅凭 `topic` 出题，不会因为字段缺失卡住一键生成。\n\n**带上 `session_id` 时本张试卷落一条新版本**（版本号在会话内单调递增，旧的试卷版本保持可回看、可下载）；会话不存在返回 `404`。",
         "operationId": "generate_exam_paper_api_v1_exam_generate_post",
         "requestBody": {
           "content": {

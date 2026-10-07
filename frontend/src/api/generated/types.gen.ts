@@ -313,7 +313,7 @@ export type ChatRequest = {
     /**
      * Granularity
      */
-    granularity?: string;
+    granularity?: '快速' | '标准' | '精细';
     /**
      * Messages
      */
@@ -833,7 +833,7 @@ export type Message = {
     /**
      * Role
      */
-    role: string;
+    role: 'user' | 'assistant';
 };
 
 /**

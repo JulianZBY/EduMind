@@ -67,3 +67,18 @@ def test_chat_generate_when_complete(install_semantic_llm):
     assert body["clarifying"] is False
     assert body["artifacts"] is not None
     assert body["artifacts"]["ppt"]["slides"]
+
+
+def test_chat_rejects_malformed_request_body():
+    """请求体校验：空对话、不存在的追问粒度、不存在的角色一律 422，不进入意图分析。"""
+    cases = {
+        "空对话": {"messages": []},
+        "不存在的追问粒度": {
+            "messages": [{"role": "user", "content": "备课"}],
+            "granularity": "超细",
+        },
+        "不存在的角色": {"messages": [{"role": "hacker", "content": "备课"}]},
+    }
+    for name, payload in cases.items():
+        r = client.post("/api/v1/chat", json=payload)
+        assert r.status_code == 422, (name, r.text)

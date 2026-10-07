@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
@@ -30,6 +30,11 @@ from app.knowledge.retrieval.factory import get_retriever
 router = APIRouter()
 
 
+# 一张试卷的题量边界：下限保证有题可出，上限避免一次请求长时间占用模型并灌满题库
+EXAM_MIN_QUESTIONS = 1
+EXAM_MAX_QUESTIONS = 50
+
+
 class ExamGenerateRequest(BaseModel):
     """一键生成试卷的请求：备课意图 + 题目数量。"""
 
@@ -44,7 +49,8 @@ class ExamGenerateRequest(BaseModel):
 
     # 生成物区透传上次备课意图；空意图时仅凭主题生成
     intent: dict = {}
-    n: int = 5
+    # 题目数量：1～50。越界在请求校验阶段以 422 拒绝，不把「0 道 / 负数道 / 十万道」交给模型自行理解
+    n: int = Field(default=5, ge=EXAM_MIN_QUESTIONS, le=EXAM_MAX_QUESTIONS)
     # 可选：所属备课会话；带上后本张试卷产出**新版本**并入库（不传则保持既有语义）
     session_id: str | None = None
 
@@ -79,7 +85,7 @@ def _intent_from_topic(intent: dict) -> TeachingIntent:
     tags=["生成物"],
     summary="一键生成试卷",
     description=(
-        "按备课意图出题并同侧入库：生成 `n` 道题（默认 5）→ 题目写入题库（来源=`自编`）"
+        "按备课意图出题并同侧入库：生成 `n` 道题（默认 5，取值 1～50，越界返回 `422`）→ 题目写入题库（来源=`自编`）"
         "→ 按考查知识点关联知识图谱节点 → 渲染 Word 试卷。\n\n"
         "返回的 `questions` 供生成物区直接预览，`bank_saved` 为实际入题库的题目数，"
         "`filename` 可用于 `GET /api/v1/files/{filename}` 下载，"

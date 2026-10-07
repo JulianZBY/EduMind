@@ -162,3 +162,30 @@ def test_generate_returns_502_when_llm_output_unparseable(monkeypatch, tmp_path)
     assert r.status_code == 502
     after = {p.name for p in OUTPUT_DIR.glob("exam_*.docx")} if OUTPUT_DIR.is_dir() else set()
     assert after == before  # 未新增落盘试卷
+
+
+def test_generate_rejects_out_of_range_question_count(monkeypatch, tmp_path):
+    """题量越界（0 / 负数 / 超过上限）在请求校验阶段 422 拒绝：不调用模型、不入题库。"""
+    _install_fake(monkeypatch, tmp_path)
+    calls = []
+
+    async def _should_not_run(*args, **kwargs):
+        calls.append(kwargs)
+        return []
+
+    monkeypatch.setattr("app.api.v1.exam.generate_exam", _should_not_run)
+
+    for n in (0, -3, 51, 100000):
+        r = _generate(n=n, intent={"topic": "TCP"})
+        assert r.status_code == 422, (n, r.text)
+        assert r.json()["detail"][0]["loc"] == ["body", "n"]
+
+    assert calls == []  # 越界请求没有走到出题
+
+
+def test_generate_accepts_question_count_boundaries(monkeypatch, tmp_path):
+    """题量边界值 1 与 50 合法。"""
+    _install_fake(monkeypatch, tmp_path)
+
+    for n in (1, 50):
+        assert _generate(n=n, intent={"topic": f"TCP_{uuid.uuid4().hex[:6]}"}).status_code == 200
