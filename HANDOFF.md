@@ -2,6 +2,10 @@
 
 写给下一个接手 agent。**细节一律看文件，不在这里复述**：本单只交代状态、决策、坑与下一步。
 
+> **这是提交 `1c7a454` 时点的快照**，不随后续提交更新：下面的仓库路径是当时那台机器上的路径，
+> 「352 passed」「未提交任何 commit」等状态描述也只对那个时点成立。当前的测试数量以实跑
+> `uv run pytest -q` 为准；接手前先 `git log 1c7a454..HEAD` 看之后发生了什么。
+
 - 仓库：`D:\Projects\EduMind`（FastAPI 后端 `backend/` + React 前端 `frontend/`）
 - 交接时刻状态：**后端 352 passed / ruff 全过；前端 lint 0 警告 0 错误 / build 通过 / 七路由全达**；后端已在 `127.0.0.1:8000` 跑着（本会话末尾重启过）；前端 vite dev 在 `localhost:5173`
 - 整个会话**未提交任何 commit**（改动很多，先 `git status`）

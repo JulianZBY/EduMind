@@ -3,6 +3,8 @@
 前置：后端 :8000（已配置供应商或 .env Key）、前端 :5173（vite dev，/api 代理）。
 未配置后端也有意义：S3 备课对话改走「未配置」断言，验证 503 与 provider_not_configured；
 依赖真实模型的产物场景（S4–S8）在未配置时跳过。
+依赖：`playwright` 包与本机 Chrome。两者都**不在项目依赖里**（`uv sync` 不会装），
+需要自行安装后才能运行；这是可选脚本，见 docs/acceptance-manual.md 开头的说明。
 运行：backend 目录下 `uv run python scripts/e2e_test.py`。
 失败时截图到 e2e-artifacts/。
 """

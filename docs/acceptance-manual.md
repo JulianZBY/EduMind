@@ -8,8 +8,12 @@
 - 依据：`CONTEXT.md`（术语，判断文案对不对的唯一依据）、`docs/architecture.md`（应有的形态）、
   `docs/api/**`（协议语义）、`docs/style/minimalist-flat.md`（视觉硬标准）、`docs/adr/**`（决策）。
 
-> 为什么必须由人做：本仓库不装 Playwright（无浏览器自动化基建，见 `spec.md`「范围外」），
-> 真实 Key 也不该进仓库。这两件事的验收只能由人拿着真浏览器与真 Key 走一遍。
+> 为什么必须由人做：项目依赖里不含 Playwright，按 README 装好的环境没有浏览器自动化能力
+> （见 `spec.md`「范围外」），真实 Key 也不该进仓库。这两件事的验收只能由人拿着真浏览器与真 Key 走一遍。
+>
+> 仓库里另有一个**可选**的端到端脚本 `backend/scripts/e2e_test.py`（十个场景，Playwright 驱动本机 Chrome）。
+> 它不属于默认环境：需要自行安装 `playwright` 包并且本机装有 Chrome 才能运行，装不上不影响本手册的任何步骤，
+> 它也不能替代下面的人工点选与人眼视觉项。
 
 ---
 
@@ -19,7 +23,7 @@
 
 ```bash
 # 终端 1：后端（默认未配置：不配任何 Key 也能起服务，涉及云端能力的操作返回 503 引导）
-cd backend && uv sync
+cd backend && uv sync --frozen
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 # 终端 2：前端

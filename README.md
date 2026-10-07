@@ -56,8 +56,8 @@ flowchart TB
 git clone https://github.com/JulianZBY/EduMind.git
 cd EduMind
 
-# 后端依赖（生成 backend/.venv）
-cd backend && uv sync && cd ..
+# 后端依赖（生成 backend/.venv）。--frozen：严格按 uv.lock 安装，不改写锁文件
+cd backend && uv sync --frozen && cd ..
 
 # 前端依赖
 cd frontend && npm install && cd ..
@@ -65,6 +65,11 @@ cd frontend && npm install && cd ..
 # 配置（先到设置页添加供应商（只选家 + 粘 Key，模型清单自动拉取）或配置 .env，再开始备课；未配置时相关操作返回 503 引导）
 cp backend/.env.example backend/.env    # Windows 用 copy
 ```
+
+> **关于 `--frozen` 与镜像**：不带 `--frozen` 时，较新版本的 uv 会升级锁文件格式，使用 PyPI 镜像
+> （如 `UV_DEFAULT_INDEX` 指向国内镜像）还会把锁文件里的下载地址整体换成镜像地址——`uv.lock`
+> 会出现上千行与你的改动无关的差异。只是安装依赖时请带上 `--frozen`；如果已经改写了，
+> `git checkout -- backend/uv.lock` 还原即可，不要提交。确实要增删依赖时再去掉它。
 
 **启动**（开两个终端，Windows / macOS / Linux 命令一致）：
 
