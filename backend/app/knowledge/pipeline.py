@@ -73,7 +73,11 @@ async def parse_document(doc_id: str) -> str:
             doc.status = "失败"
             doc.failure_reason = failure_reason_for(exc)
             db.commit()
-            logger.exception("文档解析失败 doc=%s file=%s", doc_id, doc.filename)
+            if isinstance(exc, ProviderNotConfigured):
+                # 能力未配置不是故障：原因已写进 failure_reason 给教师看，日志记一行、不带堆栈
+                logger.warning("文档解析未完成（能力未配置）doc=%s file=%s：%s", doc_id, doc.filename, exc)
+            else:
+                logger.exception("文档解析失败 doc=%s file=%s", doc_id, doc.filename)
             return ""
         doc.status = "有冲突" if conflict_count else "已完成"
         doc.failure_reason = ""
@@ -124,6 +128,10 @@ async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
                 title_embeddings=dict(zip(titles, embeddings)),
             )
         return len(pending)
+    except ProviderNotConfigured as exc:
+        # 没配对话模型时知识提取跳过、分块照常入库（文档约定的未配置行为）：记一行，不带堆栈
+        logger.info("知识图谱提取跳过（能力未配置）doc=%s：%s", doc_id, exc)
+        return 0
     except Exception:
         logger.exception("知识图谱提取失败 doc=%s", doc_id)
         return 0

@@ -11,7 +11,7 @@ import zipfile
 import httpx
 
 from app.config import settings
-from app.core.parser.base import PdfParser
+from app.core.parser.base import PdfParser, PdfStrategyNotConfigured
 
 
 class MinerUParser(PdfParser):
@@ -32,7 +32,7 @@ class MinerUParser(PdfParser):
         self, pdf_path: str, poll_interval: float = 3.0, timeout: float = 300.0
     ) -> str:
         if not self.token:
-            raise ValueError("MINERU_TOKEN 未配置")
+            raise PdfStrategyNotConfigured("MINERU_TOKEN 未配置")
         filename = os.path.basename(pdf_path)
         async with httpx.AsyncClient(timeout=120, transport=self._transport) as client:
             # 1. 获取上传地址

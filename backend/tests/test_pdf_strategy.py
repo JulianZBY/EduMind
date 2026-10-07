@@ -188,3 +188,39 @@ def test_unknown_strategy_lists_available(monkeypatch):
     get_pdf_parser.cache_clear()
     with pytest.raises(ValueError, match="可选"):
         get_pdf_parser()
+
+
+async def test_unconfigured_primary_falls_back_without_a_stack_trace(tmp_path, caplog):
+    """默认档没填 MinerU token：回退本地是预期路径，日志只记一行、不带堆栈。"""
+    import logging
+
+    caplog.set_level(logging.INFO, logger="app.core.parser.fallback")
+
+    result = await get_pdf_parser().parse(_pdf_file(tmp_path))
+
+    assert PDF_TEXT in result
+    records = [r for r in caplog.records if r.name == "app.core.parser.fallback"]
+    assert len(records) == 1
+    assert records[0].levelno == logging.INFO
+    assert records[0].exc_info is None
+    assert "未配置" in records[0].getMessage()
+
+
+async def test_real_primary_failure_still_logs_the_stack(tmp_path, caplog):
+    """主策略配置了但调用失败：仍然告警并保留堆栈（这才是需要排查的情况）。"""
+    import logging
+
+    class _Boom(PdfParser):
+        name = "boom"
+
+        async def parse(self, pdf_path: str) -> str:
+            raise RuntimeError("主策略崩了")
+
+    caplog.set_level(logging.INFO, logger="app.core.parser.fallback")
+
+    await FallbackPdfParser(_Boom(), PypdfParser()).parse(_pdf_file(tmp_path))
+
+    records = [r for r in caplog.records if r.name == "app.core.parser.fallback"]
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    assert records[0].exc_info is not None
