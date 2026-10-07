@@ -224,3 +224,15 @@ async def test_real_primary_failure_still_logs_the_stack(tmp_path, caplog):
     assert len(records) == 1
     assert records[0].levelno == logging.WARNING
     assert records[0].exc_info is not None
+
+
+async def test_backup_failure_is_not_chained_to_the_primary_failure(tmp_path):
+    """备选策略自己失败时，抛出的异常不带主策略的异常链（否则日志里先出现无关的堆栈）。"""
+    broken = tmp_path / "broken.pdf"
+    broken.write_bytes(b"not a pdf")
+
+    with pytest.raises(Exception) as excinfo:
+        await get_pdf_parser().parse(str(broken))
+
+    assert not isinstance(excinfo.value, ValueError) or "MINERU_TOKEN" not in str(excinfo.value)
+    assert excinfo.value.__context__ is None or "MINERU_TOKEN" not in str(excinfo.value.__context__)

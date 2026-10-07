@@ -23,9 +23,10 @@ class FallbackPdfParser(PdfParser):
             logger.info(
                 "PDF 主策略 %s 未配置（%s），改用 %s", self.primary.name, exc, self.backup.name
             )
-            return await self.backup.parse(pdf_path)
         except Exception:
             logger.warning(
                 "PDF 主策略 %s 失败，退到 %s", self.primary.name, self.backup.name, exc_info=True
             )
-            return await self.backup.parse(pdf_path)
+        # 备选策略在 except 块之外调用：它自己失败时，异常不会挂上主策略的异常链。
+        # 否则一份坏 PDF 的报错里会先出现一段无关的「主策略未配置」堆栈，把人引向错误的方向。
+        return await self.backup.parse(pdf_path)
