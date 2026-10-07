@@ -7,7 +7,6 @@
 """
 
 import uuid
-from pathlib import Path
 
 from docx import Document as DocxDocument
 from fastapi.testclient import TestClient
@@ -19,6 +18,7 @@ import app.knowledge.vector_store as vector_store_module
 from app.core.llm.base import ChatResult, LLMProvider
 from app.db import SessionLocal, init_db
 from app.db.models import KnowledgeNode, Question, QuestionKnowledge
+from app.generate import output_dir
 from app.knowledge.vector_store import VectorStore
 from app.main import app
 from tests.support.fakes import FakeEmbedder, FakeLLM
@@ -26,7 +26,7 @@ from tests.support.fakes import FakeEmbedder, FakeLLM
 client = TestClient(app)
 init_db()  # 幂等：确保表、列与默认用户存在
 
-OUTPUT_DIR = Path("data/output")
+OUTPUT_DIR = output_dir()  # 生成物目录以配置为准（测试会话里指向临时目录），不写死 data/output
 
 # FakeLLM 固定试卷中题目考查的知识点（与替身响应约定一致，供种子节点对齐）
 FAKE_KNOWLEDGE_POINTS = ["TCP三次握手", "TCP四次挥手", "TCP滑动窗口"]

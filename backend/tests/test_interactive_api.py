@@ -8,7 +8,6 @@
 
 import json
 import uuid
-from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -21,6 +20,7 @@ import app.generate.word as word_module
 import app.knowledge.vector_store as vector_store_module
 from app.core.llm.base import ChatResult, LLMProvider
 from app.db import init_db
+from app.generate import output_dir
 from app.knowledge.vector_store import VectorStore
 from app.main import app
 from tests.support.fakes import FakeEmbedder, FakeLLM
@@ -28,7 +28,7 @@ from tests.support.fakes import FakeEmbedder, FakeLLM
 client = TestClient(app)
 init_db()  # 幂等：确保表、列与默认用户存在
 
-OUTPUT_DIR = Path("data/output")
+OUTPUT_DIR = output_dir()  # 生成物目录以配置为准（测试会话里指向临时目录），不写死 data/output
 
 # 三大生成器（PPT/Word/提纲）共用的假响应：结构可解析，渲染走默认值
 _FAKE_CHAT_JSON = (

@@ -1,11 +1,11 @@
 """课件/教案迭代接口测试（替身隔离）。"""
 
-from pathlib import Path
 
 from docx import Document
 from fastapi.testclient import TestClient
 
 import app.api.v1.revise as revise_module
+from app.generate import output_dir
 from app.main import app
 
 client = TestClient(app)
@@ -65,7 +65,7 @@ def test_revise_word_consecutive_progressive(monkeypatch):
     assert r1.status_code == 200 and r2.status_code == 200
     f1, f2 = r1.json()["filename"], r2.json()["filename"]
     assert f1 != f2
-    p1, p2 = Path("data/output") / f1, Path("data/output") / f2
+    p1, p2 = output_dir() / f1, output_dir() / f2
     assert p1.is_file() and p2.is_file()
     texts1 = [p.text for p in Document(str(p1)).paragraphs]
     texts2 = [p.text for p in Document(str(p2)).paragraphs]

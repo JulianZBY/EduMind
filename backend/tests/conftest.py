@@ -7,6 +7,8 @@
 - DATABASE_URL：主库（SQLAlchemy）
 - VECTORS_DB_PATH：向量库（sqlite-vec，否则冲突检测等内部默认构造会写进 data/vectors.db）
 - UPLOAD_DIR：上传文件落盘目录
+- OUTPUT_DIR：生成物落盘目录（否则每跑一轮测试就往 backend/data/output 写入几十个文件，
+  和教师的真实生成物混在一起；`isolated_output_dir` 夹具只覆盖显式声明它的用例）
 
 **密封隔离**（票 14 收口，产品不再有假数据兜底后沿用）：云端 provider 一律不配（代码默认空），
 环境变量优先级高于 `.env`，因此即使开发者 `.env` 里写着 `LLM_PROVIDER=qwen` + 真实 Key，
@@ -25,6 +27,7 @@ _tmp = Path(tempfile.mkdtemp(prefix="edumind-test-"))
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_tmp / 'test.db'}")
 os.environ.setdefault("VECTORS_DB_PATH", str(_tmp / "vectors.db"))
 os.environ.setdefault("UPLOAD_DIR", str(_tmp / "uploads"))
+os.environ.setdefault("OUTPUT_DIR", str(_tmp / "output"))
 # 供应商扩展配置文件：测试一律不读开发机上的 providers.json（要测扩展的用例自己指定路径）
 os.environ.setdefault("PROVIDERS_CONFIG", "")
 # ---- 密封：能力 provider 与 Key（见文件头「密封隔离」）----
