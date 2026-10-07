@@ -15,6 +15,26 @@ def output_dir() -> Path:
     return OUTPUT_DIR
 
 
+def remove_output_files(filenames: list[str]) -> int:
+    """删除落盘的生成物文件，返回实际删掉的个数。
+
+    只认文件名（不含目录），且只在生成物目录内删除；文件已不在时跳过——
+    调用方是「删除备课会话」这类清理路径，单个文件删不掉不应让整个操作失败。
+    """
+    removed = 0
+    for name in filenames:
+        if not name or Path(name).name != name:
+            continue
+        path = OUTPUT_DIR / name
+        try:
+            if path.is_file():
+                path.unlink()
+                removed += 1
+        except OSError:
+            continue
+    return removed
+
+
 def unique_output_path(stem: str, suffix: str) -> str:
     """统一随机命名：固定前缀 + 8 位随机后缀，连续生成同类产物互不覆盖。"""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

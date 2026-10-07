@@ -189,3 +189,42 @@ def test_generate_accepts_question_count_boundaries(monkeypatch, tmp_path):
 
     for n in (1, 50):
         assert _generate(n=n, intent={"topic": f"TCP_{uuid.uuid4().hex[:6]}"}).status_code == 200
+
+
+def test_deleting_session_removes_its_artifact_files(monkeypatch, tmp_path):
+    """删除备课会话时，它的生成物文件随版本记录一起删除：按版本、按文件名都取不回。
+
+    不属于该会话的文件（无会话标识产出的试卷）不受影响。
+    """
+    _install_fake(monkeypatch, tmp_path)
+    session_id = client.post("/api/v1/sessions", json={"title": "待删除"}).json()["id"]
+    owned = _generate(session_id=session_id, intent={"topic": f"TCP_{uuid.uuid4().hex[:6]}"}).json()
+    loose = _generate(intent={"topic": f"TCP_{uuid.uuid4().hex[:6]}"}).json()
+    assert (output_dir() / owned["filename"]).is_file()
+    assert client.get(f"/api/v1/files/{owned['filename']}").status_code == 200
+
+    assert client.delete(f"/api/v1/sessions/{session_id}").status_code == 200
+
+    assert not (output_dir() / owned["filename"]).exists()
+    assert client.get(f"/api/v1/files/{owned['filename']}").status_code == 404
+    assert client.get(f"/api/v1/artifacts/{owned['version_id']}/download").status_code == 404
+    assert (output_dir() / loose["filename"]).is_file()
+
+
+def test_remove_output_files_ignores_paths_and_missing_files():
+    """只按文件名在生成物目录内删除：带目录的名字与不存在的文件一律跳过，不抛错。"""
+    from app.generate import remove_output_files
+
+    target = output_dir()
+    target.mkdir(parents=True, exist_ok=True)
+    keep = target.parent / f"outside_{uuid.uuid4().hex[:6]}.txt"
+    keep.write_text("x", encoding="utf-8")
+    inside = target / f"inside_{uuid.uuid4().hex[:6]}.txt"
+    inside.write_text("x", encoding="utf-8")
+
+    removed = remove_output_files([inside.name, f"../{keep.name}", "missing.docx", ""])
+
+    assert removed == 1
+    assert not inside.exists()
+    assert keep.is_file()
+    keep.unlink()

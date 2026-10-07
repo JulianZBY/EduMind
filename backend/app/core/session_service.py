@@ -5,12 +5,17 @@
 `db/artifacts.py`（生成物版本）。
 """
 
+import logging
+
 from app.core.artifacts import attach_version_refs, register_generated_artifacts
 from app.core.conversation import TurnOutcome, accumulate_intent, run_turn
 from app.core.intent import TeachingIntent, intent_from_payload
 from app.db.artifacts import ArtifactStore
 from app.db.models import PrepSession, SessionMessage
 from app.db.sessions import ConversationStore
+from app.generate import remove_output_files
+
+logger = logging.getLogger(__name__)
 
 # 新建会话的占位标题：首轮教师需求自动充当标题（改用 CONTEXT.md 术语，不用「未命名」）
 SESSION_TITLE_PLACEHOLDER = "新的备课会话"
@@ -68,9 +73,21 @@ def delete_session(store: ConversationStore, session_id: str) -> str:
     prep = store.get(session_id)
     if prep is None:
         raise LookupError(f"会话不存在: {session_id}")
-    # 生成物版本随会话一起清掉，不留无主版本行（与消息同一口径）；落盘文件不删（见 docs/api/artifacts.md）
-    ArtifactStore(store.db).delete_for_session(session_id)
+    # 生成物版本随会话一起清掉，不留无主版本行（与消息同一口径）；落盘文件一并删除：
+    # 版本记录没了以后这些文件不再属于任何备课，却仍能按文件名下载（见 docs/api/artifacts.md）。
+    # 先删记录再删文件：中途失败时宁可留下无主文件，也不留下指向不存在文件的版本记录。
+    artifacts = ArtifactStore(store.db)
+    filenames = [v.filename for v in artifacts.list_versions(session_id=session_id)]
+    artifacts.delete_for_session(session_id)
     store.delete(prep)
+    removed = remove_output_files(filenames)
+    if removed != len(filenames):
+        logger.warning(
+            "删除会话 %s：%d 个生成物文件里实际删掉 %d 个（其余已不在或无法删除）",
+            session_id,
+            len(filenames),
+            removed,
+        )
     return session_id
 
 
