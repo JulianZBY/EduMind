@@ -4056,6 +4056,19 @@
               }
             },
             "description": "本轮备课生成失败：课件 / 教案 / 提纲任一路没生成出来，未产出任何生成物，可重试"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "备课对话",
@@ -4589,6 +4602,19 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "上传教学资料",
@@ -4865,6 +4891,19 @@
               }
             },
             "description": "试卷生成失败：模型未返回可解析的题目"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "一键生成试卷",
@@ -5042,6 +5081,19 @@
               }
             },
             "description": "互动内容生成失败：模型未返回单文件 HTML"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "生成互动内容",
@@ -5548,11 +5600,24 @@
             "content": {
               "application/json": {
                 "example": {
-                  "detail": "网络搜索（BOCHA_API_KEY）未配置"
+                  "detail": "Internal Server Error"
                 }
               }
             },
-            "description": "网络搜索（BOCHA_API_KEY）未配置:该能力缺 Key 且当前配置未指向可用实现,请在 .env 或设置中补齐(票 13 落地前只能改配置后重启)。"
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "网络搜索",
@@ -5894,6 +5959,19 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "按修改意见重做课件",
@@ -5985,6 +6063,19 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "按修改意见重做试卷",
@@ -6063,6 +6154,19 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "按修改意见重做互动内容",
@@ -6141,6 +6245,19 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "按修改意见重做提纲",
@@ -6232,6 +6349,19 @@
               }
             },
             "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
           }
         },
         "summary": "按修改意见重做教案",

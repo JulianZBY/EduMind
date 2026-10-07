@@ -41,13 +41,18 @@ def internal_error(detail: str = "Internal Server Error") -> dict:
     return error_response("未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。", detail)
 
 
-def unconfigured(capability: str) -> dict:
-    """外部能力未配置时的错误说明：由能力工厂抛 ProviderNotConfigured，全局处理器转 503。"""
-    return error_response(
-        f"{capability}未配置:该能力缺 Key 且当前配置未指向可用实现,"
-        "请在 .env 或设置中补齐(票 13 落地前只能改配置后重启)。",
-        f"{capability}未配置",
-    )
+# 云端能力未配置：能力工厂抛 ProviderNotConfigured，全局处理器统一转成这个响应。
+# 状态码与响应体形状都以全局处理器为准（见 app/main.py 与 docs/api/provider-not-configured.md）。
+PROVIDER_NOT_CONFIGURED = json_response(
+    "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，"
+    "`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。",
+    {
+        "detail": {
+            "code": "provider_not_configured",
+            "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。",
+        }
+    },
+)
 
 VALIDATION_ERROR = error_response(
     "请求校验失败:请求体、表单或路径字段缺失或类型不符",

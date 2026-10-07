@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
+    PROVIDER_NOT_CONFIGURED,
     VALIDATION_ERROR,
     error_response,
     internal_error,
@@ -88,6 +89,7 @@ def _is_single_file_html(html: str) -> bool:
         404: error_response("备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
         502: error_response(
             "互动内容生成失败：模型未返回单文件 HTML",
             "互动内容生成失败：模型未返回单文件 HTML，请重试",

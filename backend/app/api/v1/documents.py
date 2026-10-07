@@ -26,6 +26,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
+    PROVIDER_NOT_CONFIGURED,
     VALIDATION_ERROR,
     error_response,
     internal_error,
@@ -156,6 +157,7 @@ def _document_or_404(db: Session, document_id: str) -> Document:
         ),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
     },
 )
 async def upload_document(

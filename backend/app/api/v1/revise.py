@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
+    PROVIDER_NOT_CONFIGURED,
     VALIDATION_ERROR,
     error_response,
     internal_error,
@@ -162,6 +163,7 @@ def _resolve_baseline(
         ),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
     },
 )
 async def revise(req: ReviseRequest, db: Annotated[Session, Depends(get_session)]):
@@ -222,6 +224,7 @@ async def revise(req: ReviseRequest, db: Annotated[Session, Depends(get_session)
         ),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
     },
 )
 async def revise_word_endpoint(
@@ -385,6 +388,7 @@ class ReviseInteractiveResponse(BaseModel):
         ),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
     },
 )
 async def revise_outline_endpoint(
@@ -458,6 +462,7 @@ async def revise_outline_endpoint(
         ),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
     },
 )
 async def revise_exam_endpoint(
@@ -521,6 +526,7 @@ async def revise_exam_endpoint(
         ),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
     },
 )
 async def revise_interactive_endpoint(

@@ -7,11 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
+    PROVIDER_NOT_CONFIGURED,
     VALIDATION_ERROR,
     error_response,
     internal_error,
     json_response,
-    unconfigured,
 )
 from app.core.embedding.factory import get_embedder
 from app.core.intent import intent_from_payload
@@ -236,7 +236,8 @@ class WebSearchResponse(BaseModel):
             },
         ),
         422: VALIDATION_ERROR,
-        500: unconfigured("网络搜索（BOCHA_API_KEY）"),
+        500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
     },
 )
 async def web_search(req: SearchRequest) -> WebSearchResponse:

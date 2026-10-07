@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
+    PROVIDER_NOT_CONFIGURED,
     VALIDATION_ERROR,
     error_response,
     internal_error,
@@ -160,6 +161,7 @@ def _full_history_text(messages: list[Message]) -> str:
         ),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
     },
 )
 async def chat(req: ChatRequest, db: Annotated[Session, Depends(get_session)]):

@@ -163,3 +163,51 @@ def test_json_endpoints_declare_a_response_model():
         missing.append(f"{method.upper()} {path}")
 
     assert not missing, f"以下回 JSON 的端点缺 response_model:{missing}"
+
+
+# 需要云端能力才能回答的端点：未配置时由全局处理器返回 503。
+# OpenAPI 是接口的唯一事实源，前端类型由它生成，所以这个响应必须写在契约里。
+_CLOUD_ENDPOINTS = [
+    "/api/v1/chat",
+    "/api/v1/knowledge/web-search",
+    "/api/v1/exam/generate",
+    "/api/v1/interactive/generate",
+    "/api/v1/documents/upload",
+    "/api/v1/revise",
+    "/api/v1/revise/word",
+    "/api/v1/revise/outline",
+    "/api/v1/revise/exam",
+    "/api/v1/revise/interactive",
+]
+
+
+@pytest.mark.parametrize("path", _CLOUD_ENDPOINTS)
+def test_cloud_endpoints_declare_provider_not_configured(path: str):
+    """涉及云端能力的端点在契约里声明 503，且示例与全局处理器的真实响应体同形。"""
+    responses = app.openapi()["paths"][path]["post"]["responses"]
+
+    assert "503" in responses, f"{path} 未声明 503"
+    example = responses["503"]["content"]["application/json"]["example"]
+    assert example["detail"]["code"] == "provider_not_configured"
+    assert example["detail"]["message"]
+
+
+def test_declared_503_matches_the_real_unconfigured_response(monkeypatch):
+    """契约里的 503 不是摆设：未配置时真实响应的状态码与形状和声明一致。"""
+    from fastapi.testclient import TestClient
+
+    from app.config import settings
+    from app.core.llm.factory import get_llm
+
+    monkeypatch.setattr(settings, "llm_provider", "")
+    get_llm.cache_clear()
+    try:
+        r = TestClient(app).post(
+            "/api/v1/chat", json={"messages": [{"role": "user", "content": "备课"}]}
+        )
+    finally:
+        get_llm.cache_clear()
+
+    assert r.status_code == 503
+    assert set(r.json()["detail"]) == {"code", "message"}
+    assert r.json()["detail"]["code"] == "provider_not_configured"

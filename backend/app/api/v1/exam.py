@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
+    PROVIDER_NOT_CONFIGURED,
     VALIDATION_ERROR,
     error_response,
     internal_error,
@@ -110,6 +111,7 @@ def _intent_from_topic(intent: dict) -> TeachingIntent:
         404: error_response("备课会话不存在", "会话不存在: 9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b"),
         422: VALIDATION_ERROR,
         500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
         502: error_response(
             "试卷生成失败：模型未返回可解析的题目",
             "试卷生成失败：模型未返回可解析的题目，请重试",

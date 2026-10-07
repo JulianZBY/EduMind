@@ -2420,6 +2420,10 @@ export type ChatApiV1ChatPostErrors = {
      * 本轮备课生成失败：课件 / 教案 / 提纲任一路没生成出来，未产出任何生成物，可重试
      */
     502: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type ChatApiV1ChatPostResponses = {
@@ -2566,6 +2570,10 @@ export type UploadDocumentApiV1DocumentsUploadPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type UploadDocumentApiV1DocumentsUploadPostResponses = {
@@ -2679,6 +2687,10 @@ export type GenerateExamPaperApiV1ExamGeneratePostErrors = {
      * 试卷生成失败：模型未返回可解析的题目
      */
     502: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type GenerateExamPaperApiV1ExamGeneratePostResponses = {
@@ -2763,6 +2775,10 @@ export type GenerateInteractiveApiV1InteractiveGeneratePostErrors = {
      * 互动内容生成失败：模型未返回单文件 HTML
      */
     502: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type GenerateInteractiveApiV1InteractiveGeneratePostResponses = {
@@ -2964,9 +2980,13 @@ export type WebSearchApiV1KnowledgeWebSearchPostErrors = {
      */
     422: unknown;
     /**
-     * 网络搜索（BOCHA_API_KEY）未配置:该能力缺 Key 且当前配置未指向可用实现,请在 .env 或设置中补齐(票 13 落地前只能改配置后重启)。
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type WebSearchApiV1KnowledgeWebSearchPostResponses = {
@@ -3103,6 +3123,10 @@ export type ReviseApiV1RevisePostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type ReviseApiV1RevisePostResponses = {
@@ -3134,6 +3158,10 @@ export type ReviseExamEndpointApiV1ReviseExamPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type ReviseExamEndpointApiV1ReviseExamPostResponses = {
@@ -3165,6 +3193,10 @@ export type ReviseInteractiveEndpointApiV1ReviseInteractivePostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type ReviseInteractiveEndpointApiV1ReviseInteractivePostResponses = {
@@ -3196,6 +3228,10 @@ export type ReviseOutlineEndpointApiV1ReviseOutlinePostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type ReviseOutlineEndpointApiV1ReviseOutlinePostResponses = {
@@ -3227,6 +3263,10 @@ export type ReviseWordEndpointApiV1ReviseWordPostErrors = {
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
 };
 
 export type ReviseWordEndpointApiV1ReviseWordPostResponses = {
