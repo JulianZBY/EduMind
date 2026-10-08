@@ -5,7 +5,6 @@
 断言「删的恰好是演示数据、questions 与备份分毫不动、门禁对不上就拒绝」。
 """
 
-# ruff: noqa: EXE002 —— 本机 /mnt/Data 是 fuse 挂载，所有文件强制显示可执行位，chmod 无效
 
 import importlib.util
 import json

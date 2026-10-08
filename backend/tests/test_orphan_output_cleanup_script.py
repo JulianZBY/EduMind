@@ -5,7 +5,6 @@
 其余全删；对账不过即拒绝」。用临时库 + 临时目录复刻现场，全程离线确定。
 """
 
-# ruff: noqa: EXE002 —— 本机 /mnt/Data 是 fuse 挂载，所有文件强制显示可执行位，chmod 无效
 
 import importlib.util
 import json

@@ -31,7 +31,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 # ASYNC230: 本地文件读取（PDF/图片，规模可控）在 async 中直接 open 可接受
-ignore = ["ASYNC230"]
+# EXE002: /mnt/Data 为 fuse 挂载，强制全部文件 777，ruff 误报 ~146 个「可执行但无 shebang」；
+#   git 实录 mode 均为 100644，chmod 不贴，未触碰的基线文件同样中招（2026-10-08 维护者拍板全局忽略）
+ignore = ["ASYNC230", "EXE002"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
