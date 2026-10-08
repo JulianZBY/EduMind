@@ -1,6 +1,40 @@
 {
   "components": {
     "schemas": {
+      "AffectedQuestionView": {
+        "description": "被题目考查的知识点牵出的题目：删除后题目保留、考查关系置空。",
+        "example": {
+          "content": "下列函数中，属于一次函数的是？",
+          "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+          "knowledge_titles": [
+            "一次函数的定义"
+          ]
+        },
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "knowledge_titles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Knowledge Titles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "knowledge_titles"
+        ],
+        "title": "AffectedQuestionView",
+        "type": "object"
+      },
       "ArtifactListResponse": {
         "properties": {
           "groups": {
@@ -653,6 +687,23 @@
         "title": "ConflictList",
         "type": "object"
       },
+      "DeleteDocumentRequest": {
+        "additionalProperties": false,
+        "description": "删除资料的勾选项：对话框交代的选项之外没有隐藏开关（未知字段拒收）。",
+        "example": {
+          "delete_single_source_knowledge": true
+        },
+        "properties": {
+          "delete_single_source_knowledge": {
+            "default": true,
+            "description": "同时删除仅来源于此资料的知识点（对话框默认勾选）。false 时这些知识点保留、来源引用清空，被题目考查的关系也原样保留。",
+            "title": "Delete Single Source Knowledge",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteDocumentRequest",
+        "type": "object"
+      },
       "DocumentChunk": {
         "description": "一个分块：`chunk_id` 全局唯一，`chunk_index` 是它在原文中的次序。",
         "properties": {
@@ -675,6 +726,184 @@
           "content"
         ],
         "title": "DocumentChunk",
+        "type": "object"
+      },
+      "DocumentDeletePreview": {
+        "description": "删除前预览：按默认勾选（删单来源知识点）口径列出全部后果，不另加也不隐瞒。",
+        "example": {
+          "affected_questions": [
+            {
+              "content": "下列函数中，属于一次函数的是？",
+              "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+              "knowledge_titles": [
+                "一次函数"
+              ]
+            }
+          ],
+          "chunk_count": 12,
+          "document_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+          "filename": "一次函数讲义.pdf",
+          "knowledge_multi_source": [
+            {
+              "id": "4d5e6f70-8a9b-4c2d-9e3f-5a6b7c8d9e0f",
+              "title": "函数的概念"
+            }
+          ],
+          "knowledge_single_source": [
+            {
+              "id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f",
+              "title": "一次函数"
+            }
+          ],
+          "literature_note_present": true,
+          "pending_conflict_count": 1
+        },
+        "properties": {
+          "affected_questions": {
+            "items": {
+              "$ref": "#/components/schemas/AffectedQuestionView"
+            },
+            "title": "Affected Questions",
+            "type": "array"
+          },
+          "chunk_count": {
+            "title": "Chunk Count",
+            "type": "integer"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "knowledge_multi_source": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgePointRefView"
+            },
+            "title": "Knowledge Multi Source",
+            "type": "array"
+          },
+          "knowledge_single_source": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgePointRefView"
+            },
+            "title": "Knowledge Single Source",
+            "type": "array"
+          },
+          "literature_note_present": {
+            "title": "Literature Note Present",
+            "type": "boolean"
+          },
+          "pending_conflict_count": {
+            "title": "Pending Conflict Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document_id",
+          "filename",
+          "chunk_count",
+          "literature_note_present",
+          "pending_conflict_count",
+          "knowledge_single_source",
+          "knowledge_multi_source",
+          "affected_questions"
+        ],
+        "title": "DocumentDeletePreview",
+        "type": "object"
+      },
+      "DocumentDeleteResult": {
+        "description": "删除结果回执：每条规则的执行事实，供界面回执与对账。",
+        "example": {
+          "chunks_deleted": 12,
+          "conflicts_withdrawn": 1,
+          "document_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+          "file_removed": true,
+          "filename": "一次函数讲义.pdf",
+          "knowledge_deleted": [
+            {
+              "id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f",
+              "title": "一次函数"
+            }
+          ],
+          "knowledge_kept": [
+            {
+              "id": "4d5e6f70-8a9b-4c2d-9e3f-5a6b7c8d9e0f",
+              "title": "函数的概念"
+            }
+          ],
+          "literature_note_deleted": true,
+          "questions_cleared": [
+            {
+              "content": "下列函数中，属于一次函数的是？",
+              "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+              "knowledge_titles": [
+                "一次函数"
+              ]
+            }
+          ]
+        },
+        "properties": {
+          "chunks_deleted": {
+            "title": "Chunks Deleted",
+            "type": "integer"
+          },
+          "conflicts_withdrawn": {
+            "title": "Conflicts Withdrawn",
+            "type": "integer"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "file_removed": {
+            "title": "File Removed",
+            "type": "boolean"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "knowledge_deleted": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgePointRefView"
+            },
+            "title": "Knowledge Deleted",
+            "type": "array"
+          },
+          "knowledge_kept": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgePointRefView"
+            },
+            "title": "Knowledge Kept",
+            "type": "array"
+          },
+          "literature_note_deleted": {
+            "title": "Literature Note Deleted",
+            "type": "boolean"
+          },
+          "questions_cleared": {
+            "items": {
+              "$ref": "#/components/schemas/AffectedQuestionView"
+            },
+            "title": "Questions Cleared",
+            "type": "array"
+          }
+        },
+        "required": [
+          "document_id",
+          "filename",
+          "chunks_deleted",
+          "literature_note_deleted",
+          "conflicts_withdrawn",
+          "knowledge_deleted",
+          "knowledge_kept",
+          "questions_cleared",
+          "file_removed"
+        ],
+        "title": "DocumentDeleteResult",
         "type": "object"
       },
       "DocumentDetail": {
@@ -1334,6 +1563,29 @@
           "sources"
         ],
         "title": "KnowledgePointDetail",
+        "type": "object"
+      },
+      "KnowledgePointRefView": {
+        "description": "级联涉及的一个知识点（id 可定位到知识图谱）。",
+        "example": {
+          "id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f",
+          "title": "一次函数"
+        },
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "KnowledgePointRefView",
         "type": "object"
       },
       "KnowledgeSourceRef": {
@@ -4791,6 +5043,114 @@
       }
     },
     "/api/v1/documents/{document_id}": {
+      "delete": {
+        "description": "删除一份教学资料的记录及本地原件（如有），并按已确认的规则完成级联，无隐藏级联：\n\n- **必删**：该资料的分块与向量、文献笔记、引用该资料的待审冲突（撤下）；待审冲突包括新知来自本资料、旧知识点来源含本资料或新旧快照明确引用本资料，不因单来源知识点选择保留而免于撤下，已裁决记录不动；\n- **知识点**：仅来源于该资料的默认删（`delete_single_source_knowledge=false` 改为保留，保留者清空该来源引用）；多来源知识点摘除该来源、节点保留；关系边随节点走；\n- **被题目考查的知识点**：题目保留，仅移除对被删知识点的考查关系（删除前请先调 `GET /documents/{document_id}/delete-preview` 列出受影响题目）；\n- 生成物历史版本的溯源文本不改写（史实留痕）。\n\n响应回执逐条报告执行事实（删了什么、留了什么），供界面回执与对账。删除不调用云端能力，未配置供应商也能删除。处理中资料暂不可删除（409），请等待处理结束后再试。",
+        "operationId": "delete_document_api_v1_documents__document_id__delete",
+        "parameters": [
+          {
+            "description": "教学资料 id，取自上传响应或资料列表",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "教学资料 id，取自上传响应或资料列表",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "chunks_deleted": 12,
+                  "conflicts_withdrawn": 1,
+                  "document_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                  "file_removed": true,
+                  "filename": "一次函数讲义.pdf",
+                  "knowledge_deleted": [
+                    {
+                      "id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f",
+                      "title": "一次函数"
+                    }
+                  ],
+                  "knowledge_kept": [],
+                  "literature_note_deleted": true,
+                  "questions_cleared": []
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDeleteResult"
+                }
+              }
+            },
+            "description": "删除完成（回执含全部级联事实）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "资料不存在：7f6e5d4c-3b2a-4918-8776-655443322110"
+                }
+              }
+            },
+            "description": "资料不存在：id 不属于任何一份已上传的教学资料"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "教学资料正在处理中，暂不可删除。请等待处理结束后再试。"
+                }
+              }
+            },
+            "description": "资料正在处理中，暂不可删除"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "删除教学资料（按规则级联）",
+        "tags": [
+          "知识库"
+        ]
+      },
       "get": {
         "description": "一份教学资料的全部信息：解析状态与参考资料标记（与列表同一口径），外加解析完成时间、待审冲突数、入库的分块明细（可回溯到来源资料），以及这份资料的**文献笔记**（资料概要 + 知识点索引，ADR-0007）。\n\n`literature_note.status` 口径：`已生成` = 概要与索引可用；`未配置` = 对话模型未配置、笔记没有生成（分块与解析照常入库），界面据此给「去设置页」引导，接口不返回假摘要；`未生成` = 解析未到终态或概要生成没有成功。\n\n`chunks` 只返回前 200 个分块，`chunk_count` 是该资料的分块总数；资料仍在 `处理中` 时 `parsed_at` 为空、`chunks` 为空——列表与详情的状态都会随后台解析自动变化，客户端无需手动刷新。",
         "operationId": "get_document_api_v1_documents__document_id__get",
@@ -4878,6 +5238,103 @@
           }
         },
         "summary": "教学资料详情",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/delete-preview": {
+      "get": {
+        "description": "删除对话框的数据源：按默认勾选（删单来源知识点）口径，把这次删除会发生的每一件事列出来，不另加也不隐瞒。\n\n- **必删**：该资料的全部分块与向量（`chunk_count`）、文献笔记（`literature_note_present`，原本缺席时如实报 `false`）、引用该资料的待审冲突（`pending_conflict_count`，撤下；含新知来自本资料、旧知识点来源含本资料、新旧快照明确引用本资料的待审冲突，已裁决记录不动）。\n- `knowledge_single_source`：仅来源于该资料的知识点，默认删除；对话框可勾选改为保留（保留者清空该来源引用）。\n- `knowledge_multi_source`：多来源知识点，摘除该来源引用、节点保留。\n- `affected_questions`：被题目考查的知识点牵出的题目——确认后**题目保留**、考查关系置空；只统计将随默认删除的单来源知识点，多来源知识点保留、其考查关系不受影响。\n\n生成物历史版本的溯源文本不改写（史实留痕）。本端点不调用云端能力，未配置供应商也能预览与删除。",
+        "operationId": "get_document_delete_preview_api_v1_documents__document_id__delete_preview_get",
+        "parameters": [
+          {
+            "description": "教学资料 id，取自上传响应或资料列表",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "教学资料 id，取自上传响应或资料列表",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "affected_questions": [
+                    {
+                      "content": "下列函数中，属于一次函数的是？",
+                      "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+                      "knowledge_titles": [
+                        "一次函数"
+                      ]
+                    }
+                  ],
+                  "chunk_count": 12,
+                  "document_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                  "filename": "一次函数讲义.pdf",
+                  "knowledge_multi_source": [],
+                  "knowledge_single_source": [
+                    {
+                      "id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f",
+                      "title": "一次函数"
+                    }
+                  ],
+                  "literature_note_present": true,
+                  "pending_conflict_count": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDeletePreview"
+                }
+              }
+            },
+            "description": "删除后果预览（默认勾选口径）"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "资料不存在：7f6e5d4c-3b2a-4918-8776-655443322110"
+                }
+              }
+            },
+            "description": "资料不存在：id 不属于任何一份已上传的教学资料"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "删除教学资料前预览级联后果",
         "tags": [
           "知识库"
         ]

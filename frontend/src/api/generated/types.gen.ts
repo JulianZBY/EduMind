@@ -5,6 +5,26 @@ export type ClientOptions = {
 };
 
 /**
+ * AffectedQuestionView
+ *
+ * 被题目考查的知识点牵出的题目：删除后题目保留、考查关系置空。
+ */
+export type AffectedQuestionView = {
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Knowledge Titles
+     */
+    knowledge_titles: Array<string>;
+};
+
+/**
  * ArtifactListResponse
  */
 export type ArtifactListResponse = {
@@ -404,6 +424,20 @@ export type ConflictList = {
 };
 
 /**
+ * DeleteDocumentRequest
+ *
+ * 删除资料的勾选项：对话框交代的选项之外没有隐藏开关（未知字段拒收）。
+ */
+export type DeleteDocumentRequest = {
+    /**
+     * Delete Single Source Knowledge
+     *
+     * 同时删除仅来源于此资料的知识点（对话框默认勾选）。false 时这些知识点保留、来源引用清空，被题目考查的关系也原样保留。
+     */
+    delete_single_source_knowledge?: boolean;
+};
+
+/**
  * DocumentChunk
  *
  * 一个分块：`chunk_id` 全局唯一，`chunk_index` 是它在原文中的次序。
@@ -421,6 +455,90 @@ export type DocumentChunk = {
      * Content
      */
     content: string;
+};
+
+/**
+ * DocumentDeletePreview
+ *
+ * 删除前预览：按默认勾选（删单来源知识点）口径列出全部后果，不另加也不隐瞒。
+ */
+export type DocumentDeletePreview = {
+    /**
+     * Affected Questions
+     */
+    affected_questions: Array<AffectedQuestionView>;
+    /**
+     * Chunk Count
+     */
+    chunk_count: number;
+    /**
+     * Document Id
+     */
+    document_id: string;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Knowledge Multi Source
+     */
+    knowledge_multi_source: Array<KnowledgePointRefView>;
+    /**
+     * Knowledge Single Source
+     */
+    knowledge_single_source: Array<KnowledgePointRefView>;
+    /**
+     * Literature Note Present
+     */
+    literature_note_present: boolean;
+    /**
+     * Pending Conflict Count
+     */
+    pending_conflict_count: number;
+};
+
+/**
+ * DocumentDeleteResult
+ *
+ * 删除结果回执：每条规则的执行事实，供界面回执与对账。
+ */
+export type DocumentDeleteResult = {
+    /**
+     * Chunks Deleted
+     */
+    chunks_deleted: number;
+    /**
+     * Conflicts Withdrawn
+     */
+    conflicts_withdrawn: number;
+    /**
+     * Document Id
+     */
+    document_id: string;
+    /**
+     * File Removed
+     */
+    file_removed: boolean;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Knowledge Deleted
+     */
+    knowledge_deleted: Array<KnowledgePointRefView>;
+    /**
+     * Knowledge Kept
+     */
+    knowledge_kept: Array<KnowledgePointRefView>;
+    /**
+     * Literature Note Deleted
+     */
+    literature_note_deleted: boolean;
+    /**
+     * Questions Cleared
+     */
+    questions_cleared: Array<AffectedQuestionView>;
 };
 
 /**
@@ -823,6 +941,22 @@ export type KnowledgePointDetail = {
      * Subject
      */
     subject?: string | null;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
+ * KnowledgePointRefView
+ *
+ * 级联涉及的一个知识点（id 可定位到知识图谱）。
+ */
+export type KnowledgePointRefView = {
+    /**
+     * Id
+     */
+    id: string;
     /**
      * Title
      */
@@ -2684,6 +2818,48 @@ export type UploadDocumentApiV1DocumentsUploadPostResponses = {
 
 export type UploadDocumentApiV1DocumentsUploadPostResponse = UploadDocumentApiV1DocumentsUploadPostResponses[keyof UploadDocumentApiV1DocumentsUploadPostResponses];
 
+export type DeleteDocumentApiV1DocumentsDocumentIdDeleteData = {
+    body: DeleteDocumentRequest;
+    path: {
+        /**
+         * Document Id
+         *
+         * 教学资料 id，取自上传响应或资料列表
+         */
+        document_id: string;
+    };
+    query?: never;
+    url: '/api/v1/documents/{document_id}';
+};
+
+export type DeleteDocumentApiV1DocumentsDocumentIdDeleteErrors = {
+    /**
+     * 资料不存在：id 不属于任何一份已上传的教学资料
+     */
+    404: unknown;
+    /**
+     * 资料正在处理中，暂不可删除
+     */
+    409: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type DeleteDocumentApiV1DocumentsDocumentIdDeleteResponses = {
+    /**
+     * 删除完成（回执含全部级联事实）
+     */
+    200: DocumentDeleteResult;
+};
+
+export type DeleteDocumentApiV1DocumentsDocumentIdDeleteResponse = DeleteDocumentApiV1DocumentsDocumentIdDeleteResponses[keyof DeleteDocumentApiV1DocumentsDocumentIdDeleteResponses];
+
 export type GetDocumentApiV1DocumentsDocumentIdGetData = {
     body?: never;
     path: {
@@ -2723,6 +2899,44 @@ export type GetDocumentApiV1DocumentsDocumentIdGetResponses = {
 };
 
 export type GetDocumentApiV1DocumentsDocumentIdGetResponse = GetDocumentApiV1DocumentsDocumentIdGetResponses[keyof GetDocumentApiV1DocumentsDocumentIdGetResponses];
+
+export type GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetData = {
+    body?: never;
+    path: {
+        /**
+         * Document Id
+         *
+         * 教学资料 id，取自上传响应或资料列表
+         */
+        document_id: string;
+    };
+    query?: never;
+    url: '/api/v1/documents/{document_id}/delete-preview';
+};
+
+export type GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetErrors = {
+    /**
+     * 资料不存在：id 不属于任何一份已上传的教学资料
+     */
+    404: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetResponses = {
+    /**
+     * 删除后果预览（默认勾选口径）
+     */
+    200: DocumentDeletePreview;
+};
+
+export type GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetResponse = GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetResponses[keyof GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetResponses];
 
 export type SetReferenceApiV1DocumentsDocumentIdReferencePatchData = {
     body: ReferenceRequest;
