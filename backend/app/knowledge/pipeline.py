@@ -7,7 +7,7 @@ from datetime import datetime
 from app.core.errors import ProviderNotConfigured
 from app.db import SessionLocal
 from app.db.models import Document
-from app.knowledge.literature_note import SOURCE_DOCUMENT, build_note
+from app.knowledge.literature_note import SOURCE_DOCUMENT, SOURCE_WEB, build_note
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +18,20 @@ REASON_PARSE_ERROR = (
 )
 
 
-def failure_reason_for(exc: Exception) -> str:
+WEB_RETRY_HINT = "请回到备课会话，手动再次点击「联网检索并入库」。"
+REASON_WEB_ERROR = f"网页资料处理没有成功。{WEB_RETRY_HINT}"
+REASON_WEB_INTERRUPTED = f"网页资料处理被中断（服务重启）。{WEB_RETRY_HINT}"
+
+
+def failure_reason_for(exc: Exception, *, source: str = SOURCE_DOCUMENT) -> str:
     """把解析异常翻译成给教师看的一句话。
 
     未配置云端能力时沿用能力工厂给出的引导原文（它本来就是写给教师的）；
-    其余异常一律用通用说法，细节只进日志。
+    其余异常按来源给出恢复指引，细节只进日志；网页没有可重新上传的原件。
     """
     if isinstance(exc, ProviderNotConfigured):
         return str(exc)
-    return REASON_PARSE_ERROR
+    return REASON_WEB_ERROR if source == SOURCE_WEB else REASON_PARSE_ERROR
 
 
 def fail_stuck_documents() -> int:
@@ -34,7 +39,7 @@ def fail_stuck_documents() -> int:
 
     后台解析任务随进程消亡——进程重启后被中断的解析再没有任何任务推进它，
     若不清扫会永远停在「处理中」，前端会一直轮询（不会自愈）。这里统一标记为
-    「失败」（与解析异常同一终态），教师可按原文重新上传；不自动重排解析：
+    「失败」（与解析异常同一终态），教师按来源重新上传或手动联网检索并入库；不自动重排解析：
     坏文件会在每次启动时反复失败、形成启动循环。
     """
     db = SessionLocal()
@@ -42,7 +47,9 @@ def fail_stuck_documents() -> int:
         stuck = db.query(Document).filter(Document.status == "处理中").all()
         for doc in stuck:
             doc.status = "失败"
-            doc.failure_reason = REASON_INTERRUPTED
+            doc.failure_reason = (
+                REASON_WEB_INTERRUPTED if doc.file_type == SOURCE_WEB else REASON_INTERRUPTED
+            )
         if stuck:
             db.commit()
             logger.warning("启动清扫：%d 份「处理中」资料标记为失败", len(stuck))
@@ -80,7 +87,9 @@ async def parse_document(
             # 后台任务入口：吞掉异常仅记日志——失败经 doc.status=「失败」观测即可，
             # 重抛只会打断 FastAPI 后台任务且无所收益（ticket #11：失败不拖垮其他格式解析）
             doc.status = "失败"
-            doc.failure_reason = failure_reason_for(exc)
+            doc.failure_reason = failure_reason_for(
+                exc, source=SOURCE_WEB if doc.file_type == SOURCE_WEB else source
+            )
             db.commit()
             if isinstance(exc, ProviderNotConfigured):
                 # 能力未配置不是故障：原因已写进 failure_reason 给教师看，日志记一行、不带堆栈

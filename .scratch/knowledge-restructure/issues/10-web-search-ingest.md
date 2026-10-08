@@ -40,3 +40,15 @@
 - 前端：`npm run gen:api` 生成快照与类型（37 路径、42 操作），`npm run lint`、`npm run build`（含 tsc）、`npm run check:routes` 全退出 0。额外离线 SSR／narrowing 核验：空库与无相关命中均显示入口、命中不显示、缺失主题安全收窄。自审实际 diff 与 `git diff --check` 通过。
 - 扁平风格自检：新增容器直角黑框、黑白与强调色、Button 复用默认／悬停反色／聚焦／禁用四态；状态文案有 status／alert 语义，无新圆角、阴影、灰底、渐变、位移或循环动效。机器扫描 109 文件、10 条规则零违规。未新增弹层、图谱或外链字体。
 - 未执行：浏览器真实交互与真实博查 Key 冒烟（检索入库并产生真实待审冲突），仍待教师配合，不勾选人工项。保留既有后台任务重启中断语义、无去重、知识提取尽力而为语义。npm install 报既有依赖审计 6 项（2 low、4 high），未扩大范围升级；构建仍有既有大块体积提示。
+
+
+### 评审处置（pass 1）
+
+- 已读取独立两轴报告：`w10-spec.md` 无问题；`w10-standards.md` 的 P2「网页失败仍指向重新上传」经协调者确认有效，本次仅做来源恢复指引适配。Status 不改；本次修复仍待协调者复门与针对性独立复核。
+- 后端：`failure_reason_for` 增加默认保持上传资料口径的 `source` 参数。网页通用失败与服务重启中断均引导回备课会话、手动再次点击「联网检索并入库」；`ProviderNotConfigured` 优先保留原设置引导。不改变共享解析流程、任务生命周期、冲突隔离或状态集合。
+- 前端共享文件精确变更（供与 07 合并）：`DocumentDetail.tsx` 在详情主组件以 `file_type／literature_note.source` 判断网页来源，向 `DetailHeader／StatusBlock／LiteratureNoteSection` 传 `isWeb`；仅网页失败覆盖状态长说明、将恢复按钮替换为指向 `/lesson-prep` 的 Link，网页未配置能力显示去设置引导，网页文献笔记未配置不再要求上传原件。普通上传资料的重新上传按钮、默认文案、参考资料逻辑均不改；未触碰删除逻辑。
+- 检查发现标题行状态标签 tooltip 也沿用上传说法，经 `contact_supervisor` 额外明确批准：`DocumentStatus.tsx` 仅增加可选 `hint` 覆盖，默认仍用原 `STATUS_HINT[status]`；只由详情网页失败场景传正确提示，不改列表默认值或解析状态类型。
+- 先红证据：后端强化网页失败文案并新增未配置／中断回归后，`uv run pytest -q tests/test_web_search_ingest.py tests/test_documents.py` 为 3 failed、14 passed；3 项分别暴露错误上传指引、缺少来源参数与中断指引未适配。真实详情 SSR 回归 `node scripts/check-document-detail-recovery.mjs` 初次退出 1，网页正文仍显示重新上传。
+- 转绿证据：修复后针对 `test_web_search_ingest.py／test_documents.py／test_generation_failures.py` 共 23 passed；新增 SSR 脚本不添加组件导出或测试接口，通过真实详情＋QueryClient 快照覆盖网页 file_type／source 分支、正文与 tooltip、恢复目标、未配置去设置、普通上传兼容。脚本退出 0。类型检查 `npx tsc -b` 退出 0；本次不变更 OpenAPI，未重生成或手抄接口类型。
+- 最终五门全部真实运行：后端 `uv run pytest -q`＝438 passed、退出 0；`uv run ruff check .`＝All checks passed、退出 0；前端 `npm run lint`、`npm run build`、`npm run check:routes` 均退出 0。额外来源恢复 SSR 脚本退出 0，`git diff --check` 通过；日志保存在本 worktree `.scratch/w10-pass1-gates/`（不提交日志）。两个既有清理脚本仅获准本地＋x供 Ruff，内容与仓库模式不暂存、不提交。
+- 扁平风格自检：恢复链接复用 Button 的黑白反色／聚焦／禁用四态、直角黑框，设置引导复用既有扁平 Notice，无新样式或状态；109 文件、10 条禁用 class 规则零违规。人工浏览器点击、真实 Key 联网入库与真实待审冲突冒烟仍未执行；保留待办，不勾选人工项。

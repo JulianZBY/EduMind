@@ -18,6 +18,8 @@ import type { ParseStatus } from './status'
 import { documentErrorMessage, useDocument, useSetDocumentReference } from './queries'
 import { useKnowledgeUi } from './store'
 
+const WEB_RECOVERY_NOTE = '网页资料处理没有成功。请回到备课会话，手动再次点击「联网检索并入库」。'
+
 /** 解析完成时间：本地时区的可读写法；处理中为空。 */
 function formatParsedAt(value: string | null | undefined): string {
   if (!value) return '—'
@@ -45,11 +47,17 @@ export function DocumentDetail() {
     )
   }
 
+  const isWeb = data.file_type === '网页' || data.literature_note.source === '网页'
+
   return (
     <article className="flex flex-col">
-      <DetailHeader document={data} />
-      <StatusBlock status={data.status} failureReason={data.failure_reason ?? ''} />
-      <LiteratureNoteSection note={data.literature_note} processing={isProcessing(data.status)} />
+      <DetailHeader document={data} isWeb={isWeb} />
+      <StatusBlock status={data.status} failureReason={data.failure_reason ?? ''} isWeb={isWeb} />
+      <LiteratureNoteSection
+        note={data.literature_note}
+        processing={isProcessing(data.status)}
+        isWeb={isWeb}
+      />
       <Facts document={data} />
       <ChunkList
         chunks={data.chunks}
@@ -64,13 +72,21 @@ export function DocumentDetail() {
  * 文献笔记（CONTEXT.md「文献笔记」，ADR-0007）：资料概要 + 这份资料提取出的知识点索引。
  * 资料的管理入口从此落在文献笔记上；索引条目可点进知识图谱定位到知识点。
  */
-function LiteratureNoteSection({ note, processing }: { note: LiteratureNoteView; processing: boolean }) {
+function LiteratureNoteSection({ note, processing, isWeb }: {
+  note: LiteratureNoteView
+  processing: boolean
+  isWeb: boolean
+}) {
   if (note.status === '未配置') {
     // 对话模型未配置：分块与解析照常入库，但笔记不生成——给去设置页的引导，不返回假摘要
     return (
       <section aria-label="文献笔记" className="border-b-2 border-black px-3 py-2">
         <NoteHeading source={note.source} />
-        <ProviderMissingNotice message="文献笔记还没有生成：对话模型未配置。配置后重新上传这份资料即可生成。" />
+        <ProviderMissingNotice message={
+          isWeb
+            ? '文献笔记还没有生成：对话模型未配置。请先到设置页配置，再回到备课会话手动点击「联网检索并入库」。'
+            : '文献笔记还没有生成：对话模型未配置。配置后重新上传这份资料即可生成。'
+        } />
       </section>
     )
   }
@@ -126,7 +142,7 @@ function KnowledgeIndex({ entries }: { entries: LiteratureNoteView['knowledge_in
 }
 
 /** 标题行：文件名、类型、解析状态与参考资料标记切换。 */
-function DetailHeader({ document }: { document: DocumentDetailPayload }) {
+function DetailHeader({ document, isWeb }: { document: DocumentDetailPayload; isWeb: boolean }) {
   const setReference = useSetDocumentReference()
   const { toast } = useToast()
 
@@ -150,7 +166,10 @@ function DetailHeader({ document }: { document: DocumentDetailPayload }) {
       <div className="flex min-w-0 flex-wrap items-baseline gap-2">
         <h2 className="text-sm font-bold">{document.filename}</h2>
         <span className="text-xs uppercase">{document.file_type}</span>
-        <DocumentStatusBadge status={document.status} />
+        <DocumentStatusBadge
+          status={document.status}
+          hint={isWeb && document.status === '失败' ? WEB_RECOVERY_NOTE : undefined}
+        />
       </div>
       <Button
         size="sm"
@@ -166,8 +185,12 @@ function DetailHeader({ document }: { document: DocumentDetailPayload }) {
   )
 }
 
-/** 状态块：一句口径 + 该状态下的出路（等待解析 / 去裁决 / 重新上传）。 */
-function StatusBlock({ status, failureReason }: { status: ParseStatus; failureReason: string }) {
+/** 状态块：一句口径 + 该状态下的出路；网页无上传原件，回备课会话手动重试。 */
+function StatusBlock({ status, failureReason, isWeb }: {
+  status: ParseStatus
+  failureReason: string
+  isWeb: boolean
+}) {
   const openUpload = useKnowledgeUi((state) => state.openUpload)
   const attention = status === '有冲突' || status === '失败'
 
@@ -178,9 +201,11 @@ function StatusBlock({ status, failureReason }: { status: ParseStatus; failureRe
         attention ? 'border-l-[#ff3366]' : 'border-l-black',
       )}
     >
-      <p className="text-sm">{STATUS_NOTE[status]}</p>
+      <p className="text-sm">{isWeb && status === '失败' ? WEB_RECOVERY_NOTE : STATUS_NOTE[status]}</p>
       {status === '失败' && failureReason ? (
-        <p className="text-sm font-bold">原因：{failureReason}</p>
+        isWeb && failureReason.includes('未配置')
+          ? <ProviderMissingNotice message={failureReason} />
+          : <p className="text-sm font-bold">原因：{failureReason}</p>
       ) : null}
       {isProcessing(status) ? (
         <div aria-hidden="true" className="h-2 w-full max-w-sm rounded-none border-2 border-black">
@@ -196,9 +221,15 @@ function StatusBlock({ status, failureReason }: { status: ParseStatus; failureRe
         </Link>
       ) : null}
       {status === '失败' ? (
-        <Button size="sm" variant="accent" onClick={openUpload} className="self-start">
-          重新上传
-        </Button>
+        isWeb ? (
+          <Button size="sm" variant="accent" asChild className="self-start">
+            <Link to="/lesson-prep">返回备课会话，联网检索并入库</Link>
+          </Button>
+        ) : (
+          <Button size="sm" variant="accent" onClick={openUpload} className="self-start">
+            重新上传
+          </Button>
+        )
       ) : null}
     </section>
   )

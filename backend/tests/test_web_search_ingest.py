@@ -218,7 +218,10 @@ def test_background_failure_remains_observable_in_knowledge_library(monkeypatch)
     doc_id = response.json()["documents"][0]["id"]
     detail = client.get(f"/api/v1/documents/{doc_id}").json()
     assert detail["status"] == "失败"
-    assert detail["failure_reason"]
+    assert "备课会话" in detail["failure_reason"]
+    assert "手动" in detail["failure_reason"]
+    assert "联网检索并入库" in detail["failure_reason"]
+    assert "重新上传" not in detail["failure_reason"]
     assert detail["literature_note"]["source"] == "网页"
     assert detail["literature_note"]["status"] == "未生成"
 
@@ -237,3 +240,38 @@ def test_manual_ingest_does_not_modify_sessions_or_generated_artifacts(monkeypat
     assert search.queries == ["隔离检索"]
     assert client.get(f"/api/v1/sessions/{prep['id']}").json() == before
     assert client.get("/api/v1/artifacts").json() == artifacts_before
+
+
+def test_web_failure_reason_keeps_unconfigured_provider_guidance():
+    """网页来源不能覆盖能力未配置的设置引导，也不回显内部错误文本。"""
+    from app.core.errors import ProviderNotConfigured
+    from app.knowledge.literature_note import SOURCE_WEB
+    from app.knowledge.pipeline import failure_reason_for
+
+    guidance = "网络搜索未配置：请到设置页配置。"
+    assert failure_reason_for(ProviderNotConfigured(guidance), source=SOURCE_WEB) == guidance
+    reason = failure_reason_for(ValueError("/secret/path failure"), source=SOURCE_WEB)
+    assert "联网检索并入库" in reason
+    assert "重新上传" not in reason
+    assert "/secret" not in reason
+
+
+def test_interrupted_web_ingest_guides_manual_retry_not_upload():
+    """启动清扫沿用共享失败终态，但网页没有上传原件。"""
+    from app.db import SessionLocal
+    from app.db.models import Document
+    from app.knowledge.pipeline import fail_stuck_documents
+
+    with SessionLocal() as db:
+        doc = Document(
+            user_id="default", filename="网页", file_type="网页", file_path="", status="处理中"
+        )
+        db.add(doc)
+        db.commit()
+        doc_id = doc.id
+    assert fail_stuck_documents() >= 1
+    detail = client.get(f"/api/v1/documents/{doc_id}").json()
+    assert detail["status"] == "失败"
+    assert "被中断" in detail["failure_reason"]
+    assert "联网检索并入库" in detail["failure_reason"]
+    assert "重新上传" not in detail["failure_reason"]
