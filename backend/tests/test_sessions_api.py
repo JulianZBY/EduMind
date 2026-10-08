@@ -63,10 +63,11 @@ def test_create_session_returns_teacher_facing_summary():
 
 
 def test_create_session_defaults_title_and_granularity():
-    """不传字段时给出可用默认：标题先占位，追问粒度为标准，参考资料为空。"""
+    """零表单新建（票 04）：初始名「未命名备课」，追问粒度为标准，参考资料为空。"""
     created = _create()
 
-    assert created["title"] == "新的备课会话"
+    assert created["title"] == "未命名备课"
+    assert created["title_edited"] is False  # 未手动改过名：首条教师消息仍会自动命名
     assert created["granularity"] == "标准"
     assert created["reference_doc_ids"] == []
 
@@ -169,7 +170,18 @@ def test_rename_session_updates_title_and_settings():
     )
     row = _session_row(created["id"])
     assert row is not None and row.granularity == "快速"
+    assert row.title_edited is True  # 手动改名落库为标记：自动命名自此停用
     assert client.get(f"/api/v1/sessions/{created['id']}").json()["session"]["title"] == "新标题"
+
+
+def test_settings_only_patch_does_not_mark_title_edited():
+    """只改粒度/参考资料不算手动改名：自动命名不被误停用。"""
+    created = _create()
+
+    patched = client.patch(f"/api/v1/sessions/{created['id']}", json={"granularity": "快速"})
+
+    assert patched.status_code == 200
+    assert patched.json()["title_edited"] is False
 
 
 def test_rename_unknown_session_returns_404():

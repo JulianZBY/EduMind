@@ -50,12 +50,15 @@ class ConversationStore:
         prep: PrepSession,
         *,
         title: str | None = None,
+        title_edited: bool | None = None,
         granularity: str | None = None,
         reference_doc_ids: list[str] | None = None,
     ) -> PrepSession:
         """按传入字段更新；未传的字段保持原值（重命名与改设置共用）。"""
         if title is not None:
             prep.title = title
+        if title_edited is not None:
+            prep.title_edited = title_edited
         if granularity is not None:
             prep.granularity = granularity
         if reference_doc_ids is not None:
@@ -121,7 +124,7 @@ class ConversationStore:
 
         前端在发送失败时会回滚乐观追加的教师气泡并让教师重发；服务端若留着这条，
         重发成功后同一句话会出现两条。`restore_title` 用于把首轮失败时抢先取的
-        会话标题恢复成占位标题，使「失败 = 没发生过」在库里也成立。
+        会话名恢复成「未命名备课」，使「失败 = 没发生过」在库里也成立。
         """
         if restore_title is not None:
             prep.title = restore_title

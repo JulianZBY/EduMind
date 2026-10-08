@@ -264,6 +264,34 @@ def test_incremental_intent_analyzes_only_the_new_turn(install_semantic_llm):
     assert sum(len(text) for text in incremental_texts) < len(full_text)
 
 
+# ---- 会话命名三态（票 04：零表单直开 + 自动命名 + 手动改名锁存）----
+
+
+def test_title_three_states_create_auto_then_manual_lock(install_semantic_llm):
+    """票 04 三态：创建即开是「未命名备课」；首条教师消息自动命名；手动改名后不再自动覆盖。"""
+    install_semantic_llm(learned=LEARNED)
+    created = _create()
+    assert created["title"] == "未命名备课"  # 创建即开：零表单，先叫未命名备课
+
+    _chat(created["id"], FIRST_TURN)
+    after_first = client.get(f"/api/v1/sessions/{created['id']}").json()["session"]
+    assert after_first["title"] == FIRST_TURN[:30]  # 首条教师消息自动命名
+    assert after_first["title_edited"] is False
+
+    _chat(created["id"], SECOND_TURN)
+    after_second = client.get(f"/api/v1/sessions/{created['id']}").json()["session"]
+    assert after_second["title"] == FIRST_TURN[:30]  # 后续消息不再改动自动名
+
+    manual = "初二一次函数·第五周"
+    renamed = client.patch(f"/api/v1/sessions/{created['id']}", json={"title": manual})
+    assert renamed.status_code == 200
+    assert renamed.json()["title_edited"] is True
+
+    _chat(created["id"], "换个讲法：先讲斜率再讲图象")  # 手动改名后，教师再说话也不覆盖手动名
+    locked = client.get(f"/api/v1/sessions/{created['id']}").json()["session"]
+    assert locked["title"] == manual
+
+
 # ---- 口径与不变式 ----
 
 

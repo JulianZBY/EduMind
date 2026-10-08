@@ -46,7 +46,9 @@ class PrepSession(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
     title: Mapped[str] = mapped_column(
         String(200)
-    )  # 会话标题：默认「新的备课会话」，首轮需求自动充当标题
+    )  # 会话标题：新建先叫「未命名备课」，首条教师消息自动命名；教师手动改名后不再自动改
+    # 教师是否手动改过名：True 后自动命名停用，后续对话不再覆盖教师取的名字（票 04「未命名备课」）
+    title_edited: Mapped[bool] = mapped_column(Boolean, default=False)
     granularity: Mapped[str] = mapped_column(String(20), default="标准")  # 追问粒度：快速/标准/精细
     # 累积意图：上一轮意图 + 本轮新增（避免每轮把全部对话重析一遍）
     intent: Mapped[dict | None] = mapped_column(JSON, nullable=True)

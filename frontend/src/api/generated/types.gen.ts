@@ -1689,7 +1689,7 @@ export type SearchResponse = {
 /**
  * SessionCreateRequest
  *
- * 新建备课会话：标题可留空（首轮需求自动充当标题），并带上本次备课的参考资料。
+ * 新建备课会话：零表单直开（标题可留空，先叫「未命名备课」），可带初始设置。
  */
 export type SessionCreateRequest = {
     /**
@@ -1769,6 +1769,10 @@ export type SessionSummary = {
      * Title
      */
     title: string;
+    /**
+     * Title Edited
+     */
+    title_edited: boolean;
     /**
      * Updated At
      */
@@ -3334,7 +3338,7 @@ export type CreateSessionApiV1SessionsPostErrors = {
 
 export type CreateSessionApiV1SessionsPostResponses = {
     /**
-     * 新建成功，返回落库后的会话
+     * 新建成功，返回落库后的会话（先叫「未命名备课」）
      */
     200: SessionSummary;
 };
@@ -3452,7 +3456,7 @@ export type RenameSessionApiV1SessionsSessionIdPatchErrors = {
 
 export type RenameSessionApiV1SessionsSessionIdPatchResponses = {
     /**
-     * 修改成功，返回更新后的会话
+     * 修改成功，返回更新后的会话（手动改名后 title_edited = true）
      */
     200: SessionSummary;
 };
