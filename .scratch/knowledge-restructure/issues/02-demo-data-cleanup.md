@@ -5,7 +5,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 影响面（已核实，`backend/edumind.db` + `backend/data/vectors.db`）：
 - `documents` 3 行：`7679299b…`（讲义教师版）、`a181d7d2…`（板书照片）、`9eb4e0bc…`（2024 修订版）
@@ -55,3 +55,10 @@
 - 遗留：①`backend/data/edumind.db` 有个 0 字节杂散文件（非本票范围，未动）；
   ②题库 5 题内容是 TCP 题（「自编」），票面明确保留，未动；
   ③删除脚本为一次性，保留在 scripts/ 供复核与复用其门禁模式，如需可后续移除。
+
+## 协调者复核(2026-10-08, wave-1 集成)
+
+- 评审:reviewer fresh-context 裁决 **OK with notes**(run 498fe34c)。
+- 协调者独立核验(只读):edumind.db 计数 documents/nodes/edges/conflicts = 0/0/0/0,questions = 5 分毫未动;vectors.db 四表(chunks/chunk_embeddings/node_titles/node_title_embeddings)全 0;uploads 目录空;备份目录两 db 为有效 SQLite 且非零;两 commit(git show --stat)仅含 scripts/tests/票文件。
+- P2 记录在案:①uploads 5 文件删前无文件级副本(spec 的「目录备份」未覆盖到,数据为教师批准全删的演示/垃圾件);②脚本 dry-run 用 sqlite3.connect 打开主库,文件缺失会静默建空库,复用该模式时应改 mode=ro。
+- **Status: done(独立复验通过)**

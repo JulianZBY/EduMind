@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] `NewSessionDialog` 与 `ReferencePicker` 从新建流程退场：点「新建备课会话」→
   `POST /api/v1/sessions` → 导航到 `/lesson-prep/{id}`，全程无弹层
@@ -64,3 +64,12 @@ rounded-none/hover 反色）；文案中文全角标点。
   2. 编辑时自动检查（lens）在本 worktree 有环境性误报：其等价于在仓库根无 venv 上下文跑 pyright，
      会误报导入解析；项目钉住配置下全部干净。可考虑根级 `pyrightconfig.json` 指向 `backend/.venv`
      （仓库根配置超出本票 Ownership，未动）
+
+## 协调者复核(2026-10-08, wave-1 集成)
+
+- 评审:reviewer fresh-context 裁决 **OK with notes**(run 5fdfc907)。
+- 协调者独立复门:worktree 内 pytest **394 passed** + 前端三件套绿;合并后主区 425 passed 全量吻合。
+- 行为冒烟:零表单 `POST /api/v1/sessions` 空 body → title「未命名备课」/ title_edited false / granularity「标准」,删除 200(冒烟会话已清理)。
+- worker 移交的 docs/acceptance-manual.md:78 旧弹窗流程已由协调者收口(重写为零表单直开+自动命名观察点,commit 见 docs(acceptance))。
+- P2 留档待补:①截断边界测试强度(FIRST_TURN 恰 30 字,断言在不截断时同样通过);②迁移 prep_sessions 分支(title_edited 补列+回填)无 legacy 库用例。
+- **Status: done(独立复验通过;P2 测试加固可后续小票)**

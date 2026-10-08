@@ -5,7 +5,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 数据模型：文献笔记（资料概要、来源=教学资料或网页、与教学资料 1:1），
   新表进数据模型并带中文语义注释
@@ -38,3 +38,11 @@
   - 索引是入库时点快照：冲突裁决「接受新」替换节点后，索引条目不自动改写（关联治理归 07/10 票口径）
   - 老存量资料（本票之前入库的）无文献笔记，详情如实报「未生成」，不做补生成
   - 环境备注：本机 /mnt/Data fuse 挂载对所有文件强制 777，ruff EXE002 与编辑器 lint 的「executable/shebang」「依赖解析」报错均属该伪象；冷 worktree 需先 `uv sync --frozen` 让钉定工具链生效
+
+## 协调者复核(2026-10-08, wave-1 集成)
+
+- 评审:reviewer fresh-context 裁决 **OK with notes**(run 03302134;literature_note.py 走对话模型接口/无假摘要/1:1 落库/两挂钩时序/失败隔离均亲验)。
+- 协调者独立复门:worktree 内 pytest **395 passed** + 前端三件套绿;13e190b 格式化 commit 逐行核验零语义;paraformer 权威 git diff 为空。
+- 两条 P2 已由协调者修复(commit 0b61fe4):①models.py 注释错别字「兑底→兜底」×2;②build_note 落库环节补 try/except 隔离并与 docstring「尽力而为」契约对齐。修复后全量 425 passed、ruff 实质零违规。
+- OpenAPI:LiteratureNoteView 三态枚举(已生成/未配置/未生成)与 source(教学资料/网页)已实测于 /openapi.json,DocumentDetail.literature_note required。
+- **Status: done(独立复验通过)**

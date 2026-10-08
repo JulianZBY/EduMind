@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 时间线按 `artifact_type` 分组（课件/教案/提纲/试卷/互动内容），组内默认折叠到当前版本
 - [x] 展开组后可见全部版本与版本树关系（parent 衍生连线/标注）；历史版本仍可回看、下载、作基线
@@ -66,3 +66,10 @@
 【约束】视觉硬标准 `docs/style/minimalist-flat.md`：折叠箭头/展开态零阴影零渐变，
 border-2 border-black、rounded-none、hover 黑白反色；文案中文全角标点；
 版本用语遵守 CONTEXT.md §3（禁止「旧版本被覆盖」类表述）。
+
+## 协调者复核(2026-10-08, wave-1 集成)
+
+- 评审:reviewer fresh-context 裁决 **OK with notes**(run e9519883;historyToggle 状态机逐交互迹验证正确,半角标点零残留,视觉过自检)。
+- 协调者独立复门:worktree 内 `npm run lint`(109 文件零违规)/`build`/`check:routes`(七路由)全绿——补齐评审无 shell 工具面未能独立复跑的三道门。
+- P2 留档:CollapseChevron 展开态与共享 ChevronDownIcon 逐字节重复,后续小票将 ChevronRightIcon 提入共享表后收敛(本票 Ownership 禁改 components/,不修)。
+- **Status: done(独立复验通过)**

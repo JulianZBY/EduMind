@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] `app/knowledge/retrieval/search.py` 的 `search_hits` 按**余弦距离阈值**过滤命中：
   超阈值的命中一律丢弃（不是降权）；阈值可配置（先例：`conflict_distance_threshold`，
@@ -77,3 +77,12 @@
 3. `app/core/orchestrator.py` L62/L67 与 `app/core/llm/provider_instances.py` 存在既有的
    类型收窄/静态模式提示（触碰文件即全文件复扫所现，git diff 证实非本票引入），未顺手修，
    避免扩票。
+
+## 协调者复核(2026-10-08, wave-1 集成)
+
+- 评审:reviewer fresh-context 裁决 **OK with notes**(run 3d22aea5;前任 9f2c3774 因账户限额中断,其核查线索已交接种子化)。
+- P1(openapi 快照滞后)已闭环:worktree 内 `npm run gen:api` 刷新(knowledge_hits 3→true、补 knowledge_empty:false),diff 与评审预测逐行一致,随 lane 合并入库。
+- 协调者独立复门(合并后主区):`uv run pytest -q` **425 passed**(409+11+5 三 lane 对账吻合);`npm run lint`/`build`/`check:routes` 全绿;`uv run ruff check .` 全绿(EXE002 已按维护者拍板全局忽略,commit 62ea244)。
+- 后端重启载入新码,conversation.py 三口径文案在位(:60-65)。
+- 遗留(不阻塞):①教师真实向量化冒烟待办;②P2 报告项——无 boost 时 L2 top-k 候选截断可致召回天花板(与基线同,归一化向量下不可达),可选加固 fetch_k=k×4;③本地 _RecordingLLM 替身符合仓库既有实践,日后可并入 fakes.py。
+- **Status: done(独立复验通过)**

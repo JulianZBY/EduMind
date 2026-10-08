@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 判定口径（先核实再执行）：
 - **保留**：文件名出现在 `artifact_versions.filename`，或被 `session_messages.artifacts`
@@ -50,3 +50,11 @@
   `backend/tests/test_orphan_output_cleanup_script.py`。
 - 遗留：①tar 备份在 /tmp（票面指定位置），重启即清，如需长期留存请人工迁移；
   ②一次性脚本保留在 scripts/ 供复核，如需可后续移除。
+
+## 协调者复核(2026-10-08, wave-1 集成)
+
+- 评审:reviewer fresh-context 裁决 **OK with notes**(run 498fe34c)。
+- 协调者独立核验(只读):`data/output/` 恰 9 文件,与 artifact_versions.filename 对账两差集均为空;删后下载/预览验证记录在交付记录。
+- **P1 补记(须教师知会)**:唯一删除清单备份 `/tmp/edumind-output-orphans-20261008-123427.tar` 已被系统清理(2026-10-08 午后 /tmp 回收),3366 个已删文件现无留痕副本。删除本身经教师批准且不可逆,终态正确;此补记为留痕完备性声明,无法挽回。
+- P2 记录在案:tar 默认落 /tmp 易失位置,复用该模式时应默认耐久路径。
+- **Status: done(独立复验通过;含上述知会事项)**
