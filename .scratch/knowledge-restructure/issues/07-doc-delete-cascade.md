@@ -97,3 +97,13 @@
   无新增 Checkbox 包告警；全部既存 package 条目未升级。不扩大本票作依赖安全修复。
 - 残余：教师资料／网页删除冒烟、浏览器视觉与键盘人工验证待办；协调者将复门并安排独立针对性复核。
   跨主库／向量库／文件系统崩溃原子性仍是既有架构限制。仍不改冲突裁决语义、生成物版本表或 ASR 史实。
+
+### 2026-10-08：恢复后独立 P1 聚焦修正（待独立只读复核）
+
+- 从冻结 `4a6cdea5f50b4b741b9307acaf830670e2b6eedc` 在 home 恢复工作树继续，旧运行返回 Async run not found；不沿用失效运行的复核结论，不改变 Status。
+- 新独立报告 `wave2/runtime-recovery/w07-review.md` 指出此前“可见聚焦”的源码自检结论不成立：Tailwind 4.3.3 的 `outline-none` 显式设置 `--tw-outline-style:none`，聚焦宽度／颜色不恢复实线，全局 base 层不能覆盖 utilities。仅在 Checkbox 加 `focus-visible:outline-solid`；不修改基线 Button、Radix 行为、受控值、悬停、勾选或禁用态。
+- 新增离线 `frontend/scripts/check-checkbox-focus.mjs`，直接读取真实组件 `cn` 的默认类名，用现有 Tailwind 编译，按实际顺序检查适用 outline reset／focus-visible 规则并解析 outline style 变量；不把 `@property` 默认 solid 当作可见聚焦证据，同时断言 2px 宽度、2px offset 与黑色。
+- 红：修改组件前回归退出 1，`Checkbox focus outline is none; focus must override outline-none`；绿：窄修后退出 0，`solid, 2px, offset 2px, black`。
+- 本轮真实受影响门：focus 回归、`npm run lint`、`npm run build`（含 tsc）、`npm run check:routes` 全部退出 0；禁用 class 扫描 111 文件／10 规则零违规，七区路由及 SSR 通过。构建既存 >500kB chunk 警告未扩大处理。未安装／更新依赖，未重复后端五门证据（parent 已执行 466 pytest／ruff／前端三门）；backend 与冻结基线保持一致。
+- 对本 Checkbox 逐项风格自检：黑白、直角黑框、无阴影／渐变／灰底／半透明、悬停黑白反色、禁用细边框与降级文字、显式默认／悬停／聚焦／禁用、150ms 纯颜色过渡；没有新增字体、动画、弹层、布局或图谱变化（相应清单项不适用）。源码与编译检查不等同于浏览器实操。
+- 待办保留：浏览器视觉、人工 Tab／Space、教师教学资料／网页删除冒烟，以及独立只读复核；不宣称人工验收或 reviewer 已通过。证据日志位于持久 `recovery/wave2-20261008-164611/w07-focus-pass2/`。
