@@ -30,6 +30,7 @@ def _set_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
     finally:
         cursor.close()
 
+
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
@@ -41,7 +42,9 @@ _LEGACY_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("conflicts", "review_action", "VARCHAR(20)"),
     ("llm_provider_instances", "models_error", "TEXT DEFAULT ''"),
     ("documents", "failure_reason", "TEXT DEFAULT ''"),
+    ("prep_sessions", "title_edited", "BOOLEAN DEFAULT 0"),
 )
+
 
 def _ensure_sqlite_columns(bind=None) -> None:
     """轻量幂等迁移：补列 + 回填（默认库为 SQLite）。
@@ -69,6 +72,13 @@ def _ensure_sqlite_columns(bind=None) -> None:
         if "conflicts" in tables:
             conn.exec_driver_sql(
                 "UPDATE conflicts SET category = '定义冲突' WHERE category IS NULL OR category = ''"
+            )
+            conn.commit()
+        if "prep_sessions" in tables:
+            # 旧占位标题统一到现行术语「未命名备课」（CONTEXT.md §2，同一概念不两种叫法）；
+            # 这些会话还没说过话，统一后首条教师消息照常自动命名（title_edited 默认 0）。
+            conn.exec_driver_sql(
+                "UPDATE prep_sessions SET title = '未命名备课' WHERE title = '新的备课会话'"
             )
             conn.commit()
 

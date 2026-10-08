@@ -17,8 +17,15 @@ import { ConversationComposer } from './ConversationComposer'
 import { ConversationTranscript } from './ConversationTranscript'
 import { GranularityPicker } from './GranularityPicker'
 import { ReferencePicker } from './ReferencePicker'
+import { SessionRenameForm } from './SessionRenameForm'
 import type { Granularity, SessionHistoryBody } from './queries'
-import { useAttachReference, useSendTurn, useSessionHistory, useUpdateSession } from './queries'
+import {
+  useAttachReference,
+  useCreateAndOpenSession,
+  useSendTurn,
+  useSessionHistory,
+  useUpdateSession,
+} from './queries'
 import { ProviderMissingNotice } from '../settings/ProviderMissingNotice'
 import { useProviderMissingState } from '../settings/queries'
 import { LESSON_PREP_PATH } from './routes'
@@ -74,6 +81,7 @@ function HistoryUnavailable({
   notFound: boolean
   onRetry: () => void
 }) {
+  const newSession = useCreateAndOpenSession()
   if (notFound) {
     return (
       <EmptyState
@@ -85,9 +93,14 @@ function HistoryUnavailable({
             <Button asChild size="sm">
               <Link to={LESSON_PREP_PATH}>返回会话列表</Link>
             </Button>
-            <Button asChild size="sm">
-              <Link to={{ pathname: LESSON_PREP_PATH, search: '?new=1' }}>新建备课会话</Link>
+            <Button size="sm" disabled={newSession.creating} onClick={newSession.openNewSession}>
+              {newSession.creating ? '正在新建…' : '新建备课会话'}
             </Button>
+            {newSession.failed ? (
+              <p role="alert" className="w-full text-xs font-bold text-[#ff3366]">
+                没建成：后端暂时取不到会话。确认后端已启动后重试。
+              </p>
+            ) : null}
           </>
         }
       />
@@ -176,6 +189,8 @@ export function ConversationAxis({ sessionId }: { sessionId: string }) {
   const attach = useAttachReference(sessionId)
   const [failedUtterance, setFailedUtterance] = useState<string | null>(null)
   const [referencesOpen, setReferencesOpen] = useState(false)
+  /** 会话头 inline 改名（票 04）：改名入口常驻，不弹层；保存走既有 PATCH。 */
+  const [renaming, setRenaming] = useState(false)
   const missing = useProviderMissingState()
   const runTurn = (utterance: string) => {
     setFailedUtterance(null)
@@ -246,10 +261,21 @@ export function ConversationAxis({ sessionId }: { sessionId: string }) {
     <AxisPanel>
       <header className="flex flex-wrap items-start justify-between gap-2 border-b-2 border-black px-3 py-2">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-sm font-bold">{session.title}</h1>
-          <SessionMeta history={history.data} />
+          {renaming ? (
+            <SessionRenameForm session={session} onDone={() => setRenaming(false)} />
+          ) : (
+            <>
+              <h1 className="text-sm font-bold">{session.title}</h1>
+              <SessionMeta history={history.data} />
+            </>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {!renaming ? (
+            <Button size="sm" aria-label="重命名备课会话" onClick={() => setRenaming(true)}>
+              重命名
+            </Button>
+          ) : null}
           <GranularityPicker
             value={session.granularity}
             disabled={update.isPending}

@@ -11,6 +11,7 @@
  * query key 一律以 `lessonPrepKeys.all` 打头（票 04 的扩展点约定）。
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router'
 import { apiRequest } from '../../api/client'
 import type { ApiResponseBody } from '../../api/client'
 import type {
@@ -32,6 +33,7 @@ import type {
 import { readKnowledgeDocument, readKnowledgeDocuments } from './narrowing'
 import type { KnowledgeDocument } from './narrowing'
 import { artifactKeys } from '../artifacts/queries'
+import { sessionPath } from './routes'
 
 /** 会话摘要与消息形状都直接来自生成的 schema（ADR-0005 禁止手抄接口类型）。 */
 export type { SessionSummary }
@@ -269,6 +271,19 @@ export function useCreateSession() {
       void queryClient.invalidateQueries({ queryKey: lessonPrepKeys.sessionLists() })
     },
   })
+}
+
+/**
+ * 新建即开（票 04）：零表单直接 `POST /api/v1/sessions`，成功即导航进这次备课。
+ * 新建弹窗已退场：不填标题（先叫「未命名备课」）、不选粒度（默认「标准」，会话内可改）、
+ * 不勾参考资料（备课中随时挂）。失败不导航，调用处给出重试出路。
+ */
+export function useCreateAndOpenSession() {
+  const navigate = useNavigate()
+  const create = useCreateSession()
+  const openNewSession = () =>
+    create.mutate({}, { onSuccess: (session) => navigate(sessionPath(session.id)) })
+  return { openNewSession, creating: create.isPending, failed: create.isError }
 }
 
 /** 改会话设置（重命名 / 追问粒度 / 参考资料）：只改传入字段，改完立即影响后续对话。 */

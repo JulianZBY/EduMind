@@ -6,13 +6,14 @@
  * 会话整体退场）。生成结果并排显示在对话旁（票 08 的 `GenerationPreview`），它的版本数据与
  * 生成物区同源；历史版本中心仍住生成物区。
  */
-import { Link, Outlet, useParams } from 'react-router'
+import { Outlet, useParams } from 'react-router'
 import { MainPanel, Workbench } from '../../components/layout/Workbench'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConversationAxis } from './ConversationAxis'
 import { GenerationPreview } from './GenerationPreview'
 import { SessionSidebar } from './SessionSidebar'
+import { useCreateAndOpenSession } from './queries'
 
 export function LessonPrepArea() {
   return (
@@ -24,16 +25,24 @@ export function LessonPrepArea() {
 
 /** 主区默认内容（未选中会话时）：编辑密度，一次只做一件事。 */
 export function LessonPrepIndex() {
+  const newSession = useCreateAndOpenSession()
   return (
     <MainPanel title="备课会话" tagline="一次备课的完整对话现场">
       <EmptyState
         title="还没有选中备课会话"
         description="左列是全部备课会话：新建一次备课，或选中一条继续。会话与历史存在服务端，刷新、换设备都不丢。"
         action={
-          <Button asChild>
-            {/* 新建走地址（`?new=1`）：URL 即状态，刷新后弹层还在，不引第二份浏览器状态 */}
-            <Link to="?new=1">新建备课会话</Link>
-          </Button>
+          <>
+            {/* 新建即开（票 04）：零表单直接建会话并进入，不再弹层 */}
+            <Button disabled={newSession.creating} onClick={newSession.openNewSession}>
+              {newSession.creating ? '正在新建…' : '新建备课会话'}
+            </Button>
+            {newSession.failed ? (
+              <p role="alert" className="w-full text-xs font-bold text-[#ff3366]">
+                没建成：后端暂时取不到会话。确认后端已启动后重试。
+              </p>
+            ) : null}
+          </>
         }
       />
     </MainPanel>

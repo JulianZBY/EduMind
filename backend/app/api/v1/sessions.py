@@ -29,12 +29,12 @@ Granularity = Literal["快速", "标准", "精细"]
 
 
 class SessionCreateRequest(BaseModel):
-    """新建备课会话：标题可留空（首轮需求自动充当标题），并带上本次备课的参考资料。"""
+    """新建备课会话：零表单直开（标题可留空，先叫「未命名备课」），可带初始设置。"""
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "title": "一次函数（初二）",
+                "title": "",
                 "granularity": "标准",
                 "reference_doc_ids": ["5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"],
             }
@@ -68,7 +68,7 @@ class SessionUpdateRequest(BaseModel):
     @classmethod
     def _title_is_not_blank(cls, value: str | None) -> str | None:
         if value is not None and not value.strip():
-            raise ValueError("title 不能为空或全空白；要清掉标题请改为「新的备课会话」")
+            raise ValueError("title 不能为空或全空白")
         return value.strip() if value is not None else None
 
     @model_validator(mode="after")
@@ -80,7 +80,9 @@ class SessionUpdateRequest(BaseModel):
 
 class SessionSummary(BaseModel):
     id: str
-    title: str  # 会话标题：默认「新的备课会话」，首轮需求自动充当标题
+    title: str  # 会话名：新建先叫「未命名备课」，首条教师消息自动命名
+    # 教师是否手动改过名：True 后自动命名停用（票 04「未命名备课」）
+    title_edited: bool
     granularity: str  # 追问粒度：快速 / 标准 / 精细
     reference_doc_ids: list[str]  # 本次备课勾选的参考资料
     message_count: int  # 消息条数（教师说的 + 助手说的）
@@ -116,6 +118,7 @@ def _summary(store: ConversationStore, prep: PrepSession) -> SessionSummary:
     return SessionSummary(
         id=prep.id,
         title=prep.title,
+        title_edited=prep.title_edited,
         granularity=prep.granularity,
         reference_doc_ids=list(prep.reference_doc_ids or []),
         message_count=store.message_count(prep.id),
@@ -142,21 +145,25 @@ def _message(item: SessionMessage) -> MessageItem:
     tags=["备课会话"],
     summary="新建备课会话",
     description=(
-        "新建一个备课会话并立即落库：标题、追问粒度与参考资料都由服务端保存，"
-        "供教师换设备、清浏览器数据后继续备课（后端是唯一事实源）。\n\n"
-        "* `title` 留空时先用「新的备课会话」占位，首轮教师需求自动充当标题；\n"
-        "* `granularity` 是追问粒度三档：快速 / 标准 / 精细；\n"
-        "* `reference_doc_ids` 是本次备课勾选的参考资料（文档 id），影响检索加权与生成物溯源。\n\n"
+        "新建一个备课会话并立即落库：全部设置由服务端保存，"
+        "供教师换设备、清浏览器数据后继续备课（后端是唯一事实源）。"
+        "前端新建是零表单直开（票 04）：点「新建备课会话」直接调本接口后进入会话。\n\n"
+        "* `title` 留空（推荐）时先叫「未命名备课」，首条教师消息自动以消息内容命名；"
+        "教师手动改名（PATCH）后自动命名停用；\n"
+        "* `granularity` 是追问粒度三档：快速 / 标准 / 精细，默认「标准」，会话内可改；\n"
+        "* `reference_doc_ids` 是本次备课勾选的参考资料（文档 id），影响检索加权与生成物溯源，"
+        "备课过程中可随时增减。\n\n"
         "随后的备课对话走 `POST /api/v1/chat` 并携带本接口返回的 `id`。"
     ),
     responses={
         200: json_response(
-            "新建成功，返回落库后的会话",
+            "新建成功，返回落库后的会话（先叫「未命名备课」）",
             {
                 "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
-                "title": "一次函数（初二）",
+                "title": "未命名备课",
+                "title_edited": False,
                 "granularity": "标准",
-                "reference_doc_ids": ["5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"],
+                "reference_doc_ids": [],
                 "message_count": 0,
                 "created_at": "2026-09-24T10:00:00",
                 "updated_at": "2026-09-24T10:00:00",
@@ -167,7 +174,7 @@ def _message(item: SessionMessage) -> MessageItem:
     },
 )
 async def create_session(req: SessionCreateRequest, db: Annotated[Session, Depends(get_session)]):
-    """新建备课会话（标题可留空，追回粒度默认标准，参考资料可选）。"""
+    """新建备课会话（零表单直开：标题可留空，追回粒度默认标准，参考资料可选）。"""
     prep = session_service.create_session(
         ConversationStore(db),
         title=req.title,
@@ -195,6 +202,7 @@ async def create_session(req: SessionCreateRequest, db: Annotated[Session, Depen
                     {
                         "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
                         "title": "一次函数（初二）",
+                        "title_edited": False,
                         "granularity": "标准",
                         "reference_doc_ids": [],
                         "message_count": 4,
@@ -237,6 +245,7 @@ async def list_sessions(
                 "session": {
                     "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
                     "title": "一次函数（初二）",
+                    "title_edited": False,
                     "granularity": "标准",
                     "reference_doc_ids": [],
                     "message_count": 2,
@@ -290,16 +299,20 @@ async def session_history(
     tags=["备课会话"],
     summary="重命名备课会话",
     description=(
-        "修改备课会话：`title` 重命名，`granularity` 切追问粒度（快速 / 标准 / 精细），"
-        "`reference_doc_ids` 换本次备课的参考资料。只改传入的字段，未传的字段保持原值。\n\n"
+        "修改备课会话：`title` 改名（inline 改名与列表重命名共用），`granularity` 切追问粒度"
+        "（快速 / 标准 / 精细），`reference_doc_ids` 换本次备课的参考资料。"
+        "只改传入的字段，未传的字段保持原值。\n\n"
+        "教师改过 `title` 后会话标记为手动改名（`title_edited` = true），"
+        "此后首条消息的自动命名不再覆盖教师取的名字。"
         "会话内对话时的追问粒度与参考资料以会话上的设置为准，因此改完立即影响后续对话。"
     ),
     responses={
         200: json_response(
-            "修改成功，返回更新后的会话",
+            "修改成功，返回更新后的会话（手动改名后 title_edited = true）",
             {
                 "id": "9f1a2b3c-4d5e-4f60-8a7b-1c2d3e4f5a6b",
                 "title": "一次函数（初二·修订）",
+                "title_edited": True,
                 "granularity": "精细",
                 "reference_doc_ids": ["5c9d1e3b-6f47-4a1c-9a2e-0d4c5b7a8f01"],
                 "message_count": 2,

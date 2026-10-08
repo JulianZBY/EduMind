@@ -17,8 +17,9 @@ from app.generate import remove_output_files
 
 logger = logging.getLogger(__name__)
 
-# 新建会话的占位标题：首轮教师需求自动充当标题（改用 CONTEXT.md 术语，不用「未命名」）
-SESSION_TITLE_PLACEHOLDER = "新的备课会话"
+# 新建会话的初始名「未命名备课」（CONTEXT.md §2）：零表单直开，首条教师消息自动命名，
+# 教师手动改名后（title_edited）不再自动改
+UNNAMED_PREP_TITLE = "未命名备课"
 # 自动标题取首轮需求的前 N 个字符
 AUTO_TITLE_LENGTH = 30
 
@@ -30,9 +31,9 @@ def create_session(
     granularity: str = "标准",
     reference_doc_ids: list[str] | None = None,
 ) -> PrepSession:
-    """新建备课会话：标题留空时先用占位标题，等首轮需求自动替换。"""
+    """新建备课会话：零表单直开，标题留空时先叫「未命名备课」。"""
     return store.create(
-        title=(title or "").strip() or SESSION_TITLE_PLACEHOLDER,
+        title=(title or "").strip() or UNNAMED_PREP_TITLE,
         granularity=granularity,
         reference_doc_ids=reference_doc_ids or [],
     )
@@ -65,7 +66,12 @@ def update_session(
     if prep is None:
         raise LookupError(f"会话不存在: {session_id}")
     return store.update(
-        prep, title=title, granularity=granularity, reference_doc_ids=reference_doc_ids
+        prep,
+        title=title,
+        # 教师手动改名：落库为标记，自动命名自此停用（CONTEXT.md「未命名备课」）
+        title_edited=True if title is not None else None,
+        granularity=granularity,
+        reference_doc_ids=reference_doc_ids,
     )
 
 
@@ -113,8 +119,10 @@ async def handle_turn(
     if prep is None:
         raise LookupError(f"会话不存在: {session_id}")
     previous_title = prep.title
-    if prep.title == SESSION_TITLE_PLACEHOLDER:
-        prep.title = utterance[:AUTO_TITLE_LENGTH]  # 首轮需求充当会话标题
+    # 首条教师消息自动命名（CONTEXT.md「未命名备课」）：只认未改名且仍叫初始名的会话，
+    # 手动改名（title_edited）后教师取的名字不再被覆盖
+    if not prep.title_edited and prep.title == UNNAMED_PREP_TITLE:
+        prep.title = utterance[:AUTO_TITLE_LENGTH]
     teacher_message = store.append_message(prep, role="user", content=utterance)
 
     try:
