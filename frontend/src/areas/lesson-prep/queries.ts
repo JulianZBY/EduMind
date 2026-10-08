@@ -18,6 +18,9 @@ import type {
   ChatApiV1ChatPostData,
   ChatApiV1ChatPostResponse,
   ChatRequest,
+  WebIngestRequest,
+  WebIngestResponse,
+  WebSearchIngestApiV1KnowledgeWebSearchIngestPostData,
   DeleteSessionApiV1SessionsSessionIdDeleteResponse,
   DownloadFileApiV1FilesFilenameGetData,
   ListDocumentsApiV1DocumentsGetData,
@@ -32,6 +35,7 @@ import type {
 } from '../../api/generated'
 import { readKnowledgeDocument, readKnowledgeDocuments } from './narrowing'
 import type { KnowledgeDocument } from './narrowing'
+import { knowledgeKeys } from '../knowledge/queries'
 import { artifactKeys } from '../artifacts/queries'
 import { sessionPath } from './routes'
 
@@ -372,6 +376,21 @@ export function useAttachReference(sessionId: string) {
       // 新资料也要出现在勾选清单里
       void queryClient.invalidateQueries({ queryKey: lessonPrepKeys.knowledgeDocuments() })
       void queryClient.invalidateQueries({ queryKey: lessonPrepKeys.sessionLists() })
+    },
+  })
+}
+
+/** 教师手动触发；这里只入知识库，不发对话、不修改任何生成物。 */
+export function useWebSearchIngest() {
+  const queryClient = useQueryClient()
+  const url: WebSearchIngestApiV1KnowledgeWebSearchIngestPostData['url'] =
+    '/api/v1/knowledge/web-search/ingest'
+  return useMutation({
+    mutationFn: (input: WebIngestRequest) =>
+      apiRequest<WebIngestResponse>(url, { method: 'POST', body: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: knowledgeKeys.all })
+      void queryClient.invalidateQueries({ queryKey: lessonPrepKeys.knowledgeDocuments() })
     },
   })
 }

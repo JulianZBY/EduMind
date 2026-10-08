@@ -2486,6 +2486,48 @@ export type ValidationError = {
 };
 
 /**
+ * WebIngestRequest
+ *
+ * 教师手动发起联网检索并入库，不触发本次生成。
+ */
+export type WebIngestRequest = {
+    /**
+     * K
+     *
+     * 最多入库的网页结果数（1–5）
+     */
+    k?: number;
+    /**
+     * Query
+     *
+     * 本次备课的检索主题
+     */
+    query: string;
+};
+
+/**
+ * WebIngestResponse
+ *
+ * 已接收入库，不代表后台处理成功；通过资料列表和详情跟进终态。
+ */
+export type WebIngestResponse = {
+    /**
+     * Documents
+     */
+    documents: Array<DocumentView>;
+    /**
+     * Ingested
+     *
+     * 已接收入库的网页资料数；零结果为 0
+     */
+    ingested: number;
+    /**
+     * Query
+     */
+    query: string;
+};
+
+/**
  * WebSearchResponse
  *
  * 网络搜索响应：结果列表（未配置博查 Key 时返回 503 引导，不返回占位结果）。
@@ -3454,6 +3496,37 @@ export type WebSearchApiV1KnowledgeWebSearchPostResponses = {
 };
 
 export type WebSearchApiV1KnowledgeWebSearchPostResponse = WebSearchApiV1KnowledgeWebSearchPostResponses[keyof WebSearchApiV1KnowledgeWebSearchPostResponses];
+
+export type WebSearchIngestApiV1KnowledgeWebSearchIngestPostData = {
+    body: WebIngestRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/knowledge/web-search/ingest';
+};
+
+export type WebSearchIngestApiV1KnowledgeWebSearchIngestPostErrors = {
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+    /**
+     * 所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。
+     */
+    503: unknown;
+};
+
+export type WebSearchIngestApiV1KnowledgeWebSearchIngestPostResponses = {
+    /**
+     * 已接收入库（后台处理中）；零结果 documents 为空
+     */
+    200: WebIngestResponse;
+};
+
+export type WebSearchIngestApiV1KnowledgeWebSearchIngestPostResponse = WebSearchIngestApiV1KnowledgeWebSearchIngestPostResponses[keyof WebSearchIngestApiV1KnowledgeWebSearchIngestPostResponses];
 
 export type PingApiV1PingGetData = {
     body?: never;

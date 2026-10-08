@@ -2,8 +2,8 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
@@ -13,13 +13,17 @@ from app.api.openapi_examples import (
     internal_error,
     json_response,
 )
+from app.api.v1.documents import DocumentView
 from app.core.embedding.factory import get_embedder
 from app.core.intent import intent_from_payload
 from app.core.search.factory import get_search
 from app.db import get_session
 from app.knowledge.graph import filter_graph, node_detail, subgraph
+from app.knowledge.literature_note import SOURCE_WEB
+from app.knowledge.pipeline import parse_document
 from app.knowledge.retrieval.factory import get_retriever
 from app.knowledge.vector_store import VectorStore
+from app.knowledge.web_ingest import prepare_web_ingest
 
 router = APIRouter()
 
@@ -219,8 +223,7 @@ class WebSearchResponse(BaseModel):
         "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n"
         "实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则返回 503 引导（code: provider_not_configured），"
         "不返回任何占位结果——拿假结果当教学依据比明确报错更糟。"
-        "显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时请求失败（`500`，`detail` 为 "
-        "`BOCHA_API_KEY 未配置`），而不是静默返回空结果。"
+        "显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时同样返回 `503` 配置引导。"
     ),
     responses={
         200: json_response(
@@ -243,6 +246,79 @@ class WebSearchResponse(BaseModel):
 async def web_search(req: SearchRequest) -> WebSearchResponse:
     results = await get_search().search(req.query, count=req.k)
     return WebSearchResponse(results=[WebSearchResult(**r) for r in results])
+
+
+class WebIngestRequest(BaseModel):
+    """教师手动发起联网检索并入库，不触发本次生成。"""
+
+    model_config = ConfigDict(json_schema_extra={"example": {"query": "一次函数", "k": 5}})
+
+    query: str = Field(min_length=1, max_length=500, description="本次备课的检索主题")
+    k: int = Field(default=5, ge=1, le=5, description="最多入库的网页结果数（1–5）")
+
+    @field_validator("query", mode="before")
+    @classmethod
+    def trim_query(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+
+class WebIngestResponse(BaseModel):
+    """已接收入库，不代表后台处理成功；通过资料列表和详情跟进终态。"""
+
+    query: str
+    ingested: int = Field(description="已接收入库的网页资料数；零结果为 0")
+    documents: list[DocumentView]
+
+
+@router.post(
+    "/knowledge/web-search/ingest",
+    response_model=WebIngestResponse,
+    tags=["知识库"],
+    summary="联网检索并入库",
+    description=(
+        "仅教师手动触发博查检索；每条结果的标题、URL、摘要作为网页资料入知识库。"
+        "响应中的资料为「处理中」，随后与上传资料共用分块、向量化、知识提取、"
+        "冲突检测与文献笔记管道（来源＝网页）。待审知识点不入知识图谱。"
+        "请在知识库通过资料列表和详情轮询到「已完成／有冲突／失败」。"
+        "零结果返回 ingested＝0，不建资料；未配置搜索返回 503 和设置引导。"
+        "不自动联网，不修改本次课件或会话消息，后续备课经本地检索使用。"
+    ),
+    responses={
+        200: json_response(
+            "已接收入库（后台处理中）；零结果 documents 为空",
+            {
+                "query": "一次函数",
+                "ingested": 1,
+                "documents": [
+                    {
+                        "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                        "filename": "一次函数的定义",
+                        "file_type": "网页",
+                        "status": "处理中",
+                        "is_reference": False,
+                        "failure_reason": "",
+                    }
+                ],
+            },
+        ),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+        503: PROVIDER_NOT_CONFIGURED,
+    },
+)
+async def web_search_ingest(
+    req: WebIngestRequest,
+    background_tasks: BackgroundTasks,
+    db: Annotated[Session, Depends(get_session)],
+) -> WebIngestResponse:
+    created = await prepare_web_ingest(db, req.query, req.k)
+    for doc, text in created:
+        background_tasks.add_task(parse_document, doc.id, text=text, source=SOURCE_WEB)
+    return WebIngestResponse(
+        query=req.query,
+        ingested=len(created),
+        documents=[DocumentView.model_validate(doc, from_attributes=True) for doc, _ in created],
+    )
 
 
 class GraphNode(BaseModel):

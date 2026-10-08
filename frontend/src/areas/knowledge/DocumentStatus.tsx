@@ -8,10 +8,10 @@ import { MarkerIcon } from '../../components/ui/icons'
 import { STATUS_HINT, statusTone } from './status'
 import type { ParseStatus } from './status'
 
-export function DocumentStatusBadge({ status }: { status: ParseStatus }) {
+export function DocumentStatusBadge({ status, hint }: { status: ParseStatus; hint?: string }) {
   const tone = statusTone(status)
   return (
-    <Badge tone={tone} title={STATUS_HINT[status]}>
+    <Badge tone={tone} title={hint ?? STATUS_HINT[status]}>
       {tone === 'accent' ? <MarkerIcon className="h-3 w-3" /> : null}
       {status}
     </Badge>
