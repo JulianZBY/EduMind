@@ -59,9 +59,7 @@ def knowledge_index_for_doc(db: Session, doc_id: str) -> list[dict]:
         .all()
     )
     return [
-        {"id": node.id, "title": node.title}
-        for node in rows
-        if doc_id in (node.source_docs or [])
+        {"id": node.id, "title": node.title} for node in rows if doc_id in (node.source_docs or [])
     ]
 
 

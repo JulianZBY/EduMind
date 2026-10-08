@@ -182,7 +182,9 @@ def _literature_note_view(db: Session, doc: Document) -> LiteratureNoteView:
     return LiteratureNoteView(
         status=cast(
             Literal["已生成", "未配置", "未生成"],
-            note.status if note.status in (STATUS_GENERATED, STATUS_UNCONFIGURED) else STATUS_PENDING,
+            note.status
+            if note.status in (STATUS_GENERATED, STATUS_UNCONFIGURED)
+            else STATUS_PENDING,
         ),
         source=cast(Literal["教学资料", "网页"], note.source),
         summary=note.summary or "",

@@ -79,7 +79,9 @@ async def parse_document(doc_id: str) -> str:
             db.commit()
             if isinstance(exc, ProviderNotConfigured):
                 # 能力未配置不是故障：原因已写进 failure_reason 给教师看，日志记一行、不带堆栈
-                logger.warning("文档解析未完成（能力未配置）doc=%s file=%s：%s", doc_id, doc.filename, exc)
+                logger.warning(
+                    "文档解析未完成（能力未配置）doc=%s file=%s：%s", doc_id, doc.filename, exc
+                )
             else:
                 logger.exception("文档解析失败 doc=%s file=%s", doc_id, doc.filename)
             return ""

@@ -130,6 +130,7 @@ class AppSetting(Base):
         DateTime, default=datetime.now, onupdate=datetime.now
     )
 
+
 class LLMProviderInstance(Base):
     """已添加的供应商实例（多供应商并存；CONTEXT.md「供应商目录」的多供应商形态）。
 
