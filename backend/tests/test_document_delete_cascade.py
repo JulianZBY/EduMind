@@ -671,3 +671,72 @@ def test_delete_without_configured_llm(sealed_vectors, monkeypatch):
     doc = _seed_document()
     assert _preview(doc.id).status_code == 200
     assert _delete(doc.id).status_code == 200
+
+
+@pytest.mark.parametrize("status", ["有冲突", "处理中", "失败", "已完成"])
+@pytest.mark.parametrize("remaining_count", [0, 1])
+def test_cross_document_withdrawal_refreshes_source_detail(
+    sealed_vectors, status, remaining_count
+):
+    deleted = _seed_document()
+    retained = _seed_document(filename="保留的冲突来源.pdf")
+    old = _seed_node("被引用的旧知识", [deleted.id])
+    with SessionLocal() as db:
+        source = db.get(Document, retained.id)
+        assert source is not None
+        source.status = status
+        source.conflict_count = 1 + remaining_count
+        db.add(Conflict(
+            user_id="default", doc_id=retained.id, status="待审",
+            new_knowledge={"title": "待撤下新知识"}, existing_knowledge={"id": old.id},
+        ))
+        db.commit()
+    # 同资料其余待审不引用被删资料，必须留下；已裁决记录不计入待审数。
+    for _ in range(remaining_count):
+        _seed_conflict(retained.id, "待审", "不受删除影响的矛盾")
+    _seed_conflict(retained.id, "已接受", "已裁决史实")
+    assert _delete(deleted.id).status_code == 200
+    detail = _get_document(retained.id)
+    assert detail.status_code == 200
+    assert detail.json()["conflict_count"] == remaining_count
+    expected_status = "已完成" if status == "有冲突" and remaining_count == 0 else status
+    assert detail.json()["status"] == expected_status
+
+
+@pytest.mark.parametrize("path_kind", ["empty", "dot", "missing", "directory"])
+def test_web_document_without_local_original_deletes(sealed_vectors, tmp_path, path_kind):
+    paths = {"empty": "", "dot": ".", "missing": str(tmp_path / "gone"), "directory": str(tmp_path)}
+    doc = _seed_document(with_file=False)
+    single = _seed_node("网页中的知识点", [doc.id])
+    _seed_note(doc.id)
+    pending_id = _seed_conflict(doc.id, "待审", "网页中的矛盾")
+    sealed_vectors.add(doc.id, ["网页分块"], [[1.0] * 8])
+    with SessionLocal() as db:
+        row = db.get(Document, doc.id)
+        assert row is not None
+        row.file_type = "网页"
+        row.file_path = paths[path_kind]
+        db.commit()
+    response = _delete(doc.id)
+    assert response.status_code == 200
+    assert response.json()["file_removed"] is False
+    assert response.json()["chunks_deleted"] == 1
+    assert response.json()["literature_note_deleted"] is True
+    assert _node_by_id(single.id) is None
+    assert _get_document(doc.id).status_code == 404
+    assert tmp_path.is_dir()
+    assert sealed_vectors.list_doc_chunks(doc.id) == (0, [])
+    with SessionLocal() as db:
+        assert db.get(Conflict, pending_id) is None
+
+
+def test_delete_api_error_examples_and_punctuation(sealed_vectors):
+    schema = client.get("/openapi.json").json()
+    preview = schema["paths"]["/api/v1/documents/{document_id}/delete-preview"]["get"]
+    delete = schema["paths"]["/api/v1/documents/{document_id}"]["delete"]
+    assert "example" in preview["responses"]["422"]["content"]["application/json"]
+    document_id = "7f6e5d4c-3b2a-4918-8776-655443322110"
+    for operation, response in ((preview, _preview(document_id)), (delete, _delete(document_id))):
+        example = operation["responses"]["404"]["content"]["application/json"]["example"]
+        assert response.status_code == 404
+        assert example == response.json() == {"detail": f"资料不存在：{document_id}"}

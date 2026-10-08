@@ -2870,16 +2870,14 @@ export type GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetErro
      */
     404: unknown;
     /**
-     * Validation Error
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
      */
-    422: HttpValidationError;
+    422: unknown;
     /**
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
 };
-
-export type GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetError = GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetErrors[keyof GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetErrors];
 
 export type GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetResponses = {
     /**

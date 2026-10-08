@@ -299,10 +299,14 @@ def _view(doc: Document) -> DocumentView:
     )
 
 
-def _document_or_404(db: Session, document_id: str) -> Document:
+def _document_or_404(
+    db: Session, document_id: str, *, not_found_detail: str | None = None
+) -> Document:
     doc = db.get(Document, document_id)
     if doc is None:
-        raise HTTPException(status_code=404, detail=f"资料不存在: {document_id}")
+        raise HTTPException(
+            status_code=404, detail=not_found_detail or f"资料不存在: {document_id}"
+        )
     return doc
 
 
@@ -629,8 +633,9 @@ async def set_reference(
         ),
         404: error_response(
             "资料不存在：id 不属于任何一份已上传的教学资料",
-            "资料不存在: 7f6e5d4c-3b2a-4918-8776-655443322110",
+            "资料不存在：7f6e5d4c-3b2a-4918-8776-655443322110",
         ),
+        422: VALIDATION_ERROR,
         500: internal_error(),
     },
 )
@@ -638,7 +643,7 @@ async def get_document_delete_preview(
     document_id: Annotated[str, PathParam(description="教学资料 id，取自上传响应或资料列表")],
     db: Annotated[Session, Depends(get_session)],
 ):
-    doc = _document_or_404(db, document_id)
+    doc = _document_or_404(db, document_id, not_found_detail=f"资料不存在：{document_id}")
     chunk_count, _ = VectorStore().list_doc_chunks(document_id, limit=0)
     data = preview_delete(db, doc, chunk_count)
     return DocumentDeletePreview(
@@ -673,7 +678,7 @@ def _affected_question_view(question: AffectedQuestion) -> AffectedQuestionView:
     tags=["知识库"],
     summary="删除教学资料（按规则级联）",
     description=(
-        "删除一份教学资料的记录与原始文件，并按已确认的规则完成级联，无隐藏级联：\n\n"
+        "删除一份教学资料的记录及本地原件（如有），并按已确认的规则完成级联，无隐藏级联：\n\n"
         "- **必删**：该资料的分块与向量、文献笔记、引用该资料的待审冲突（撤下）；"
         "待审冲突包括新知来自本资料、旧知识点来源含本资料或新旧快照明确引用本资料，"
         "不因单来源知识点选择保留而免于撤下，已裁决记录不动；\n"
@@ -706,7 +711,7 @@ def _affected_question_view(question: AffectedQuestion) -> AffectedQuestionView:
         ),
         404: error_response(
             "资料不存在：id 不属于任何一份已上传的教学资料",
-            "资料不存在: 7f6e5d4c-3b2a-4918-8776-655443322110",
+            "资料不存在：7f6e5d4c-3b2a-4918-8776-655443322110",
         ),
         409: error_response("资料正在处理中，暂不可删除", PROCESSING_DELETE_MESSAGE),
         422: VALIDATION_ERROR,
@@ -718,7 +723,7 @@ async def delete_document(
     req: DeleteDocumentRequest,
     db: Annotated[Session, Depends(get_session)],
 ):
-    doc = _document_or_404(db, document_id)
+    doc = _document_or_404(db, document_id, not_found_detail=f"资料不存在：{document_id}")
     try:
         result = cascade_delete_document(
             db, doc, delete_single_source_knowledge=req.delete_single_source_knowledge

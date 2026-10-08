@@ -10,6 +10,7 @@ import { useId, useState } from 'react'
 import { useNavigate } from 'react-router'
 import type { DocumentDetail as DocumentDetailPayload } from '../../api/generated'
 import { Button } from '../../components/ui/Button'
+import { Checkbox } from '../../components/ui/Checkbox'
 import { Dialog } from '../../components/ui/Dialog'
 import { InfoIcon } from '../../components/ui/icons'
 import { useToast } from '../../components/ui/useToast'
@@ -28,7 +29,7 @@ function MandatoryLosses({
   const noteText = literatureNotePresent ? '文献笔记 1 张' : '文献笔记：这份资料没有文献笔记'
   return (
     <ul className="flex flex-col gap-1 text-sm leading-6">
-      <li>教学资料记录与上传的原始文件，随资料删除</li>
+      <li>教学资料记录随资料删除；如有本地原件，一并删除</li>
       <li>分块与向量：{chunkCount} 个，全部清除</li>
       <li>{noteText}，随资料删除</li>
       <li>
@@ -118,7 +119,7 @@ export function DeleteDocumentDialog({
         <p className="text-sm text-black/60">正在核对这次删除会发生的每一件事…</p>
       ) : preview.isError || !data ? (
         <div className="flex flex-col gap-2">
-          <p className="flex items-start gap-2 text-sm font-bold text-[#ff3366]">
+          <p className="flex items-start gap-2 rounded-none border-2 border-[#ff3366] p-2 text-sm font-bold text-[#ff3366]" role="alert">
             <InfoIcon className="shrink-0" />
             删除后果没有核对出来：{documentErrorMessage(preview.error)}
           </p>
@@ -139,24 +140,17 @@ export function DeleteDocumentDialog({
 
           <section aria-label="知识点的去向" className="flex flex-col gap-2">
             <div className="flex items-start gap-2 text-sm leading-6">
-              <Button
-                role="checkbox"
-                aria-checked={deleteSingleSource}
-                aria-labelledby={optionId}
+              <Checkbox
+                id={optionId}
+                checked={deleteSingleSource}
                 disabled={remove.isPending}
-                onClick={() => setDeleteSingleSource((checked) => !checked)}
-                className="mt-1 h-5 w-5 p-0"
-              >
-                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  {deleteSingleSource ? (
-                    <path d="m3 8 3 3 7-7" stroke="currentColor" strokeWidth="2" />
-                  ) : null}
-                </svg>
-              </Button>
-              <span id={optionId}>
+                onCheckedChange={(checked) => setDeleteSingleSource(checked === true)}
+                className="mt-1"
+              />
+              <label htmlFor={optionId}>
                 同时删除仅来源于此资料的知识点（默认勾选，共 {data.knowledge_single_source.length} 个）；
                 不勾则保留这些知识点，只清空它们对本资料的来源引用。
-              </span>
+              </label>
             </div>
             <p className="text-xs leading-5 text-black/60">
               删除知识点时，与它们相连的关系一并删除；未删除知识点之间的关系保留。
@@ -214,7 +208,7 @@ export function DeleteDocumentDialog({
             生成物的历史版本不改写：已有课件、教案等里的溯源文本按原样留痕。
           </p>
           {error ? (
-            <p className="flex items-start gap-2 text-xs font-bold text-[#ff3366]" role="alert">
+            <p className="flex items-start gap-2 rounded-none border-2 border-[#ff3366] p-2 text-xs font-bold text-[#ff3366]" role="alert">
               <InfoIcon className="shrink-0" />
               {error}
             </p>

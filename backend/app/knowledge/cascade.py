@@ -15,7 +15,7 @@ OpenAPI 注解与前端删除对话框里（词汇用 CONTEXT.md：教学资料 
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -237,8 +237,27 @@ def delete_document(
 
     # 必删：引用该资料的待审冲突（撤下）；已裁决的冲突是史实留痕，不动
     conflicts_withdrawn = len(pending_conflicts)
+    source_doc_ids = {
+        conflict.doc_id
+        for conflict in pending_conflicts
+        if conflict.doc_id and conflict.doc_id != doc.id
+    }
     for conflict in pending_conflicts:
         db.delete(conflict)
+    if source_doc_ids:
+        # Session 禁用 autoflush，重算之前显式撤下；来源资料状态与冲突在同一事务提交。
+        db.flush()
+        for source_id in source_doc_ids:
+            source = db.get(Document, source_id)
+            if source is None:
+                continue
+            source.conflict_count = db.scalar(
+                select(func.count()).select_from(Conflict).where(
+                    Conflict.doc_id == source_id, Conflict.status == CONFLICT_PENDING
+                )
+            ) or 0
+            if source.status == "有冲突" and source.conflict_count == 0:
+                source.status = "已完成"
 
     # 必删：分块与向量（独立向量库，主库提交前先清）；回执记实际清掉的分块数
     chunks_deleted = store.delete_doc(doc.id)
@@ -262,8 +281,12 @@ def delete_document(
 
 
 def _remove_upload_file(file_path: str) -> bool:
-    """删掉资料落盘文件；文件已不在（迁移 / 手工清理）时如实报 False。"""
+    """删掉资料本地原件；网页无原件、文件已不在或路径不是文件时报 False。"""
+    if not file_path:
+        return False
     path = Path(normalize_stored_path(file_path))
+    if not path.is_file():
+        return False
     try:
         path.unlink()
         return True
