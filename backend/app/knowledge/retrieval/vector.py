@@ -2,7 +2,7 @@
 
 from app.knowledge.retrieval.base import RetrievalResult, Retriever
 from app.knowledge.retrieval.context import chunks_only_context
-from app.knowledge.retrieval.search import intent_query, search_hits, source_names
+from app.knowledge.retrieval.search import intent_query, library_is_empty, search_hits, source_names
 
 
 class VectorRetriever(Retriever):
@@ -17,6 +17,9 @@ class VectorRetriever(Retriever):
         hits = await search_hits(query, top_k, reference_doc_ids)
         if hits is None:
             return RetrievalResult.empty()
+        if not hits:
+            # 命中全空：区分「库为空」与「未命中相关内容」，供回复文案诚实二选一（票 01）
+            return RetrievalResult.empty(library_empty=library_is_empty())
         chunks = [h.content for h in hits if h.content]
         return RetrievalResult(
             context=chunks_only_context(chunks),

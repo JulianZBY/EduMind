@@ -144,8 +144,24 @@ export function readReferenceNames(artifacts: unknown): string[] {
   return names.map(asText).filter((name): name is string => name !== null)
 }
 
-/** 是否命中了本地知识库；读不出来返回 null（界面就不提这一句）。 */
-export function readKnowledgeHit(artifacts: unknown): boolean | null {
-  const hit = asRecord(artifacts)?.knowledge_hits
-  return typeof hit === 'boolean' ? hit : null
+/** 知识库命中口径（票 01 三态）：命中 / 未命中相关内容 / 库为空。 */
+export type KnowledgeOutcome = 'hit' | 'no_match' | 'empty'
+
+/**
+ * 读知识库命中口径：按后端语义显示，不再在「命中了不相关内容」时谎报已融合（票 01）。
+ *
+ * - `knowledge_hits: true` → hit（已融合本地知识库）
+ * - `knowledge_hits: false` + `knowledge_empty: false` → no_match（知识库未命中相关内容，由 AI 直接生成）
+ * - `knowledge_hits: false` + `knowledge_empty: true` → empty（知识库为空，由 AI 直接生成）
+ *
+ * 历史记录没有 `knowledge_empty` 字段：`knowledge_hits: false` 按当时的后端语义读成
+ * empty（沿用当时的「知识库为空」文案）。读不出 `knowledge_hits` 布尔时返回 null（界面不提这一句）。
+ */
+export function readKnowledgeOutcome(artifacts: unknown): KnowledgeOutcome | null {
+  const record = asRecord(artifacts)
+  if (!record) return null
+  const hit = record.knowledge_hits
+  if (typeof hit !== 'boolean') return null
+  if (hit) return 'hit'
+  return record.knowledge_empty === false ? 'no_match' : 'empty'
 }

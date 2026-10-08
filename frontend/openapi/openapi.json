@@ -4057,7 +4057,8 @@
                           "grade": "初二",
                           "topic": "一次函数"
                         },
-                        "knowledge_hits": 3,
+                        "knowledge_empty": false,
+                        "knowledge_hits": true,
                         "outline": {
                           "filename": "outline-7g8h9i.docx",
                           "path": "data/output/outline-7g8h9i.docx",

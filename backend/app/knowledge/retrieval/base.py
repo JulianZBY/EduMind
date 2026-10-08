@@ -30,11 +30,18 @@ class RetrievalResult:
     sources: list[str]
     hits: list[RetrievalHit] = field(default_factory=list)
     graph_nodes: list[dict] = field(default_factory=list)
+    # 空命中的口径（票 01）：True = 向量库本身一个分块都没有（「知识库为空」）；
+    # False = 库里可能有内容但本次没命中 / 检索失败（「知识库未命中相关内容」）。
+    # 只在 hits 为空时有意义；回复文案据此诚实二选一，不再一律说「知识库为空」。
+    library_empty: bool = False
 
     @classmethod
-    def empty(cls) -> "RetrievalResult":
-        """没有可检内容或检索失败时的空结果（既有降级行为）。"""
-        return cls(context="", sources=[])
+    def empty(cls, library_empty: bool = False) -> "RetrievalResult":
+        """没有可检内容或检索失败时的空结果（既有降级行为）。
+
+        `library_empty` 区分两种空：库里没东西，与库里有东西但没命中（票 01）。
+        """
+        return cls(context="", sources=[], library_empty=library_empty)
 
 
 class Retriever(ABC):
