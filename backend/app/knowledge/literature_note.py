@@ -93,7 +93,8 @@ async def build_note(doc_id: str, text: str, source: str = SOURCE_DOCUMENT) -> N
 
     - 对话模型未配置：落「未配置」行（概要与索引为空），教师看到的是去设置页的引导；
     - 其余异常：记日志、不落行（详情端如实报「未生成」）——资料本身已入库可用，
-      概要生成失败不该把一份能检索的资料打成「失败」。
+      概要生成失败不该把一份能检索的资料打成「失败」；落库环节同理，写库失败
+      也不得穿透回解析主流程把整单标成「失败」。
     """
     db = SessionLocal()
     try:
@@ -110,13 +111,17 @@ async def build_note(doc_id: str, text: str, source: str = SOURCE_DOCUMENT) -> N
         except Exception:
             logger.exception("文献笔记概要生成失败 doc=%s file=%s", doc_id, doc.filename)
             return
-        upsert_note(
-            db,
-            doc,
-            status=STATUS_GENERATED,
-            summary=summary,
-            knowledge_index=knowledge_index_for_doc(db, doc_id),
-        )
-        db.commit()
+        try:
+            upsert_note(
+                db,
+                doc,
+                status=STATUS_GENERATED,
+                summary=summary,
+                knowledge_index=knowledge_index_for_doc(db, doc_id),
+            )
+            db.commit()
+        except Exception:
+            # 写库失败同样“尽力而为”：分块已入库的资料不能因笔记落库失败被打成解析失败
+            logger.exception("文献笔记落库失败 doc=%s file=%s", doc_id, doc.filename)
     finally:
         db.close()

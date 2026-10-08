@@ -208,7 +208,7 @@ class Document(Base):
 class LiteratureNote(Base):
     """文献笔记（CONTEXT.md「文献笔记」，ADR-0007）：一份教学资料入库时自动生成的摘要卡。
 
-    内容 = 资料概要 + 由该资料提取的知识点索引；与教学资料 1:1（doc_id 唯一约束兑底），
+    内容 = 资料概要 + 由该资料提取的知识点索引；与教学资料 1:1（doc_id 唯一约束兜底），
     资料的管理入口（查看 / 删除 / 关联治理）落在它上面。对话模型未配置时笔记不生成，
     只落「未配置」状态——详情给去设置页的引导，不返回假摘要（AGENTS.md 铁律）。
     """
@@ -217,7 +217,7 @@ class LiteratureNote(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
-    # 所属教学资料：一份资料至多一张文献笔记（唯一索引是 1:1 的兑底约束）
+    # 所属教学资料：一份资料至多一张文献笔记（唯一索引是 1:1 的兜底约束）
     doc_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("documents.id"), unique=True, index=True
     )
