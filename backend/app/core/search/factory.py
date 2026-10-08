@@ -20,7 +20,7 @@ NOT_CONFIGURED_MESSAGE = "网络搜索未配置：到「设置 → 能力实现�
 
 def _bocha(cfg: Settings) -> WebSearch:
     if not cfg.bocha_api_key:
-        raise ValueError("BOCHA_API_KEY 未配置")
+        raise ProviderNotConfigured(NOT_CONFIGURED_MESSAGE)
     return BochaSearch(key=cfg.bocha_api_key)
 
 

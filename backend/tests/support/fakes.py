@@ -137,6 +137,9 @@ class FakeLLM(LLMProvider):
 
     name = "fake-test"
 
+    def __init__(self, *, conflict: bool = False) -> None:
+        self.conflict = conflict
+
     async def chat(self, messages: list[ChatMessage], **kwargs) -> ChatResult:
         last = messages[-1].content if messages else ""
         if "资料概要编写助手" in last:
@@ -148,7 +151,8 @@ class FakeLLM(LLMProvider):
         if "判断两段知识描述是否相互矛盾" in last:
             return ChatResult(
                 content=json.dumps(
-                    {"conflict": False, "description": "无矛盾（测试替身）"}, ensure_ascii=False
+                    {"conflict": self.conflict, "description": "离线比对（测试替身）"},
+                    ensure_ascii=False,
                 )
             )
         if "备课会话的语义判定器" in last:
@@ -187,7 +191,14 @@ FAKE_SEARCH_MARK = "（测试替身网络搜索）"
 class FakeSearch(WebSearch):
     name = "fake-test"
 
+    def __init__(self, results: list[dict] | None = None) -> None:
+        self.results = results
+        self.queries: list[str] = []
+
     async def search(self, query: str, count: int = 5, summary: bool = False) -> list[dict]:
+        self.queries.append(query)
+        if self.results is not None:
+            return self.results[:count]
         n = max(1, min(count, 5))
         return [
             {

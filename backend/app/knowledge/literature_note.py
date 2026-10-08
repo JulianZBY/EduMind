@@ -104,7 +104,9 @@ async def build_note(doc_id: str, text: str, source: str = SOURCE_DOCUMENT) -> N
         try:
             summary = await generate_summary(text)
         except ProviderNotConfigured as exc:
-            upsert_note(db, doc, status=STATUS_UNCONFIGURED, summary="", knowledge_index=[])
+            upsert_note(
+                db, doc, status=STATUS_UNCONFIGURED, summary="", knowledge_index=[], source=source
+            )
             db.commit()
             logger.info("文献笔记未生成（能力未配置）doc=%s file=%s：%s", doc_id, doc.filename, exc)
             return
@@ -118,6 +120,7 @@ async def build_note(doc_id: str, text: str, source: str = SOURCE_DOCUMENT) -> N
                 status=STATUS_GENERATED,
                 summary=summary,
                 knowledge_index=knowledge_index_for_doc(db, doc_id),
+                source=source,
             )
             db.commit()
         except Exception:

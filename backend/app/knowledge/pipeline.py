@@ -7,7 +7,7 @@ from datetime import datetime
 from app.core.errors import ProviderNotConfigured
 from app.db import SessionLocal
 from app.db.models import Document
-from app.knowledge.literature_note import build_note
+from app.knowledge.literature_note import SOURCE_DOCUMENT, build_note
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +51,10 @@ def fail_stuck_documents() -> int:
         db.close()
 
 
-async def parse_document(doc_id: str) -> str:
-    """解析文档并向量化入库，返回解析文本/Markdown。"""
+async def parse_document(
+    doc_id: str, *, text: str | None = None, source: str = SOURCE_DOCUMENT
+) -> str:
+    """解析文档并入库；网页已取得的文本跳过解析器，其余步骤与上传完全相同。"""
     from app.knowledge.chunking.factory import get_chunker
     from app.knowledge.parsers import get_parser  # 延迟 import 避免循环
 
@@ -62,15 +64,18 @@ async def parse_document(doc_id: str) -> str:
         if not doc:
             raise ValueError(f"文档不存在: {doc_id}")
         try:
-            parser = get_parser(doc.file_type)
-            result = await parser.parse(doc.file_path)
+            if text is None:
+                parser = get_parser(doc.file_type)
+                result = await parser.parse(doc.file_path)
+            else:
+                result = text
             chunks = get_chunker().chunk(result)
             if chunks:
                 await index_chunks(doc_id, chunks)
             conflict_count = await extract_and_save_knowledge(doc_id, result)
             # 文献笔记（ADR-0007）：知识提取完成后生成摘要卡——概要 + 本资料的知识点索引。
             # 尽力而为：对话模型未配置时只落「未配置」状态，不影响解析主流程。
-            await build_note(doc_id, result)
+            await build_note(doc_id, result, source=source)
         except Exception as exc:
             # 后台任务入口：吞掉异常仅记日志——失败经 doc.status=「失败」观测即可，
             # 重抛只会打断 FastAPI 后台任务且无所收益（ticket #11：失败不拖垮其他格式解析）

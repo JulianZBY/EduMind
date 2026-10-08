@@ -165,3 +165,8 @@ export function readKnowledgeOutcome(artifacts: unknown): KnowledgeOutcome | nul
   if (hit) return 'hit'
   return record.knowledge_empty === false ? 'no_match' : 'empty'
 }
+
+/** 联网检索只使用这条生成回复的备课主题，不把网页内容送给生成器。 */
+export function readWebSearchQuery(artifacts: unknown): string | null {
+  return asText(asRecord(asRecord(artifacts)?.intent)?.topic)?.trim() ?? null
+}

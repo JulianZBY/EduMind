@@ -3748,6 +3748,63 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "WebIngestRequest": {
+        "description": "教师手动发起联网检索并入库，不触发本次生成。",
+        "example": {
+          "k": 5,
+          "query": "一次函数"
+        },
+        "properties": {
+          "k": {
+            "default": 5,
+            "description": "最多入库的网页结果数（1–5）",
+            "maximum": 5,
+            "minimum": 1,
+            "title": "K",
+            "type": "integer"
+          },
+          "query": {
+            "description": "本次备课的检索主题",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "WebIngestRequest",
+        "type": "object"
+      },
+      "WebIngestResponse": {
+        "description": "已接收入库，不代表后台处理成功；通过资料列表和详情跟进终态。",
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentView"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "ingested": {
+            "description": "已接收入库的网页资料数；零结果为 0",
+            "title": "Ingested",
+            "type": "integer"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "ingested",
+          "documents"
+        ],
+        "title": "WebIngestResponse",
+        "type": "object"
+      },
       "WebSearchResponse": {
         "description": "网络搜索响应：结果列表（未配置博查 Key 时返回 503 引导，不返回占位结果）。",
         "example": {
@@ -5641,7 +5698,7 @@
     },
     "/api/v1/knowledge/web-search": {
       "post": {
-        "description": "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则返回 503 引导（code: provider_not_configured），不返回任何占位结果——拿假结果当教学依据比明确报错更糟。显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时请求失败（`500`，`detail` 为 `BOCHA_API_KEY 未配置`），而不是静默返回空结果。",
+        "description": "调用博查（Bocha）网络搜索补充课本之外的材料，返回标题 / 链接 / 摘要。\n\n实现按配置选择：默认 `auto`——配了 `BOCHA_API_KEY` 走博查，没配则返回 503 引导（code: provider_not_configured），不返回任何占位结果——拿假结果当教学依据比明确报错更糟。显式配成 `SEARCH_PROVIDER=bocha` 但缺 Key 时同样返回 `503` 配置引导。",
         "operationId": "web_search_api_v1_knowledge_web_search_post",
         "requestBody": {
           "content": {
@@ -5717,6 +5774,94 @@
           }
         },
         "summary": "网络搜索",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/knowledge/web-search/ingest": {
+      "post": {
+        "description": "仅教师手动触发博查检索；每条结果的标题、URL、摘要作为网页资料入知识库。响应中的资料为「处理中」，随后与上传资料共用分块、向量化、知识提取、冲突检测与文献笔记管道（来源＝网页）。待审知识点不入知识图谱。请在知识库通过资料列表和详情轮询到「已完成／有冲突／失败」。零结果返回 ingested＝0，不建资料；未配置搜索返回 503 和设置引导。不自动联网，不修改本次课件或会话消息，后续备课经本地检索使用。",
+        "operationId": "web_search_ingest_api_v1_knowledge_web_search_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "documents": [
+                    {
+                      "failure_reason": "",
+                      "file_type": "网页",
+                      "filename": "一次函数的定义",
+                      "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                      "is_reference": false,
+                      "status": "处理中"
+                    }
+                  ],
+                  "ingested": 1,
+                  "query": "一次函数"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/WebIngestResponse"
+                }
+              }
+            },
+            "description": "已接收入库（后台处理中）；零结果 documents 为空"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "code": "provider_not_configured",
+                    "message": "还没有配置模型供应商：到「设置 → 添加供应商」选一家并粘贴 Key 后即可使用。"
+                  }
+                }
+              }
+            },
+            "description": "所需的云端能力未配置：不返回演示用假结果。`detail.code` 固定为 `provider_not_configured`，`detail.message` 是面向教师的一句引导（去设置页添加供应商或补齐配置）。配置后即时生效，无需重启。"
+          }
+        },
+        "summary": "联网检索并入库",
         "tags": [
           "知识库"
         ]

@@ -38,6 +38,7 @@ from app.db import get_session
 from app.db.models import Document, LiteratureNote
 from app.knowledge.literature_note import (
     SOURCE_DOCUMENT,
+    SOURCE_WEB,
     STATUS_GENERATED,
     STATUS_PENDING,
     STATUS_UNCONFIGURED,
@@ -177,7 +178,10 @@ def _literature_note_view(db: Session, doc: Document) -> LiteratureNoteView:
     )
     if note is None:
         return LiteratureNoteView(
-            status=STATUS_PENDING, source=SOURCE_DOCUMENT, summary="", knowledge_index=[]
+            status=STATUS_PENDING,
+            source=SOURCE_WEB if doc.file_type == SOURCE_WEB else SOURCE_DOCUMENT,
+            summary="",
+            knowledge_index=[],
         )
     return LiteratureNoteView(
         status=cast(
