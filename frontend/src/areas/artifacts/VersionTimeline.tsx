@@ -5,6 +5,9 @@
  * 以此为基线修改时才展开（CONTEXT.md「版本用语」：当前版本没有特权，只是默认打开
  * 的那一版——折叠不删除任何入口，展开后每一行仍给同样的事：回看（选中）/ 下载
  * （互动内容另有新标签页打开）/ 以此为基线修改）。
+ *
+ * 折叠是**纯前端交互态**：不入库、不进 URL。深链 `?v=` 指向历史版本时自动展开让选中项
+ * 可见；教师点过折叠开关之后以教师的表态为准（选中的历史版本由旁边的回看列继续呈现）。
  */
 import { useState } from 'react'
 import { Badge } from '../../components/ui/Badge'
@@ -15,6 +18,30 @@ import { parentLabel, versionLabel } from './narrowing'
 
 /** 互动内容取回时走 inline：浏览器直接打开试用，而不是保存文件。 */
 const OPEN_IN_TAB: readonly string[] = ['互动内容']
+
+/**
+ * 折叠箭头：线宽 2 的 currentColor 线性箭头（与 `components/ui/icons` 同一画法，只在本处用，
+ * 不进共享图标表）。随开关按钮黑白反色，零阴影零渐变；展开向下、折叠向右。
+ */
+function CollapseChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
+      focusable="false"
+      className="shrink-0"
+    >
+      {expanded ? <path d="M4 6.5 8 10.5 12 6.5" /> : <path d="M6.5 4 10.5 8 6.5 12" />}
+    </svg>
+  )
+}
 
 export interface VersionTimelineProps {
   group: ArtifactGroup
@@ -98,16 +125,20 @@ function VersionRow({
 }
 
 export function VersionTimeline({ group, selectedVersionId, onSelect, onReviseRequest }: VersionTimelineProps) {
-  const [historyOpen, setHistoryOpen] = useState(false)
+  /** 教师对折叠开关的表态；null = 还没点过（跟随深链选中项自动展开）。 */
+  const [historyToggle, setHistoryToggle] = useState<boolean | null>(null)
 
   const current =
     group.versions.find((version) => version.id === group.current_version_id) ??
     group.versions[group.versions.length - 1]
   const history = group.versions.filter((version) => version.id !== current?.id)
 
-  /** URL 选中的是历史版本时自动展开，否则折叠着看不见选中项。 */
+  /**
+   * 深链 `?v=` 指向历史版本时自动展开（否则折叠着看不见选中项）；教师点过折叠开关后，
+   * 以教师的表态为准——收起就是收起，选中项由旁边的回看列继续呈现。
+   */
   const selectedIsHistory = history.some((version) => version.id === selectedVersionId)
-  const showHistory = historyOpen || selectedIsHistory
+  const showHistory = historyToggle ?? selectedIsHistory
 
   if (!current) return null
 
@@ -131,14 +162,17 @@ export function VersionTimeline({ group, selectedVersionId, onSelect, onReviseRe
 
         {history.length > 0 ? (
           <li className="border-b-2 border-black">
-            <button
-              type="button"
-              aria-expanded={showHistory}
-              onClick={() => setHistoryOpen(!showHistory)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold outline-none transition-colors duration-150 hover:bg-black hover:text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
-            >
-              {showHistory ? '收起历史版本' : `展开历史版本（${history.length} 版）`}
-            </button>
+            <div className="px-3 py-2">
+              <button
+                type="button"
+                aria-expanded={showHistory}
+                onClick={() => setHistoryToggle(!showHistory)}
+                className="inline-flex h-7 items-center gap-1 rounded-none border-2 border-black bg-white px-2 text-xs font-bold text-black outline-none transition-colors duration-150 hover:bg-black hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+              >
+                <CollapseChevron expanded={showHistory} />
+                {showHistory ? '收起历史版本' : `展开历史版本（${history.length} 版）`}
+              </button>
+            </div>
           </li>
         ) : null}
 
