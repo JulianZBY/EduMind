@@ -17,6 +17,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
+    select,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -85,6 +87,15 @@ class SessionMessage(Base):
     session: Mapped["PrepSession"] = relationship(back_populates="messages")
 
 
+class Subject(Base):
+    """学科清单：教师维护的唯一名称集合；「未分类」是不可改删的兜底项。"""
+
+    __tablename__ = "subjects"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(100), unique=True)  # 主学科允许的名称
+
+
 class KnowledgeNode(Base):
     __tablename__ = "knowledge_nodes"
 
@@ -92,7 +103,9 @@ class KnowledgeNode(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
     title: Mapped[str] = mapped_column(String(200))
     content: Mapped[str] = mapped_column(Text)  # LLM 理解后的完整描述
-    subject: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 学科
+    subject: Mapped[str] = mapped_column(
+        String(100), default="未分类", server_default="未分类"
+    )  # 唯一主学科：清单内名称；SQLite 触发器约束同样覆盖旧表
     chapter: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 章节
     difficulty: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 基础/进阶/难点
     importance: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 必修/选修/了解
@@ -101,6 +114,16 @@ class KnowledgeNode(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now, onupdate=datetime.now
     )
+
+
+@event.listens_for(KnowledgeNode, "before_insert")
+@event.listens_for(KnowledgeNode, "before_update")
+def _normalize_node_subject(_mapper, connection, node: KnowledgeNode) -> None:
+    """所有 ORM 入库路径（包括待审裁决）重验当前清单，防止模型幻觉或清单变更竞态。"""
+    from app.knowledge.subjects import normalize_subject
+
+    current_names = set(connection.execute(select(Subject.name)).scalars())
+    node.subject = normalize_subject(node.subject, current_names)
 
 
 class KnowledgeEdge(Base):

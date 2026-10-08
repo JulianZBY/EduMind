@@ -2226,6 +2226,44 @@ export type StructurePreview = {
 };
 
 /**
+ * SubjectListResponse
+ */
+export type SubjectListResponse = {
+    /**
+     * Subjects
+     */
+    subjects: Array<SubjectView>;
+};
+
+/**
+ * SubjectNameRequest
+ *
+ * 教师维护学科名称；主学科归类和本清单共用同一存储。
+ */
+export type SubjectNameRequest = {
+    /**
+     * Name
+     *
+     * 学科名称，一行，前后空白自动去除
+     */
+    name: string;
+};
+
+/**
+ * SubjectView
+ */
+export type SubjectView = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
  * TaskModelView
  *
  * 一个任务级模型档位：选了哪家、选了什么、**实际用的是哪家哪个模型**、来源。
@@ -3015,6 +3053,136 @@ export type SearchApiV1KnowledgeSearchPostResponses = {
 };
 
 export type SearchApiV1KnowledgeSearchPostResponse = SearchApiV1KnowledgeSearchPostResponses[keyof SearchApiV1KnowledgeSearchPostResponses];
+
+export type GetSubjectsApiV1KnowledgeSubjectsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/knowledge/subjects';
+};
+
+export type GetSubjectsApiV1KnowledgeSubjectsGetErrors = {
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type GetSubjectsApiV1KnowledgeSubjectsGetResponses = {
+    /**
+     * 学科清单
+     */
+    200: SubjectListResponse;
+};
+
+export type GetSubjectsApiV1KnowledgeSubjectsGetResponse = GetSubjectsApiV1KnowledgeSubjectsGetResponses[keyof GetSubjectsApiV1KnowledgeSubjectsGetResponses];
+
+export type CreateSubjectApiV1KnowledgeSubjectsPostData = {
+    body: SubjectNameRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/knowledge/subjects';
+};
+
+export type CreateSubjectApiV1KnowledgeSubjectsPostErrors = {
+    /**
+     * 名称重复
+     */
+    409: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type CreateSubjectApiV1KnowledgeSubjectsPostResponses = {
+    /**
+     * 已新增学科
+     */
+    201: SubjectView;
+};
+
+export type CreateSubjectApiV1KnowledgeSubjectsPostResponse = CreateSubjectApiV1KnowledgeSubjectsPostResponses[keyof CreateSubjectApiV1KnowledgeSubjectsPostResponses];
+
+export type DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Subject Id
+         */
+        subject_id: string;
+    };
+    query?: never;
+    url: '/api/v1/knowledge/subjects/{subject_id}';
+};
+
+export type DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteErrors = {
+    /**
+     * 学科不存在
+     */
+    404: unknown;
+    /**
+     * 兜底项不能删除
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteResponses = {
+    /**
+     * 已删除的学科
+     */
+    200: SubjectView;
+};
+
+export type DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteResponse = DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteResponses[keyof DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteResponses];
+
+export type RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchData = {
+    body: SubjectNameRequest;
+    path: {
+        /**
+         * Subject Id
+         */
+        subject_id: string;
+    };
+    query?: never;
+    url: '/api/v1/knowledge/subjects/{subject_id}';
+};
+
+export type RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchErrors = {
+    /**
+     * 学科不存在
+     */
+    404: unknown;
+    /**
+     * 名称重复
+     */
+    409: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchResponses = {
+    /**
+     * 已更名学科
+     */
+    200: SubjectView;
+};
+
+export type RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchResponse = RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchResponses[keyof RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchResponses];
 
 export type WebSearchApiV1KnowledgeWebSearchPostData = {
     body: SearchRequest;

@@ -442,3 +442,103 @@ async def get_neighborhood(
     if data is None:
         raise HTTPException(status_code=404, detail="知识点不存在")
     return data
+
+
+class SubjectNameRequest(BaseModel):
+    """教师维护学科名称；主学科归类和本清单共用同一存储。"""
+
+    model_config = ConfigDict(
+        str_strip_whitespace=True, json_schema_extra={"example": {"name": "天文学"}}
+    )
+    name: str = Field(min_length=1, max_length=100, description="学科名称，一行，前后空白自动去除")
+
+
+class SubjectView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    name: str
+
+
+class SubjectListResponse(BaseModel):
+    subjects: list[SubjectView]
+
+
+def _maintain_subject(db: Session, **kwargs) -> dict:
+    from app.knowledge.subjects import SubjectError, maintain_subject
+
+    try:
+        return maintain_subject(db, **kwargs)
+    except SubjectError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get(
+    "/knowledge/subjects",
+    response_model=SubjectListResponse,
+    tags=["知识库"],
+    summary="读取学科清单",
+    description="返回教师认可的当前学科清单。知识点的唯一主学科只能取清单内名称，无法选择时归「未分类」。",
+    responses={
+        200: json_response("学科清单", {"subjects": [{"id": "subject-math", "name": "数学"}]}),
+        500: internal_error(),
+    },
+)
+def get_subjects(db: Annotated[Session, Depends(get_session)]):
+    from app.knowledge.subjects import list_subjects
+
+    return {"subjects": list_subjects(db)}
+
+
+@router.post(
+    "/knowledge/subjects",
+    status_code=201,
+    response_model=SubjectView,
+    tags=["知识库"],
+    summary="新增学科",
+    description="教师将新学科加入清单，即时用于后续知识点归类。名称须唯一，不自动重新归类已有知识点。",
+    responses={
+        201: json_response("已新增学科", {"id": "subject-astronomy", "name": "天文学"}),
+        409: error_response("名称重复", "学科名称已在清单内，请使用其他名称。"),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+def create_subject(req: SubjectNameRequest, db: Annotated[Session, Depends(get_session)]):
+    return _maintain_subject(db, name=req.name)
+
+
+@router.patch(
+    "/knowledge/subjects/{subject_id}",
+    response_model=SubjectView,
+    tags=["知识库"],
+    summary="学科更名",
+    description="更名在同一事务中更新该学科的所有知识点，不留下清单外名称。「未分类」不可更名。",
+    responses={
+        200: json_response("已更名学科", {"id": "subject-math", "name": "数学与应用"}),
+        404: error_response("学科不存在", "学科不存在。"),
+        409: error_response("名称重复", "学科名称已在清单内，请使用其他名称。"),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+def rename_subject(
+    subject_id: str, req: SubjectNameRequest, db: Annotated[Session, Depends(get_session)]
+):
+    return _maintain_subject(db, subject_id=subject_id, name=req.name)
+
+
+@router.delete(
+    "/knowledge/subjects/{subject_id}",
+    response_model=SubjectView,
+    tags=["知识库"],
+    summary="删除学科",
+    description="删除清单项并在同一事务中将其知识点归「未分类」，知识点与关系不删除。「未分类」不可删除。",
+    responses={
+        200: json_response("已删除的学科", {"id": "subject-math", "name": "数学"}),
+        404: error_response("学科不存在", "学科不存在。"),
+        422: error_response("兜底项不能删除", "「未分类」用于归类兜底，不能更名或删除。"),
+        500: internal_error(),
+    },
+)
+def delete_subject(subject_id: str, db: Annotated[Session, Depends(get_session)]):
+    return _maintain_subject(db, subject_id=subject_id)

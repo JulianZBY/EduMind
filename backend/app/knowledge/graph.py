@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.llm.parsing import parse_json
 from app.db import SessionLocal
 from app.db.models import Document, KnowledgeEdge, KnowledgeNode
+from app.knowledge.subjects import UNCLASSIFIED, list_subjects, normalize_subject
 
 RELATION_TYPES = ("前置依赖", "父子包含", "推导关系", "相关关联")
 # 邻接子图拉取时优先扩展的边：知识递进关系（前置/父子）先于弱关联
@@ -15,9 +16,16 @@ _PRIORITY_RELATIONS = ("前置依赖", "父子包含")
 
 _EXTRACT_PROMPT = """你是教学知识图谱构建助手。从下面的教学内容中提取知识点及其关系。
 
+主学科唯一，只能从下面的学科清单选择一个名称；不得自造清单外学科名。
+无法选择时归「未分类」，不得输出多个学科或学科数组。章节按教学内容同批尽量填写。
+学科清单：
+__SUBJECTS__
+
 知识点字段：
 - title：简短名称
 - content：完整描述
+- subject：清单内的唯一主学科
+- chapter：章节名称（无法判断时为空）
 - difficulty：基础/进阶/难点
 - importance：必修/选修/了解
 
@@ -25,7 +33,7 @@ _EXTRACT_PROMPT = """你是教学知识图谱构建助手。从下面的教学�
 - relation_type：前置依赖 / 父子包含 / 推导关系 / 相关关联
 
 只输出 JSON，不要其他文字：
-{"nodes": [{"title": "...", "content": "...", "difficulty": "...", "importance": "..."}], "edges": [{"from": "...", "to": "...", "relation_type": "..."}]}
+{"nodes": [{"title": "...", "content": "...", "subject": "...", "chapter": "...", "difficulty": "...", "importance": "..."}], "edges": [{"from": "...", "to": "...", "relation_type": "..."}]}
 
 教学内容：
 __TEXT__
@@ -38,10 +46,18 @@ async def extract_knowledge(text: str) -> tuple[list[dict], list[dict]]:
     from app.core.llm.factory import get_llm
 
     llm = get_llm()
-    prompt = _EXTRACT_PROMPT.replace("__TEXT__", text[:8000])
+    with SessionLocal() as db:
+        names = {s.name for s in list_subjects(db)}
+    prompt = _EXTRACT_PROMPT.replace("__SUBJECTS__", "\n".join(f"- {n}" for n in sorted(names)))
+    prompt = prompt.replace("__TEXT__", text[:8000])
     result = await llm.chat([ChatMessage(role="user", content=prompt)])
     data = parse_json(result.content)
-    return data.get("nodes", []), data.get("edges", [])
+    nodes = data.get("nodes", [])
+    for node in nodes:
+        node["subject"] = normalize_subject(node.get("subject"), names)
+        chapter = node.get("chapter")
+        node["chapter"] = chapter.strip()[:100] or None if isinstance(chapter, str) else None
+    return nodes, data.get("edges", [])
 
 
 def save_knowledge(
@@ -57,9 +73,12 @@ def save_knowledge(
     供冲突检测的近名预筛使用（ADR-0006）。
     """
     from app.knowledge.vector_store import VectorStore
+
     db = SessionLocal()
     try:
         title_to_id: dict[str, str] = {}
+        saved: list[KnowledgeNode] = []
+        names = {s.name for s in list_subjects(db)}
         for n in nodes:
             title = (n.get("title") or "").strip()
             if not title:
@@ -68,6 +87,8 @@ def save_knowledge(
                 user_id=user_id,
                 title=title,
                 content=n.get("content", ""),
+                subject=normalize_subject(n.get("subject"), names),
+                chapter=n.get("chapter"),
                 difficulty=n.get("difficulty"),
                 importance=n.get("importance"),
                 source_docs=[source_doc_id] if source_doc_id else None,
@@ -75,25 +96,79 @@ def save_knowledge(
             db.add(node)
             db.flush()
             title_to_id[title] = node.id
+            saved.append(node)
             emb = (title_embeddings or {}).get(title)
             if emb:
                 VectorStore().add_node_title(node.id, title, emb)
+        # 仅解析已入库的端点；被冲突检测暂扣的节点不会由建边路径重新入图。
         for e in edges:
             f = title_to_id.get((e.get("from") or "").strip())
             t = title_to_id.get((e.get("to") or "").strip())
-            if f and t:
-                db.add(
-                    KnowledgeEdge(
-                        user_id=user_id,
-                        from_node=f,
-                        to_node=t,
-                        relation_type=e.get("relation_type", ""),
-                    )
-                )
+            _add_edge(db, user_id, f, t, e.get("relation_type", ""))
+        for node in saved:
+            _supplement_related(db, node, (title_embeddings or {}).get(node.title))
         db.commit()
         return len(title_to_id)
     finally:
         db.close()
+
+
+def _add_edge(
+    db: Session, user_id: str, from_id: str | None, to_id: str | None, relation: str
+) -> None:
+    """复用建边入口：四种关系、无自环、相关关联对称去重。"""
+    if not from_id or not to_id or from_id == to_id or relation not in RELATION_TYPES:
+        return
+    db.flush()
+    endpoints = (KnowledgeEdge.from_node == from_id) & (KnowledgeEdge.to_node == to_id)
+    if relation == "相关关联":
+        endpoints |= (KnowledgeEdge.from_node == to_id) & (KnowledgeEdge.to_node == from_id)
+    exists = db.scalar(
+        select(KnowledgeEdge.id).where(
+            KnowledgeEdge.user_id == user_id, KnowledgeEdge.relation_type == relation, endpoints
+        )
+    )
+    if exists is None:
+        db.add(
+            KnowledgeEdge(user_id=user_id, from_node=from_id, to_node=to_id, relation_type=relation)
+        )
+
+
+def _supplement_related(db: Session, node: KnowledgeNode, embedding: list[float] | None) -> None:
+    """按主学科与标题语义补弱关联：各最多 5 个候选，不把「未分类」当学科连接。
+
+    标题近邻复用已有向量索引与检索距离阈值，不再次调用模型；两端须已入图。
+    """
+    from app.config import settings
+    from app.knowledge.vector_store import VectorStore
+
+    candidates: set[str] = set()
+    if node.subject != UNCLASSIFIED:
+        candidates.update(
+            db.scalars(
+                select(KnowledgeNode.id)
+                .where(
+                    KnowledgeNode.user_id == node.user_id,
+                    KnowledgeNode.subject == node.subject,
+                    KnowledgeNode.id != node.id,
+                )
+                .order_by(KnowledgeNode.created_at.desc(), KnowledgeNode.id)
+                .limit(5)
+            )
+        )
+    if embedding:
+        semantic_count = 0
+        for hit in VectorStore().search_node_titles(embedding, k=6):
+            if hit["distance"] > settings.retrieval_distance_threshold:
+                continue
+            other = db.get(KnowledgeNode, hit["node_id"])
+            if other and other.user_id == node.user_id and other.id != node.id:
+                candidates.add(other.id)
+                semantic_count += 1
+                if semantic_count == 5:
+                    break
+    for other_id in sorted(candidates):
+        _add_edge(db, node.user_id, node.id, other_id, "相关关联")
 
 
 def nodes_for_docs(doc_ids: list[str]) -> list[dict]:

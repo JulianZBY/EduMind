@@ -3649,6 +3649,60 @@
         "title": "StructurePreview",
         "type": "object"
       },
+      "SubjectListResponse": {
+        "properties": {
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectView"
+            },
+            "title": "Subjects",
+            "type": "array"
+          }
+        },
+        "required": [
+          "subjects"
+        ],
+        "title": "SubjectListResponse",
+        "type": "object"
+      },
+      "SubjectNameRequest": {
+        "description": "教师维护学科名称；主学科归类和本清单共用同一存储。",
+        "example": {
+          "name": "天文学"
+        },
+        "properties": {
+          "name": {
+            "description": "学科名称，一行，前后空白自动去除",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SubjectNameRequest",
+        "type": "object"
+      },
+      "SubjectView": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "SubjectView",
+        "type": "object"
+      },
       "TaskModelView": {
         "description": "一个任务级模型档位：选了哪家、选了什么、**实际用的是哪家哪个模型**、来源。",
         "properties": {
@@ -5634,6 +5688,280 @@
           }
         },
         "summary": "知识库语义检索",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/knowledge/subjects": {
+      "get": {
+        "description": "返回教师认可的当前学科清单。知识点的唯一主学科只能取清单内名称，无法选择时归「未分类」。",
+        "operationId": "get_subjects_api_v1_knowledge_subjects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "subjects": [
+                    {
+                      "id": "subject-math",
+                      "name": "数学"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectListResponse"
+                }
+              }
+            },
+            "description": "学科清单"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "读取学科清单",
+        "tags": [
+          "知识库"
+        ]
+      },
+      "post": {
+        "description": "教师将新学科加入清单，即时用于后续知识点归类。名称须唯一，不自动重新归类已有知识点。",
+        "operationId": "create_subject_api_v1_knowledge_subjects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectNameRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "subject-astronomy",
+                  "name": "天文学"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectView"
+                }
+              }
+            },
+            "description": "已新增学科"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "学科名称已在清单内，请使用其他名称。"
+                }
+              }
+            },
+            "description": "名称重复"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "新增学科",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/knowledge/subjects/{subject_id}": {
+      "delete": {
+        "description": "删除清单项并在同一事务中将其知识点归「未分类」，知识点与关系不删除。「未分类」不可删除。",
+        "operationId": "delete_subject_api_v1_knowledge_subjects__subject_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "subject-math",
+                  "name": "数学"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectView"
+                }
+              }
+            },
+            "description": "已删除的学科"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "学科不存在。"
+                }
+              }
+            },
+            "description": "学科不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "「未分类」用于归类兜底，不能更名或删除。"
+                }
+              }
+            },
+            "description": "兜底项不能删除"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "删除学科",
+        "tags": [
+          "知识库"
+        ]
+      },
+      "patch": {
+        "description": "更名在同一事务中更新该学科的所有知识点，不留下清单外名称。「未分类」不可更名。",
+        "operationId": "rename_subject_api_v1_knowledge_subjects__subject_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectNameRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "subject-math",
+                  "name": "数学与应用"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectView"
+                }
+              }
+            },
+            "description": "已更名学科"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "学科不存在。"
+                }
+              }
+            },
+            "description": "学科不存在"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "学科名称已在清单内，请使用其他名称。"
+                }
+              }
+            },
+            "description": "名称重复"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "学科更名",
         "tags": [
           "知识库"
         ]

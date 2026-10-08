@@ -98,8 +98,29 @@ def _fake_summary(prompt: str) -> str:
     return f"{FAKE_MARK} 资料概要：{picked}"
 
 
+def _subject_list_from_prompt(prompt: str) -> list[str]:
+    """从提取提示词里拆出学科清单（「学科清单」节里的「- 」行，到「知识点字段」止）。"""
+    names: list[str] = []
+    in_section = False
+    for line in prompt.splitlines():
+        if line.startswith("学科清单"):
+            in_section = True
+            continue
+        if in_section:
+            if line.startswith("知识点字段"):
+                break
+            name = line.strip().lstrip("-").strip()
+            if name:
+                names.append(name)
+    return names
+
+
 def _fake_knowledge(prompt: str) -> dict:
-    """从提取提示词里拆出正文，取前 3 个非空行回显为节点/边（确定性、内容相关）。"""
+    """从提取提示词里拆出正文，取前 3 个非空行回显为节点/边（确定性、内容相关）。
+
+    学科归类与产品提示词同一契约：subject 从提示词给的学科清单里按序轮转选取
+    （清单内取值），chapter 尽力填写——清单注入缺失时两个留空（旧行为兼容）。
+    """
     _, _, body = prompt.partition("教学内容：\n")
     seen: set[str] = set()
     picked: list[str] = []
@@ -114,6 +135,7 @@ def _fake_knowledge(prompt: str) -> dict:
         picked.append(line)
         if len(picked) == 3:
             break
+    subjects = _subject_list_from_prompt(prompt)
     difficulties = ("基础", "进阶", "难点")
     importances = ("必修", "选修", "了解")
     nodes = [
@@ -122,6 +144,11 @@ def _fake_knowledge(prompt: str) -> dict:
             "content": f"{FAKE_MARK} {line[:60]}",
             "difficulty": difficulties[i % 3],
             "importance": importances[i % 3],
+            **(
+                {"subject": subjects[i % len(subjects)], "chapter": f"第{i + 1}章"}
+                if subjects
+                else {}
+            ),
         }
         for i, line in enumerate(picked)
     ]
@@ -137,6 +164,10 @@ class FakeLLM(LLMProvider):
 
     name = "fake-test"
 
+    def knowledge_payload(self, prompt: str) -> dict:
+        """知识提取的作答口径；特殊归类场景（清单外 / 缺失）由子类覆写。"""
+        return _fake_knowledge(prompt)
+
     async def chat(self, messages: list[ChatMessage], **kwargs) -> ChatResult:
         last = messages[-1].content if messages else ""
         if "资料概要编写助手" in last:
@@ -144,7 +175,7 @@ class FakeLLM(LLMProvider):
         if "意图分析模块" in last:
             return ChatResult(content=json.dumps(FAKE_INTENT, ensure_ascii=False))
         if "教学知识图谱构建助手" in last:
-            return ChatResult(content=json.dumps(_fake_knowledge(last), ensure_ascii=False))
+            return ChatResult(content=json.dumps(self.knowledge_payload(last), ensure_ascii=False))
         if "判断两段知识描述是否相互矛盾" in last:
             return ChatResult(
                 content=json.dumps(
@@ -165,6 +196,34 @@ class FakeLLM(LLMProvider):
 
     async def vision(self, image_path: str, prompt: str) -> str:
         return f"{FAKE_MARK}（占位解读）测试替身的多模态返回，与画面内容无关。"
+
+
+class OffListSubjectLLM(FakeLLM):
+    """清单外学科替身：模型无视学科清单、自造清单外学科名。
+
+    测「未分类」兜底（票 08）：无论提示词怎么约束，
+    全部知识点都带同一个清单外的 subject 回来。
+    """
+
+    def __init__(self, subject: object = "考古学") -> None:
+        self._subject = subject
+
+    def knowledge_payload(self, prompt: str) -> dict:
+        payload = _fake_knowledge(prompt)
+        for node in payload["nodes"]:
+            node["subject"] = self._subject
+        return payload
+
+
+class PromptCapturingLLM(FakeLLM):
+    """记录收到的提示词的替身：断言提示词约束（学科清单注入、硬约束文案）用。"""
+
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+
+    async def chat(self, messages: list[ChatMessage], **kwargs) -> ChatResult:
+        self.prompts.append(messages[-1].content if messages else "")
+        return await super().chat(messages, **kwargs)
 
 
 # ---- 向量化替身（原产品内的假实现：以文本长度为特征的确定性向量） ----

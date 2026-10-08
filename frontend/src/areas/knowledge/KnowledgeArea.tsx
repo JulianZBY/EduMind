@@ -12,6 +12,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Button } from '../../components/ui/Button'
 import { MainPanel, Workbench, WorkbenchSidebar } from '../../components/layout/Workbench'
 import { DocumentDetail } from './DocumentDetail'
+import { SubjectManager } from './SubjectManager'
 import { DocumentsSidebar } from './DocumentList'
 import { UploadDialog } from './UploadDialog'
 import { isProcessing } from './status'
@@ -41,7 +42,7 @@ export function KnowledgeArea() {
         </WorkbenchSidebar>
       }
     >
-      <MainPanel title="知识库" tagline="教师个人教学资料的仓库">
+      <MainPanel title="知识库" tagline="教师个人教学资料的仓库" actions={<SubjectManager />}>
         {missing.providersMissing ? (
           <ProviderMissingNotice message="还没有配置供应商：上传资料后分块与解析照常入库，知识提取与冲突检测需要对话模型，先添加一家再用全能力。" />
         ) : null}

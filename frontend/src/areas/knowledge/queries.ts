@@ -11,6 +11,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { ApiError, apiErrorMessage, apiRequest } from '../../api/client'
 import type {
+  SubjectListResponse,
+  SubjectNameRequest,
+  SubjectView,
+  GetSubjectsApiV1KnowledgeSubjectsGetData,
+  RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchData,
   DocumentDetail,
   DocumentListResponse,
   DocumentView,
@@ -21,6 +26,11 @@ import type {
   UploadDocumentApiV1DocumentsUploadPostData,
 } from '../../api/generated'
 import { hasProcessing, isProcessing } from './status'
+import { graphKeys } from '../knowledge-graph/queries'
+
+const subjectsUrl: GetSubjectsApiV1KnowledgeSubjectsGetData['url'] = '/api/v1/knowledge/subjects'
+const subjectUrl: RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchData['url'] =
+  '/api/v1/knowledge/subjects/{subject_id}'
 
 /** URL 一律从生成的 schema 取（`npm run gen:api`），改后端路径时这里会编译报错。 */
 const documentsUrl: ListDocumentsApiV1DocumentsGetData['url'] = '/api/v1/documents'
@@ -166,6 +176,52 @@ export function useSetDocumentReference() {
     onSettled: (_data, _error, input) => {
       queryClient.invalidateQueries({ queryKey: knowledgeKeys.list() })
       queryClient.invalidateQueries({ queryKey: knowledgeKeys.detail(input.documentId) })
+    },
+  })
+}
+
+/** 学科清单管理与归类共用后端清单；更名与删除后让图谱详情同步失效。 */
+export function useSubjects(enabled: boolean) {
+  return useQuery({
+    queryKey: [...knowledgeKeys.all, 'subjects'],
+    enabled,
+    queryFn: ({ signal }) => apiRequest<SubjectListResponse>(subjectsUrl, { signal }),
+  })
+}
+
+export function useCreateSubject() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: SubjectNameRequest) =>
+      apiRequest<SubjectView>(subjectsUrl, { method: 'POST', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...knowledgeKeys.all, 'subjects'] }),
+  })
+}
+
+export function useRenameSubject() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { subjectId: string; body: SubjectNameRequest }) =>
+      apiRequest<SubjectView>(subjectUrl.replace('{subject_id}', encodeURIComponent(input.subjectId)), {
+        method: 'PATCH', body: input.body,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...knowledgeKeys.all, 'subjects'] })
+      queryClient.invalidateQueries({ queryKey: graphKeys.all })
+    },
+  })
+}
+
+export function useDeleteSubject() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (subjectId: string) =>
+      apiRequest<SubjectView>(subjectUrl.replace('{subject_id}', encodeURIComponent(subjectId)), {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...knowledgeKeys.all, 'subjects'] })
+      queryClient.invalidateQueries({ queryKey: graphKeys.all })
     },
   })
 }

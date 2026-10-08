@@ -13,7 +13,7 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.db import SessionLocal, init_db
-from app.db.models import Document, KnowledgeEdge, KnowledgeNode
+from app.db.models import Document, KnowledgeEdge, KnowledgeNode, Subject
 from app.main import app
 
 client = TestClient(app)
@@ -31,6 +31,8 @@ def _seed_graph() -> dict:
 
     db = SessionLocal()
     try:
+        db.add_all([Subject(name=subject), Subject(name=other_subject)])
+        db.flush()
         doc = Document(
             user_id="default",
             filename=filename,

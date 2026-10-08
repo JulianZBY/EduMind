@@ -420,6 +420,8 @@ async def _insert_node(
         user_id=conflict.user_id,
         title=title,
         content=new_data.get("content", "") if content is None else content,
+        subject=new_data.get("subject") or (inherit.subject if inherit else None),
+        chapter=new_data.get("chapter") or (inherit.chapter if inherit else None),
         difficulty=new_data.get("difficulty") or (inherit.difficulty if inherit else None),
         importance=new_data.get("importance") or (inherit.importance if inherit else None),
         source_docs=source_docs or None,

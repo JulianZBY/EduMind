@@ -1,6 +1,6 @@
 """数据库引擎与初始化。"""
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
@@ -86,9 +86,12 @@ def _ensure_sqlite_columns(bind=None) -> None:
 def init_db() -> None:
     """建表（幂等）+ 补列（幂等）+ 确保默认用户。"""
     from app.db.models import Base, User
+    from app.knowledge.subjects import initialize_subjects
 
+    seed_subjects = not inspect(engine).has_table("subjects")
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_columns()
+    initialize_subjects(engine, seed=seed_subjects)
     # 单用户假设：无鉴权，所有数据挂在 default 用户下，预留多用户扩展
     with SessionLocal() as db:
         if not db.query(User).filter(User.id == "default").first():
