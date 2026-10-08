@@ -5,7 +5,7 @@
  * 不做独立生成物面板（生成物全版本留痕是票 07，版本中心是票 08）；历史版本只在文字上指路。
  */
 import { Link } from 'react-router'
-import { readGenerationEntries, readKnowledgeHit, readReferenceNames } from './narrowing'
+import { readGenerationEntries, readKnowledgeOutcome, readReferenceNames } from './narrowing'
 import { artifactFileUrl } from './queries'
 
 const linkBase =
@@ -14,7 +14,7 @@ const linkBase =
 export function GeneratedResult({ artifacts }: { artifacts: unknown }) {
   const entries = readGenerationEntries(artifacts)
   const references = readReferenceNames(artifacts)
-  const knowledgeHit = readKnowledgeHit(artifacts)
+  const knowledgeOutcome = readKnowledgeOutcome(artifacts)
 
   if (entries.length === 0 && references.length === 0) return null
 
@@ -57,11 +57,14 @@ export function GeneratedResult({ artifacts }: { artifacts: unknown }) {
       )}
 
       <p className="mt-1 text-xs leading-5 text-black/60">
-        {knowledgeHit === null
+        {/* 知识库口径按后端语义显示（票 01）：命中 / 未命中相关内容 / 库为空，各说各话 */}
+        {knowledgeOutcome === null
           ? ''
-          : knowledgeHit
+          : knowledgeOutcome === 'hit'
             ? '已融合本地知识库'
-            : '知识库为空，由 AI 直接生成'}
+            : knowledgeOutcome === 'empty'
+              ? '知识库为空，由 AI 直接生成'
+              : '知识库未命中相关内容，由 AI 直接生成'}
         {references.length > 0 ? ` · 命中的参考资料：${references.join('、')}` : ''}
         {'. '}
         <Link to="/artifacts" className="underline-none font-bold outline-none transition-colors duration-150 hover:text-[#ff3366] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">

@@ -98,6 +98,9 @@ async def orchestrate(intent: TeachingIntent, reference_doc_ids: list[str] | Non
     return {
         "intent": intent_dict,
         "knowledge_hits": bool(knowledge),
+        # 空命中口径（票 01）：knowledge_hits=False 时用它区分「库为空」与「未命中相关内容」；
+        # 回复文案（core/conversation）与前端提示据此诚实二选一，不再一律说「知识库为空」
+        "knowledge_empty": retrieval.library_empty,
         "references": references,
         "ppt": {"slides": slides, "path": ppt_path},
         # data：教案完整结构随产物下发，供预览面板发起教案修改（与 slides 同理）

@@ -55,7 +55,14 @@ async def accumulate_intent(previous: TeachingIntent | None, utterance: str) -> 
 def _generate_reply(topic: str, result: dict) -> str:
     """生成回复的文案（反馈）：说清产出了什么、知识库是否命中、命中了哪些参考资料。"""
     n_slides = len(result["ppt"]["slides"])
-    kb_note = "已融合本地知识库" if result["knowledge_hits"] else "知识库为空，已由 AI 直接生成"
+    if result["knowledge_hits"]:
+        kb_note = "已融合本地知识库"
+    elif result.get("knowledge_empty"):
+        # 库里一个分块都没有：沿用现状文案（票 01）
+        kb_note = "知识库为空，已由 AI 直接生成"
+    else:
+        # 库非空但检索未命中相关内容：不谎报「为空」，也不再融合不相关内容（票 01）
+        kb_note = "知识库未命中相关内容，由 AI 直接生成"
     content = f"已完成备课「{topic}」：生成 PPT {n_slides} 页、Word 教案、教学提纲。（{kb_note}）"
     references = result.get("references") or []
     if references:

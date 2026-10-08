@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     chunk_strategy: str = "paragraph"
     # 检索策略：vector_graph（默认，向量 + 图谱邻接融合）/ vector（纯向量）
     retrieval_strategy: str = "vector_graph"
+    # 检索命中阈值（票 01，ADR-0007）：命中与查询的余弦距离超过它的直接丢弃（不是降权），
+    # 默认保守取宽避免误杀真实内容。与冲突检测的 conflict_distance_threshold
+    # 是两条独立水位（那是标题近名预筛的），不共用。
+    retrieval_distance_threshold: float = 0.8
 
     # ---- 任务级模型（CONTEXT.md「任务级模型」）----
     # 按任务分别选「供应商实例 + 模型档位」：留空 = 回落全局默认。

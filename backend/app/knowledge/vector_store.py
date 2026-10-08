@@ -6,6 +6,7 @@
 
 import json
 import sqlite3
+import struct
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -73,17 +74,34 @@ class VectorStore:
         finally:
             conn.close()
 
+    def chunk_count(self) -> int:
+        """库内分块总数（0 = 库为空）：区分「知识库为空」与「未命中相关内容」（票 01）。"""
+        conn = self._connect()
+        try:
+            exists = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='chunks'"
+            ).fetchone()
+            if not exists:
+                return 0
+            return int(conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0])
+        finally:
+            conn.close()
+
     def search(
         self,
         query_embedding: list[float],
         k: int = 5,
         boost_doc_ids: Iterable[str] | None = None,
+        with_embeddings: bool = False,
     ) -> list[dict]:
         """KNN 检索，返回 [{chunk_id, distance, doc_id, content}]。空库返回 []。
 
         boost_doc_ids：参考文档 id 集合。命中这些文档的片段距离按
         REFERENCE_DISTANCE_FACTOR 折扣后参与排名（等效加权置顶）；
         返回的 distance 仍为原始值。为避免加权后排序失真，候选多取 4 倍。
+
+        with_embeddings：结果附带原始分块向量（`embedding` 键）。检索阈值过滤要
+        现算余弦距离（票 01）需要它；只读观测调用方默认不拖大向量。
         """
         boost = set(boost_doc_ids) if boost_doc_ids else None
         fetch_k = k * 4 if boost else k
@@ -94,8 +112,11 @@ class VectorStore:
             ).fetchone()
             if not exists:
                 return []
+            columns = "v.rowid, v.distance, c.doc_id, c.content"
+            if with_embeddings:
+                columns += ", v.embedding"
             rows = conn.execute(
-                "SELECT v.rowid, v.distance, c.doc_id, c.content "
+                f"SELECT {columns} "
                 "FROM chunk_embeddings v JOIN chunks c ON v.rowid = c.id "
                 "WHERE v.embedding MATCH ? AND k = ? ORDER BY v.distance",
                 (json.dumps(query_embedding), fetch_k),
@@ -103,6 +124,11 @@ class VectorStore:
             hits = [
                 {"chunk_id": r[0], "distance": r[1], "doc_id": r[2], "content": r[3]} for r in rows
             ]
+            if with_embeddings:
+                # v.embedding 以 float32 小端字节串回传（sqlite-vec vec0 存储形态）
+                for hit, row in zip(hits, rows, strict=True):
+                    blob: bytes = row[4]
+                    hit["embedding"] = list(struct.unpack(f"<{len(blob) // 4}f", blob))
             if boost:
                 # 稳定排序：同折扣键下保持原始距离序；返回原始 distance，仅排名生效
                 hits.sort(
