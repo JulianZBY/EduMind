@@ -5,7 +5,7 @@
 
 **Blocked by:** 06（删除规则包含「必删文献笔记」——文献笔记不存在就没得删）
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 删除资料 API：按下列规则级联；OpenAPI 注解齐全（summary/描述/examples/错误码/tag），
   未配置相关能力时 503 契约口径不变
@@ -107,3 +107,12 @@
 - 本轮真实受影响门：focus 回归、`npm run lint`、`npm run build`（含 tsc）、`npm run check:routes` 全部退出 0；禁用 class 扫描 111 文件／10 规则零违规，七区路由及 SSR 通过。构建既存 >500kB chunk 警告未扩大处理。未安装／更新依赖，未重复后端五门证据（parent 已执行 466 pytest／ruff／前端三门）；backend 与冻结基线保持一致。
 - 对本 Checkbox 逐项风格自检：黑白、直角黑框、无阴影／渐变／灰底／半透明、悬停黑白反色、禁用细边框与降级文字、显式默认／悬停／聚焦／禁用、150ms 纯颜色过渡；没有新增字体、动画、弹层、布局或图谱变化（相应清单项不适用）。源码与编译检查不等同于浏览器实操。
 - 待办保留：浏览器视觉、人工 Tab／Space、教师教学资料／网页删除冒烟，以及独立只读复核；不宣称人工验收或 reviewer 已通过。证据日志位于持久 `recovery/wave2-20261008-164611/w07-focus-pass2/`。
+
+## 协调者复核(2026-10-08, wave-2 集成)
+
+- 评审:两轴 fresh-context(a57d592a)裁决规范轴 BLOCK(错误态缺强调边框 P1,另有 Radix 复选/422 示例/全角标点 P2)、功能轴 P2(跨资料冲突撤下后来源资料计数/状态未同步);修正 4a6cdea 后恢复期针对性复核(80764662)确认其余项闭环,但新发现 Checkbox 键盘焦点可见性 P1(Tailwind 4.3.3 下 `outline-none` 覆盖 `focus-visible:outline-2`);窄修 3dc1198 后 fresh 复核(b2c8c621)裁决 **OK with notes**,无阻塞。
+- 协调者独立复门:修正后冻结 4a6cdea 全门 **466 passed**+ruff+前端三门(manifest=`gates/runtime-recovered-07-10`);焦点修正 3dc1198 后独立复跑焦点脚本+前端三门,backend 相对 4a6cdea 严格未变,沿用独立 466 后端证据。
+- 集成:merge commit **2a508a6**;`queries.ts` 手工语义合并(08 学科 hooks 与 07 删除预览 hooks 并存),生成物统一 `gen:api` 重生成;新增官方依赖 `@radix-ui/react-checkbox` 按锁文件安装。集成后全门 **528 passed**(含本票 41 项新增)+八项检查全绿(`gates/after-merge-07`)。
+- 教师人工冒烟(上传→看文献笔记→删除→各区状态)与浏览器视觉/键盘 Tab/Space 仍未执行,按票面【收尾】留待教师,不阻塞交付。
+- 残余(不阻塞):跨主库/向量库/文件系统崩溃原子性为既有架构限制;npm audit 既存告警未扩大处理。
+- **Status: done(独立复验通过)**

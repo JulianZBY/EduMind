@@ -6,7 +6,7 @@
 
 **Blocked by:** 06（复用文献笔记与入库管道——网页结果就是一份来源=网页的文献笔记）
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 能力接线：走既有搜索能力工厂（博查已配 Key）；未配置时 503 + 去设置页引导
   （`provider_not_configured` 全局口径，不返回假结果）
@@ -52,3 +52,12 @@
 - 转绿证据：修复后针对 `test_web_search_ingest.py／test_documents.py／test_generation_failures.py` 共 23 passed；新增 SSR 脚本不添加组件导出或测试接口，通过真实详情＋QueryClient 快照覆盖网页 file_type／source 分支、正文与 tooltip、恢复目标、未配置去设置、普通上传兼容。脚本退出 0。类型检查 `npx tsc -b` 退出 0；本次不变更 OpenAPI，未重生成或手抄接口类型。
 - 最终五门全部真实运行：后端 `uv run pytest -q`＝438 passed、退出 0；`uv run ruff check .`＝All checks passed、退出 0；前端 `npm run lint`、`npm run build`、`npm run check:routes` 均退出 0。额外来源恢复 SSR 脚本退出 0，`git diff --check` 通过；日志保存在本 worktree `.scratch/w10-pass1-gates/`（不提交日志）。两个既有清理脚本仅获准本地＋x供 Ruff，内容与仓库模式不暂存、不提交。
 - 扁平风格自检：恢复链接复用 Button 的黑白反色／聚焦／禁用四态、直角黑框，设置引导复用既有扁平 Notice，无新样式或状态；109 文件、10 条禁用 class 规则零违规。人工浏览器点击、真实 Key 联网入库与真实待审冲突冒烟仍未执行；保留待办，不勾选人工项。
+
+## 协调者复核(2026-10-08, wave-2 集成)
+
+- 评审:两轴 fresh-context(a57d592a):功能轴无发现,规范轴 P2(网页失败误导重新上传);修正 841b17c 后恢复期 fresh 复核(2da28720)裁决 **OK with notes**,无新问题。
+- 协调者独立复门:修正后冻结 841b17c 全门 **438 passed**+前端三门+真实详情 SSR(manifest=`gates/runtime-recovered-07-10`)。
+- 集成:merge commit **d4358f2**;`pipeline.py` 手工语义合并(网页文本分支与 07 读侧路径规范化并存)、`tests/support/fakes.py` 两能力替身并存、`DocumentDetail.tsx` 自动合并后人工核验(07 删除入口与 10 网页来源恢复指引并存);生成物统一 `gen:api`。集成后全门 **541 passed**+八项检查全绿(`gates/after-merge-10`)。
+- 教师真实 Key 联网检索入库冒烟、真实待审冲突与浏览器点击仍未执行,按票面【收尾】留待教师,不阻塞交付。
+- 残余(不阻塞):保留既有进程内后台任务与无去重语义;npm audit 既存告警未扩大处理。
+- **Status: done(独立复验通过)**

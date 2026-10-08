@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] 数据模型：学科清单表；知识点归类只允许清单内取值
 - [x] 内置基础学科清单（语文/数学/英语/物理/化学/生物/历史/地理/政治/信息技术），教师可增删改
@@ -71,3 +71,12 @@
 - 门禁：`cd backend && uv run pytest -q` 487 passed（两条既有 Starlette 弃用警告）；`uv run ruff check .` 退出 0；`npm run gen:api`、`npm run lint`、`npm run build`、`npm run check:routes`、`npm run check:conflict-409` 均退出 0；`tsc -b` 构建通过、七条路由可达、110 文件十条禁用规则零违规。Vite 既有大包警告仍在。
 - 新增／更新回归：后端 `test_real_fixed_dimension_409_preserves_all_state` 改断言结构化 detail 且图谱/索引无副作用；新增 `test_already_reviewed_409_keeps_string_detail` 锁定已裁决 409 仍是字符串、与维度 409 可区分；`test_vector_store::test_node_title_dimension_mismatch_friendly_error` 匹配词随文案改为「标题索引」。
 - 人工浏览器／键盘冒烟、教师真实 Key／云端向量化质量验证、服务上线冒烟仍未做，留待协调者安排。本次仅 writer 自审，不宣称独立复核通过；Status 保持由协调者裁定。持久证据在 `/home/julianzby/.local/state/edumind/recovery/wave2-20261008-164611/w08-409-fix/`。
+
+## 协调者复核(2026-10-08, wave-2 集成)
+
+- 评审:两轴 fresh-context(a57d592a)裁决功能轴 BLOCK(裁决入库漏补相关关联 P1)、规范轴 P2(业务拒绝误用 422 字符串);修正 6ea178e 后最终双轴复核(700d0483):功能轴无发现 **OK with notes**,规范轴新 P1(标题索引维度 409 被前端统一误报为「已裁决」);窄修 9473295+票记录 8c88f34 后 fresh 复核(d2fb4e21)裁决 **OK**,原 BLOCK 解除。
+- 教师批准边界已在 ADR-0008 与 ADR-0004 尾部修订留痕:标题向量 space 身份严格比对、读预览零云端、信息不足 `complete=false` 仍可按原动作裁决、固定索引维度不兼容专门 409 且全无副作用;旧 unknown/foreign space 不自动迁移重建。协调者就两项权衡执行了 ask_user 并获明确批准。
+- 协调者独立复门:原交付 451 → 409 窄修后 **487 passed**(含 `gen:api` 可复现无漂移)→ 集成 07/10 后 **541 passed**;ruff/lint/build/routes+专项脚本全绿;各次 HEAD 前后一致、无脏改动。
+- 集成:08 在 main 就地交付;`c041e3c`(cleanup 脚本 100755)为其祖先且未回退;随 07/10 合并后 main=`d4358f2`。
+- 残余(不阻塞):浏览器/真实 Key/部署冒烟未做;历史 unknown/foreign space 按批准不重建、固定维度需维护者处理(无重建 UI)。
+- **Status: done(独立复验通过)**
