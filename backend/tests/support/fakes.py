@@ -219,6 +219,22 @@ class OffListSubjectLLM(FakeLLM):
         return payload
 
 
+class ProposalLLM(FakeLLM):
+    """新学科提议替身（票 09）：知识照常离线提取，节点带清单外学科（归「未分类」），
+    另按构造参数回放一条提议 payload——合法与非法形状都由此测。
+    """
+
+    def __init__(self, proposal: object, *, node_subject: object = "考古学") -> None:
+        self._proposal = proposal
+        self._node_subject = node_subject
+
+    def knowledge_payload(self, prompt: str) -> dict:
+        payload = _fake_knowledge(prompt)
+        for node in payload["nodes"]:
+            node["subject"] = self._node_subject
+        return {**payload, "proposal": self._proposal}
+
+
 class PromptCapturingLLM(FakeLLM):
     """记录收到的提示词的替身：断言提示词约束（学科清单注入、硬约束文案）用。"""
 

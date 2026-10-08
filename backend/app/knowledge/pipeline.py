@@ -9,6 +9,7 @@ from app.db import SessionLocal
 from app.db.models import Document
 from app.knowledge.literature_note import SOURCE_DOCUMENT, SOURCE_WEB, build_note
 from app.knowledge.storage import normalize_stored_path
+from app.knowledge.subjects import UNCLASSIFIED
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,39 @@ async def index_chunks(doc_id: str, chunks: list[str]) -> None:
     await asyncio.to_thread(VectorStore().add, doc_id, chunks, embeddings)
 
 
+def _record_subject_proposal(doc_id: str, saved_nodes: list[dict], proposal: dict | None) -> None:
+    """把「清单内学科都不合适」的提议落进待批队列（票 09，尽力而为）。
+
+    涉及的知识点 = 本次真正入库且归「未分类」的节点——它们是批准后重新归类的对象；
+    被冲突检测扣住的节点还没入图谱，不在其列。去重口径见 proposals.record_proposal。
+    """
+    from app.knowledge.proposals import record_proposal
+
+    if not proposal:
+        return
+    titles = sorted(
+        {
+            title
+            for n in saved_nodes
+            if n.get("subject") == UNCLASSIFIED and (title := (n.get("title") or "").strip())
+        }
+    )
+    db = SessionLocal()
+    try:
+        record_proposal(
+            db,
+            name=proposal.get("subject") or "",
+            reason=proposal.get("reason") or "",
+            knowledge_titles=titles,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("新学科提议没有落库 doc=%s name=%r", doc_id, proposal.get("subject"))
+    finally:
+        db.close()
+
+
 async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
     """提取知识图谱 + 冲突检测（尽力而为，失败不阻断主流程），返回待审冲突数。
 
@@ -132,7 +166,7 @@ async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
     from app.knowledge.graph import extract_knowledge, save_knowledge
 
     try:
-        nodes, edges = await extract_knowledge(text)
+        nodes, edges, proposal = await extract_knowledge(text)
         if not nodes:
             return 0
         pending, duplicates = await detect_conflicts("default", nodes, doc_id)
@@ -155,6 +189,7 @@ async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
                     t: title_vector_space(embedder, len(e)) for t, e in zip(titles, embeddings)
                 },
             )
+            _record_subject_proposal(doc_id, to_save, proposal)
         return len(pending)
     except ProviderNotConfigured as exc:
         # 没配对话模型时知识提取跳过、分块照常入库（文档约定的未配置行为）：记一行，不带堆栈

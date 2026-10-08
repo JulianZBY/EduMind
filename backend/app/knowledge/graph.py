@@ -32,16 +32,24 @@ __SUBJECTS__
 关系字段（from、to 用知识点 title）：
 - relation_type：前置依赖 / 父子包含 / 推导关系 / 相关关联
 
+如果清单内学科都不适合这些知识点，可在 proposal 里提议一个新学科（subject 是新学科名、
+reason 是理由）；此时相关知识点仍归「未分类」。没有需要提议时为 null。
+
 只输出 JSON，不要其他文字：
-{"nodes": [{"title": "...", "content": "...", "subject": "...", "chapter": "...", "difficulty": "...", "importance": "..."}], "edges": [{"from": "...", "to": "...", "relation_type": "..."}]}
+{"nodes": [{"title": "...", "content": "...", "subject": "...", "chapter": "...", "difficulty": "...", "importance": "..."}], "edges": [{"from": "...", "to": "...", "relation_type": "..."}], "proposal": {"subject": "...", "reason": "..."} 或 null}
 
 教学内容：
 __TEXT__
 """
 
 
-async def extract_knowledge(text: str) -> tuple[list[dict], list[dict]]:
-    """LLM 提取知识点节点与关系边。"""
+async def extract_knowledge(text: str) -> tuple[list[dict], list[dict], dict | None]:
+    """LLM 提取知识点节点、关系边与可选的新学科提议。
+
+    返回 (nodes, edges, proposal)：proposal 为 {"subject", "reason"}，
+    清单内学科都不合适时由模型提出；清单内名称／未分类／空／多行／超长／非字符串
+    均视为无提议（与清单维护的名称口径一致，票 09）。
+    """
     from app.core.llm.base import ChatMessage
     from app.core.llm.factory import get_llm
 
@@ -57,7 +65,27 @@ async def extract_knowledge(text: str) -> tuple[list[dict], list[dict]]:
         node["subject"] = normalize_subject(node.get("subject"), names)
         chapter = node.get("chapter")
         node["chapter"] = chapter.strip()[:100] or None if isinstance(chapter, str) else None
-    return nodes, data.get("edges", [])
+    proposal = data.get("proposal")
+    reason_raw = proposal.get("reason") if isinstance(proposal, dict) else None
+    subject_raw = proposal.get("subject") if isinstance(proposal, dict) else None
+    subject = subject_raw.strip() if isinstance(subject_raw, str) else ""
+    # 提议必须是清单外的全新名称：在清单内／未分类／空／多行／超长（与清单维护同一口径）
+    # 或学科不是字符串（数组多值是模型幻觉）都视为无提议。
+    if (
+        not subject
+        or subject in names
+        or subject == UNCLASSIFIED
+        or len(subject) > 100
+        or "\n" in subject
+        or "\r" in subject
+    ):
+        proposal = None
+    else:
+        proposal = {
+            "subject": subject,
+            "reason": reason_raw.strip() if isinstance(reason_raw, str) else "",
+        }
+    return nodes, data.get("edges", []), proposal
 
 
 def save_knowledge(

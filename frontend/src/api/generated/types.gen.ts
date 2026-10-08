@@ -25,6 +25,54 @@ export type AffectedQuestionView = {
 };
 
 /**
+ * ApproveProposalResponse
+ *
+ * 批准结果：提议终态 + 入清单的学科项 + 本次重新归类的知识点数。
+ */
+export type ApproveProposalResponse = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Knowledge Titles
+     */
+    knowledge_titles: Array<string>;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Reclassified
+     *
+     * 本次从「未分类」归入新学科的知识点数
+     */
+    reclassified: number;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Subject Id
+     *
+     * 批准后进入（或已在）学科清单的那一项 id
+     */
+    subject_id: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
  * ArtifactListResponse
  */
 export type ArtifactListResponse = {
@@ -1093,6 +1141,54 @@ export type PingResponse = {
      * Status
      */
     status: string;
+};
+
+/**
+ * ProposalListResponse
+ *
+ * 待批队列：只含还没被教师处理过的提议（已批准／已拒绝的不返回）。
+ */
+export type ProposalListResponse = {
+    /**
+     * Proposals
+     */
+    proposals: Array<ProposalView>;
+};
+
+/**
+ * ProposalView
+ *
+ * 一条新学科提议（票 09）：名称、AI 理由与涉及的知识点标题。
+ */
+export type ProposalView = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Knowledge Titles
+     */
+    knowledge_titles: Array<string>;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
 };
 
 /**
@@ -3267,6 +3363,109 @@ export type GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponses = {
 };
 
 export type GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponse = GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponses[keyof GetNeighborhoodApiV1KnowledgeNodesNodeIdNeighborhoodGetResponses];
+
+export type ListProposalsApiV1KnowledgeProposalsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/knowledge/proposals';
+};
+
+export type ListProposalsApiV1KnowledgeProposalsGetErrors = {
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ListProposalsApiV1KnowledgeProposalsGetResponses = {
+    /**
+     * 待批提议列表
+     */
+    200: ProposalListResponse;
+};
+
+export type ListProposalsApiV1KnowledgeProposalsGetResponse = ListProposalsApiV1KnowledgeProposalsGetResponses[keyof ListProposalsApiV1KnowledgeProposalsGetResponses];
+
+export type ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostData = {
+    body?: never;
+    path: {
+        /**
+         * Proposal Id
+         */
+        proposal_id: string;
+    };
+    query?: never;
+    url: '/api/v1/knowledge/proposals/{proposal_id}/approve';
+};
+
+export type ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostErrors = {
+    /**
+     * 提议不存在：该 id 不在待批队列里
+     */
+    404: unknown;
+    /**
+     * 这条提议已经处理过（已批准／已拒绝），不能重复处理
+     */
+    409: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostResponses = {
+    /**
+     * 已批准：学科入清单，相关知识点重新归类
+     */
+    200: ApproveProposalResponse;
+};
+
+export type ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostResponse = ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostResponses[keyof ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostResponses];
+
+export type RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostData = {
+    body?: never;
+    path: {
+        /**
+         * Proposal Id
+         */
+        proposal_id: string;
+    };
+    query?: never;
+    url: '/api/v1/knowledge/proposals/{proposal_id}/reject';
+};
+
+export type RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostErrors = {
+    /**
+     * 提议不存在：该 id 不在待批队列里
+     */
+    404: unknown;
+    /**
+     * 这条提议已经处理过（已批准／已拒绝），不能重复处理
+     */
+    409: unknown;
+    /**
+     * 请求校验失败:请求体、表单或路径字段缺失或类型不符
+     */
+    422: unknown;
+    /**
+     * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
+     */
+    500: unknown;
+};
+
+export type RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostResponses = {
+    /**
+     * 已拒绝：提议消亡，知识点留在「未分类」
+     */
+    200: ProposalView;
+};
+
+export type RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostResponse = RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostResponses[keyof RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostResponses];
 
 export type RetrieveApiV1KnowledgeRetrievePostData = {
     body: RetrieveRequest;

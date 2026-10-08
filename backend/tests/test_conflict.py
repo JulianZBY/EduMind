@@ -51,8 +51,8 @@ def _patch_extraction(
 ) -> None:
     """提取结果固定为种子节点；LLM 比对确定性化：新知识含「（冲突版）」即判矛盾。"""
 
-    async def fake_extract(text: str) -> tuple[list[dict], list[dict]]:
-        return nodes, edges
+    async def fake_extract(text: str) -> tuple[list[dict], list[dict], dict | None]:
+        return nodes, edges, None
 
     async def fake_compare(old: str, new: str) -> dict:
         detected.append((old, new))

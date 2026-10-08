@@ -1,5 +1,6 @@
 """知识检索接口：RAG 语义搜索 + 知识图谱。"""
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -620,3 +621,164 @@ def rename_subject(
 )
 def delete_subject(subject_id: str, db: Annotated[Session, Depends(get_session)]):
     return _maintain_subject(db, subject_id=subject_id)
+
+
+class ProposalView(BaseModel):
+    """一条新学科提议（票 09）：名称、AI 理由与涉及的知识点标题。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    reason: str
+    knowledge_titles: list[str]
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProposalListResponse(BaseModel):
+    """待批队列：只含还没被教师处理过的提议（已批准／已拒绝的不返回）。"""
+
+    proposals: list[ProposalView]
+
+
+class ApproveProposalResponse(ProposalView):
+    """批准结果：提议终态 + 入清单的学科项 + 本次重新归类的知识点数。"""
+
+    subject_id: str = Field(description="批准后进入（或已在）学科清单的那一项 id")
+    reclassified: int = Field(description="本次从「未分类」归入新学科的知识点数")
+
+
+def _proposal_error(status_code: int, message: str) -> HTTPException:
+    """提议业务错误 → 同状态码的 HTTPException（薄路由只做映射）。"""
+    return HTTPException(status_code=status_code, detail=message)
+
+
+@router.get(
+    "/knowledge/proposals",
+    response_model=ProposalListResponse,
+    tags=["知识库"],
+    summary="新学科提议的待批队列",
+    description=(
+        "上传／联网检索入库时，AI 归类认为清单内学科都不合适会提议新学科（名称 + 理由 +"
+        "涉及的知识点），落进这里等教师处理。**批准入口住知识库区，不走冲突审核**"
+        "（那里只裁决矛盾）；待批提议不进学科清单、不可被归类选用，与冲突「待审」同一哲学："
+        "审核前不生效。\n\n"
+        "去重口径：同一名称已有待批提议、或名称已在学科清单内时不再重复提议——"
+        "涉及的知识点以第一条提议记录的为准；拒绝后不封杀同名，下次归类再失败会重新提议。"
+        "队列按提出时间排序，只返回「待批」，已处理的提议不再出现。"
+    ),
+    responses={
+        200: json_response(
+            "待批提议列表",
+            {
+                "proposals": [
+                    {
+                        "id": "3f2a1b0c-8d47-4e6a-9b5c-1d2e3f4a5b6c",
+                        "name": "考古学",
+                        "reason": "这批知识点围绕田野考古与器物研究，清单内没有合适学科。",
+                        "knowledge_titles": ["甲骨文与殷商考古", "青铜器铭文研究"],
+                        "status": "待批",
+                        "created_at": "2026-10-08T12:00:00",
+                        "updated_at": "2026-10-08T12:00:00",
+                    }
+                ]
+            },
+        ),
+        500: internal_error(),
+    },
+)
+def list_proposals(db: Annotated[Session, Depends(get_session)]):
+    from app.knowledge.proposals import list_pending_proposals
+
+    return {"proposals": list_pending_proposals(db)}
+
+
+@router.post(
+    "/knowledge/proposals/{proposal_id}/approve",
+    response_model=ApproveProposalResponse,
+    tags=["知识库"],
+    summary="批准新学科提议",
+    description=(
+        "教师显式批准：提议的学科进入清单，涉及的知识点里**仍为「未分类」**的那些随之归入"
+        "新学科（教师已归入其他学科的不动），并按入库同一口径补同学科「相关关联」。"
+        "学科名已在清单内（例如教师先手动加过）时不重复新增，仍执行重新归类。"
+        "不存在自动入清单——批准是教师的动作，本接口只处理「待批」提议。"
+    ),
+    responses={
+        200: json_response(
+            "已批准：学科入清单，相关知识点重新归类",
+            {
+                "id": "3f2a1b0c-8d47-4e6a-9b5c-1d2e3f4a5b6c",
+                "name": "考古学",
+                "reason": "这批知识点围绕田野考古与器物研究，清单内没有合适学科。",
+                "knowledge_titles": ["甲骨文与殷商考古"],
+                "status": "已批准",
+                "created_at": "2026-10-08T12:00:00",
+                "updated_at": "2026-10-08T12:05:00",
+                "subject_id": "subject-archaeology",
+                "reclassified": 2,
+            },
+        ),
+        404: error_response("提议不存在：该 id 不在待批队列里", "提议不存在。"),
+        409: error_response(
+            "这条提议已经处理过（已批准／已拒绝），不能重复处理",
+            "这条提议已经处理过，不能重复处理。",
+        ),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+def approve_proposal_endpoint(proposal_id: str, db: Annotated[Session, Depends(get_session)]):
+    from app.knowledge.proposals import ProposalError, approve_proposal
+
+    try:
+        proposal, subject_id, reclassified = approve_proposal(db, proposal_id)
+    except ProposalError as exc:
+        raise _proposal_error(exc.status_code, str(exc)) from exc
+    return ApproveProposalResponse(
+        **ProposalView.model_validate(proposal).model_dump(),
+        subject_id=subject_id,
+        reclassified=reclassified,
+    )
+
+
+@router.post(
+    "/knowledge/proposals/{proposal_id}/reject",
+    response_model=ProposalView,
+    tags=["知识库"],
+    summary="拒绝新学科提议",
+    description=(
+        "拒绝后提议消亡：学科不进清单，涉及的知识点留在「未分类」，清单与知识图谱都不动。"
+        "拒绝不封杀同名——下次归类再遇到清单内学科都不合适时，会带新的知识点重新提议。"
+    ),
+    responses={
+        200: json_response(
+            "已拒绝：提议消亡，知识点留在「未分类」",
+            {
+                "id": "3f2a1b0c-8d47-4e6a-9b5c-1d2e3f4a5b6c",
+                "name": "考古学",
+                "reason": "这批知识点围绕田野考古与器物研究，清单内没有合适学科。",
+                "knowledge_titles": ["甲骨文与殷商考古"],
+                "status": "已拒绝",
+                "created_at": "2026-10-08T12:00:00",
+                "updated_at": "2026-10-08T12:06:00",
+            },
+        ),
+        404: error_response("提议不存在：该 id 不在待批队列里", "提议不存在。"),
+        409: error_response(
+            "这条提议已经处理过（已批准／已拒绝），不能重复处理",
+            "这条提议已经处理过，不能重复处理。",
+        ),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+def reject_proposal_endpoint(proposal_id: str, db: Annotated[Session, Depends(get_session)]):
+    from app.knowledge.proposals import ProposalError, reject_proposal
+
+    try:
+        return reject_proposal(db, proposal_id)
+    except ProposalError as exc:
+        raise _proposal_error(exc.status_code, str(exc)) from exc

@@ -35,6 +35,67 @@
         "title": "AffectedQuestionView",
         "type": "object"
       },
+      "ApproveProposalResponse": {
+        "description": "批准结果：提议终态 + 入清单的学科项 + 本次重新归类的知识点数。",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "knowledge_titles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Knowledge Titles",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reclassified": {
+            "description": "本次从「未分类」归入新学科的知识点数",
+            "title": "Reclassified",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "subject_id": {
+            "description": "批准后进入（或已在）学科清单的那一项 id",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "reason",
+          "knowledge_titles",
+          "status",
+          "created_at",
+          "updated_at",
+          "subject_id",
+          "reclassified"
+        ],
+        "title": "ApproveProposalResponse",
+        "type": "object"
+      },
       "ArtifactListResponse": {
         "properties": {
           "groups": {
@@ -1784,6 +1845,72 @@
           "message"
         ],
         "title": "PingResponse",
+        "type": "object"
+      },
+      "ProposalListResponse": {
+        "description": "待批队列：只含还没被教师处理过的提议（已批准／已拒绝的不返回）。",
+        "properties": {
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalView"
+            },
+            "title": "Proposals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "proposals"
+        ],
+        "title": "ProposalListResponse",
+        "type": "object"
+      },
+      "ProposalView": {
+        "description": "一条新学科提议（票 09）：名称、AI 理由与涉及的知识点标题。",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "knowledge_titles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Knowledge Titles",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "reason",
+          "knowledge_titles",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProposalView",
         "type": "object"
       },
       "ProviderInstanceCreate": {
@@ -6078,6 +6205,242 @@
         "summary": "邻域子图",
         "tags": [
           "知识图谱"
+        ]
+      }
+    },
+    "/api/v1/knowledge/proposals": {
+      "get": {
+        "description": "上传／联网检索入库时，AI 归类认为清单内学科都不合适会提议新学科（名称 + 理由 +涉及的知识点），落进这里等教师处理。**批准入口住知识库区，不走冲突审核**（那里只裁决矛盾）；待批提议不进学科清单、不可被归类选用，与冲突「待审」同一哲学：审核前不生效。\n\n去重口径：同一名称已有待批提议、或名称已在学科清单内时不再重复提议——涉及的知识点以第一条提议记录的为准；拒绝后不封杀同名，下次归类再失败会重新提议。队列按提出时间排序，只返回「待批」，已处理的提议不再出现。",
+        "operationId": "list_proposals_api_v1_knowledge_proposals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "proposals": [
+                    {
+                      "created_at": "2026-10-08T12:00:00",
+                      "id": "3f2a1b0c-8d47-4e6a-9b5c-1d2e3f4a5b6c",
+                      "knowledge_titles": [
+                        "甲骨文与殷商考古",
+                        "青铜器铭文研究"
+                      ],
+                      "name": "考古学",
+                      "reason": "这批知识点围绕田野考古与器物研究，清单内没有合适学科。",
+                      "status": "待批",
+                      "updated_at": "2026-10-08T12:00:00"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalListResponse"
+                }
+              }
+            },
+            "description": "待批提议列表"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "新学科提议的待批队列",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/knowledge/proposals/{proposal_id}/approve": {
+      "post": {
+        "description": "教师显式批准：提议的学科进入清单，涉及的知识点里**仍为「未分类」**的那些随之归入新学科（教师已归入其他学科的不动），并按入库同一口径补同学科「相关关联」。学科名已在清单内（例如教师先手动加过）时不重复新增，仍执行重新归类。不存在自动入清单——批准是教师的动作，本接口只处理「待批」提议。",
+        "operationId": "approve_proposal_endpoint_api_v1_knowledge_proposals__proposal_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_at": "2026-10-08T12:00:00",
+                  "id": "3f2a1b0c-8d47-4e6a-9b5c-1d2e3f4a5b6c",
+                  "knowledge_titles": [
+                    "甲骨文与殷商考古"
+                  ],
+                  "name": "考古学",
+                  "reason": "这批知识点围绕田野考古与器物研究，清单内没有合适学科。",
+                  "reclassified": 2,
+                  "status": "已批准",
+                  "subject_id": "subject-archaeology",
+                  "updated_at": "2026-10-08T12:05:00"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveProposalResponse"
+                }
+              }
+            },
+            "description": "已批准：学科入清单，相关知识点重新归类"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "提议不存在。"
+                }
+              }
+            },
+            "description": "提议不存在：该 id 不在待批队列里"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "这条提议已经处理过，不能重复处理。"
+                }
+              }
+            },
+            "description": "这条提议已经处理过（已批准／已拒绝），不能重复处理"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "批准新学科提议",
+        "tags": [
+          "知识库"
+        ]
+      }
+    },
+    "/api/v1/knowledge/proposals/{proposal_id}/reject": {
+      "post": {
+        "description": "拒绝后提议消亡：学科不进清单，涉及的知识点留在「未分类」，清单与知识图谱都不动。拒绝不封杀同名——下次归类再遇到清单内学科都不合适时，会带新的知识点重新提议。",
+        "operationId": "reject_proposal_endpoint_api_v1_knowledge_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_at": "2026-10-08T12:00:00",
+                  "id": "3f2a1b0c-8d47-4e6a-9b5c-1d2e3f4a5b6c",
+                  "knowledge_titles": [
+                    "甲骨文与殷商考古"
+                  ],
+                  "name": "考古学",
+                  "reason": "这批知识点围绕田野考古与器物研究，清单内没有合适学科。",
+                  "status": "已拒绝",
+                  "updated_at": "2026-10-08T12:06:00"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalView"
+                }
+              }
+            },
+            "description": "已拒绝：提议消亡，知识点留在「未分类」"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "提议不存在。"
+                }
+              }
+            },
+            "description": "提议不存在：该 id 不在待批队列里"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "这条提议已经处理过，不能重复处理。"
+                }
+              }
+            },
+            "description": "这条提议已经处理过（已批准／已拒绝），不能重复处理"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": [
+                    {
+                      "loc": [
+                        "body",
+                        "messages"
+                      ],
+                      "msg": "Field required",
+                      "type": "missing"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "请求校验失败:请求体、表单或路径字段缺失或类型不符"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal Server Error"
+                }
+              }
+            },
+            "description": "未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。"
+          }
+        },
+        "summary": "拒绝新学科提议",
+        "tags": [
+          "知识库"
         ]
       }
     },

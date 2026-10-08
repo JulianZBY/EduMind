@@ -97,14 +97,14 @@ async def test_extract_uses_current_list_and_chapters(monkeypatch):
 
     llm = PromptCapturingLLM()
     monkeypatch.setattr(factory, "get_llm", lambda: llm)
-    nodes, _ = await extract_knowledge("一次函数\n函数图象")
+    nodes, _, _ = await extract_knowledge("一次函数\n函数图象")
     subjects = {s["name"] for s in client.get("/api/v1/knowledge/subjects").json()["subjects"]}
     assert len(nodes) == 2
     assert all(n["subject"] in subjects and n["chapter"] for n in nodes)
     assert "不得自造" in llm.prompts[-1]
     assert all(f"- {name}" in llm.prompts[-1] for name in subjects)
     monkeypatch.setattr(factory, "get_llm", lambda: OffListSubjectLLM())
-    nodes, _ = await extract_knowledge("考古知识")
+    nodes, _, _ = await extract_knowledge("考古知识")
     assert nodes[0]["subject"] == "未分类"
 
 
@@ -187,7 +187,7 @@ async def test_extract_rejects_missing_or_multiple_subjects(monkeypatch, value):
     from app.core.llm import factory
 
     monkeypatch.setattr(factory, "get_llm", lambda: OffListSubjectLLM(value))
-    nodes, _ = await extract_knowledge("知识正文")
+    nodes, _, _ = await extract_knowledge("知识正文")
     assert nodes[0]["subject"] == "未分类"
 
 
@@ -203,7 +203,7 @@ async def test_current_list_is_injected_and_save_rechecks_after_delete(monkeypat
     assert f"- {name}" in llm.prompts[-1]
     monkeypatch.setattr(factory, "get_llm", lambda: OffListSubjectLLM(name))
     title = uuid.uuid4().hex
-    nodes, edges = await extract_knowledge(title)
+    nodes, edges, _ = await extract_knowledge(title)
     assert nodes[0]["subject"] == name
     assert client.delete(f"/api/v1/knowledge/subjects/{subject['id']}").status_code == 200
     save_knowledge("default", nodes, edges)

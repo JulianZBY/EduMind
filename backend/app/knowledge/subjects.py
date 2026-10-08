@@ -29,6 +29,18 @@ def normalize_subject(value: object, names: set[str]) -> str:
     return name if name in names else UNCLASSIFIED
 
 
+def validate_subject_name(value: object) -> str:
+    """学科名称须为一行、1～100 字符；内容不可接受时抛 SubjectError(400)。
+
+    清单维护与提议批准共用同一口径（票 09 复用品）；仅名称格式校验，
+    不判断是否已在清单内——是否重复由写入方的唯一约束兜底。
+    """
+    name = value.strip() if isinstance(value, str) else ""
+    if not name or len(name) > 100 or "\n" in name or "\r" in name:
+        raise SubjectError(400, "学科名称须为一行，包含 1～100 个字符。")
+    return name
+
+
 def initialize_subjects(bind, *, seed: bool) -> None:
     """仅首次建清单时内置基础学科；后续启动不复活教师已删除的学科。
 
@@ -95,9 +107,7 @@ def maintain_subject(
     if subject and subject.name == UNCLASSIFIED:
         raise SubjectError(409, "「未分类」用于归类兜底，不能更名或删除。")
     if name is not None:
-        name = name.strip()
-        if not name or len(name) > 100 or "\n" in name or "\r" in name:
-            raise SubjectError(400, "学科名称须为一行，包含 1～100 个字符。")
+        name = validate_subject_name(name)
         if subject is None:
             subject = Subject(name=name)
             db.add(subject)

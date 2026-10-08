@@ -16,6 +16,12 @@ import type {
   SubjectView,
   GetSubjectsApiV1KnowledgeSubjectsGetData,
   RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchData,
+  ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostData,
+  ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostResponse,
+  ListProposalsApiV1KnowledgeProposalsGetData,
+  ProposalListResponse,
+  RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostData,
+  RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostResponse,
   DeleteDocumentApiV1DocumentsDocumentIdDeleteData,
   DeleteDocumentRequest,
   DocumentDeletePreview,
@@ -38,6 +44,11 @@ import { questionKeys } from '../question-bank/queries'
 const subjectsUrl: GetSubjectsApiV1KnowledgeSubjectsGetData['url'] = '/api/v1/knowledge/subjects'
 const subjectUrl: RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchData['url'] =
   '/api/v1/knowledge/subjects/{subject_id}'
+const proposalsUrl: ListProposalsApiV1KnowledgeProposalsGetData['url'] = '/api/v1/knowledge/proposals'
+const approveProposalUrl: ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostData['url'] =
+  '/api/v1/knowledge/proposals/{proposal_id}/approve'
+const rejectProposalUrl: RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostData['url'] =
+  '/api/v1/knowledge/proposals/{proposal_id}/reject'
 
 /** URL 一律从生成的 schema 取（`npm run gen:api`），改后端路径时这里会编译报错。 */
 const documentsUrl: ListDocumentsApiV1DocumentsGetData['url'] = '/api/v1/documents'
@@ -66,6 +77,8 @@ export const knowledgeKeys = {
   detail: (documentId: string) => [...knowledgeKeys.all, 'detail', documentId] as const,
   /** 删除前预览：只在对话框打开时拉取，不算详情的一部分。 */
   deletePreview: (documentId: string) => [...knowledgeKeys.all, 'delete-preview', documentId] as const,
+  /** 新学科提议的待批队列（票 09）：解析在后台落提议，随本区缓存一同失效。 */
+  proposals: () => [...knowledgeKeys.all, 'proposals'] as const,
 }
 
 /** 接口错误翻成教师能读的一句话（400 的 `detail.message` 本身就是面向教师的文案）。 */
@@ -237,6 +250,58 @@ export function useDeleteSubject() {
       queryClient.invalidateQueries({ queryKey: graphKeys.all })
     },
   })
+}
+
+/** 新学科提议的待批队列：批准前不进学科清单，这里只列还没处理过的提议。
+ * 提议随后台解析落地，比上传动作晚到——队列永远当下重取（同删除预览的口径），
+ * 避免教师等到解析完成后打开队列却看到缓存的「没有提议」。 */
+export function usePendingProposals() {
+  return useQuery({
+    queryKey: knowledgeKeys.proposals(),
+    queryFn: ({ signal }) => apiRequest<ProposalListResponse>(proposalsUrl, { signal }),
+    staleTime: 0,
+    gcTime: 0,
+  })
+}
+
+/** 批准：学科入清单 + 相关「未分类」知识点重新归类，牵动清单与知识图谱两处缓存。 */
+export function useApproveProposal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (proposalId: string) =>
+      apiRequest<ApproveProposalEndpointApiV1KnowledgeProposalsProposalIdApprovePostResponse>(
+        approveProposalUrl.replace('{proposal_id}', encodeURIComponent(proposalId)),
+        { method: 'POST' },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: knowledgeKeys.all })
+      queryClient.invalidateQueries({ queryKey: graphKeys.all })
+    },
+  })
+}
+
+/** 拒绝：提议消亡、知识点留在「未分类」，只有队列本身会变。 */
+export function useRejectProposal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (proposalId: string) =>
+      apiRequest<RejectProposalEndpointApiV1KnowledgeProposalsProposalIdRejectPostResponse>(
+        rejectProposalUrl.replace('{proposal_id}', encodeURIComponent(proposalId)),
+        { method: 'POST' },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: knowledgeKeys.proposals() })
+    },
+  })
+}
+
+/** 提议动作失败 → 教师能读的一句话（404/409 语义见后端端点描述）。 */
+export function proposalErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 404) return '这条提议已经不在队列里了，刷新后再看。'
+    if (error.status === 409) return '这条提议已经处理过，不能重复处理。'
+  }
+  return apiErrorMessage(error, '操作没有成功，请稍后重试。')
 }
 
 /** 删除前预览：按默认勾选口径列出这次删除会发生的每一件事（票 07，级联不静默）。 */

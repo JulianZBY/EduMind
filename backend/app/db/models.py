@@ -96,6 +96,27 @@ class Subject(Base):
     name: Mapped[str] = mapped_column(String(100), unique=True)  # 主学科允许的名称
 
 
+class SubjectProposal(Base):
+    """新学科提议（CONTEXT.md「学科清单」/ 票 09）：AI 归类时认为清单内学科都不合适，
+    提议一个新学科，附理由与涉及的知识点标题。待批期间不进学科清单、不可被归类选用，
+    也不进冲突审核（与冲突「待审」同哲学）；批准是教师显式动作——批准才入清单并触发
+    相关「未分类」知识点重新归类；拒绝后提议消亡、知识点留在「未分类」。"""
+
+    __tablename__ = "subject_proposals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100))  # 提议的学科名（待批期间不在学科清单内）
+    reason: Mapped[str] = mapped_column(Text, default="")  # AI 给出的提议理由
+    # 涉及的知识点标题（本次归类失败、留在「未分类」的节点）；批准时按标题重新归类
+    knowledge_titles: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(20), default="待批")  # 待批/已批准/已拒绝
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
+
+
 class KnowledgeNode(Base):
     __tablename__ = "knowledge_nodes"
 
