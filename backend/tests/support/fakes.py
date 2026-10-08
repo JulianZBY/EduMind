@@ -90,6 +90,14 @@ FAKE_INTENT = {
 FAKE_MARK = "[测试替身提取]"
 
 
+def _fake_summary(prompt: str) -> str:
+    """从概要提示词里拆出资料正文，回显前两行拼成资料概要（确定性、内容相关）。"""
+    _, _, body = prompt.partition("资料内容：\n")
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    picked = "；".join(lines[:2]) if lines else "（资料没有可读正文）"
+    return f"{FAKE_MARK} 资料概要：{picked}"
+
+
 def _fake_knowledge(prompt: str) -> dict:
     """从提取提示词里拆出正文，取前 3 个非空行回显为节点/边（确定性、内容相关）。"""
     _, _, body = prompt.partition("教学内容：\n")
@@ -131,6 +139,8 @@ class FakeLLM(LLMProvider):
 
     async def chat(self, messages: list[ChatMessage], **kwargs) -> ChatResult:
         last = messages[-1].content if messages else ""
+        if "资料概要编写助手" in last:
+            return ChatResult(content=_fake_summary(last))
         if "意图分析模块" in last:
             return ChatResult(content=json.dumps(FAKE_INTENT, ensure_ascii=False))
         if "教学知识图谱构建助手" in last:
@@ -195,7 +205,12 @@ FAKE_TRANSCRIPT = "（测试替身录音转写）本段录音讲解计算机网�
 
 
 class FakeTranscriber(Transcriber):
+    """转写替身：默认返回固定文字稿；需要唯一正文的用例（如文献笔记）传 transcript 覆盖。"""
+
     name = "fake-test"
 
+    def __init__(self, transcript: str | None = None) -> None:
+        self._transcript = transcript if transcript is not None else FAKE_TRANSCRIPT
+
     async def transcribe(self, file_path: str) -> str:
-        return FAKE_TRANSCRIPT
+        return self._transcript
