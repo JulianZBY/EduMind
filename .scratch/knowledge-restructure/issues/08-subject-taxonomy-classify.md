@@ -60,3 +60,14 @@
 - 新增／更新离线回归覆盖：所有建点动作与元数据重验、同学科／语义关联、完整终态对照实际、待审私有向量不泄露、GET 遇服务失败仍零调用、历史／手工缺信息及标题／模型／维度变更不完整、同维外空间与旧未知空间过滤、foreign 占前五不饿死兼容候选、幂等迁移、底层失败回滚、真实固定维度 `409` 全状态不变、仅重算当前标题、清单更名／删除后的约束、普通上传及新索引空间保存兼容。能力替身全部只增于 `tests/support/fakes.py`。
 - 前端硬清单源码自检：新增仅非交互说明，强调色 `border-2`＋`rounded-none`＋黑字／内边距；无阴影、渐变、灰底、动画、装饰图标、新字体或新控件；既有 Card、扁平图示／四关系主题与按钮四态／Radix 行为不变。机器扫描及构建通过。没有进行浏览器／键盘人工冒烟、教师真实 Key／云端向量化质量验证或服务上线冒烟，留待协调者安排。
 - 本记录仅 writer 自审，不宣称独立复核通过；Status 保持由协调者裁定。持久证据在 `/home/julianzby/.local/state/edumind/recovery/wave2-20261008-164611/w08-recovery/`，正式交付报告使用运行时指定路径。
+
+### 2026-10-08：最终规范轴 P1 处置（维度 409 教师提示误报）与窄修交付
+
+- 接受规范轴发现：固定标题索引维度不兼容返回 `409` 后，前端 `ConflictQueuePanel` 无条件把它显示成「这条冲突已经裁决过，不能重复提交」，与冲突仍保持待审的事实矛盾。本次只修这一条，未改 07/10、未开始 09/12。
+- 后端 `review_conflict` 的维度 `409` 改为结构化 `detail={"code":"title_index_dimension_mismatch","message":"…"}`，`message` 收敛到 `vector_store.TITLE_INDEX_DIMENSION_MISMATCH_MESSAGE` 单一出处；已裁决的 `409` 保持字符串 `detail`，两种 body 可机器区分，不靠中文子串。教师文案「这条冲突仍保持待审：标题索引与当前设置不兼容，需要先处理标题索引，处理完成后再裁决这条冲突；知识图谱没有变化。」不含「已裁决／重复提交／重建」。
+- OpenAPI 409 示例与端点 docstring 区分两种 body；`docs/api/conflicts.md` 补第二种 409 语义（仍待审、需先处理标题索引、无自动重建），`docs/api/README.md` 错误体形状处注明结构化 4xx 例外（设置 400／冲突 409／未配置 503），不再与代码矛盾。`npm run gen:api` 重生成快照与类型，无手抄类型。
+- 前端 `conflictErrorMessage` 按 `detail.code === 'title_index_dimension_mismatch'` 分支，走既有 `apiErrorMessage` 展示 `detail.message`；已裁决分支保持原「这条冲突已经裁决过，不能重复提交。」。新增离线脚本 `frontend/scripts/check-conflict-409.mjs` 用 vite `ssrLoadModule` 加载真实 `queries.ts`，分别断言两种 payload 的提示不同且正确（含哨兵消息证明按 code 判别而非中文子串）。
+- 红绿证据：后端真实红（`test_vector_store` 旧断言 `match="维度"` 失败，因文案已改）→ 绿（487 passed）；前端新脚本首跑即绿，语义断言覆盖「仍待审／标题索引需先处理／不误报已裁决／不引导重建／两种提示不同」。
+- 门禁：`cd backend && uv run pytest -q` 487 passed（两条既有 Starlette 弃用警告）；`uv run ruff check .` 退出 0；`npm run gen:api`、`npm run lint`、`npm run build`、`npm run check:routes`、`npm run check:conflict-409` 均退出 0；`tsc -b` 构建通过、七条路由可达、110 文件十条禁用规则零违规。Vite 既有大包警告仍在。
+- 新增／更新回归：后端 `test_real_fixed_dimension_409_preserves_all_state` 改断言结构化 detail 且图谱/索引无副作用；新增 `test_already_reviewed_409_keeps_string_detail` 锁定已裁决 409 仍是字符串、与维度 409 可区分；`test_vector_store::test_node_title_dimension_mismatch_friendly_error` 匹配词随文案改为「标题索引」。
+- 人工浏览器／键盘冒烟、教师真实 Key／云端向量化质量验证、服务上线冒烟仍未做，留待协调者安排。本次仅 writer 自审，不宣称独立复核通过；Status 保持由协调者裁定。持久证据在 `/home/julianzby/.local/state/edumind/recovery/wave2-20261008-164611/w08-409-fix/`。
