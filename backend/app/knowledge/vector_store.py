@@ -26,6 +26,14 @@ def _dim_mismatch(path: str, exc: sqlite3.OperationalError) -> None:
     ) from exc
 
 
+# 面向教师的一句话：只出现在冲突裁决的 409 里，说明仍保持待审、需先处理标题索引，
+# 不引导不存在的重建按钮，也不承诺图谱已变。避免各调用点各写一份措辞不一致。
+TITLE_INDEX_DIMENSION_MISMATCH_MESSAGE = (
+    "这条冲突仍保持待审：标题索引与当前设置不兼容，"
+    "需要先处理标题索引，处理完成后再裁决这条冲突；知识图谱没有变化。"
+)
+
+
 class TitleIndexDimensionMismatch(ValueError):
     """当前标题向量与固定索引维度不兼容，不能自动删除或重建既有索引。"""
 
@@ -243,8 +251,7 @@ class VectorStore:
             ).fetchone()
             if row and row[0] != dimension * 4:
                 raise TitleIndexDimensionMismatch(
-                    "当前标题向量维度与已有索引不兼容。此处不会自动重建索引，"
-                    "请先由维护者处理标题索引，再裁决这条冲突。"
+                    TITLE_INDEX_DIMENSION_MISMATCH_MESSAGE
                 )
             if row is None:
                 # 空表也保留固定维度；用 vec0 声明核对。
@@ -256,7 +263,7 @@ class VectorStore:
                 match = re.search(r"float\[(\d+)\]", sql)
                 if match and int(match[1]) != dimension:
                     raise TitleIndexDimensionMismatch(
-                        "当前标题向量维度与已有索引不兼容。此处不会自动重建索引，请先由维护者处理标题索引，再裁决这条冲突。"
+                        TITLE_INDEX_DIMENSION_MISMATCH_MESSAGE
                     )
         finally:
             conn.close()

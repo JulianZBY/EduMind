@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "check:classes": "node scripts/check-forbidden-classes.mjs",
     "check:routes": "node scripts/check-routes.mjs",
+    "check:conflict-409": "node scripts/check-conflict-409.mjs",
     "openapi:snapshot": "node scripts/dump-openapi.mjs",
     "openapi:types": "openapi-ts -i ./openapi/openapi.json -o ./src/api/generated -p @hey-api/typescript --no-log-file",
     "gen:api": "npm run openapi:snapshot && npm run openapi:types"

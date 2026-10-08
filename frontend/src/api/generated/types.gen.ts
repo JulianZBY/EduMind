@@ -2596,7 +2596,7 @@ export type ReviewConflictApiV1ConflictsConflictIdReviewPostErrors = {
      */
     404: unknown;
     /**
-     * 已裁决或固定标题索引维度不兼容，图谱不变
+     * 已裁决（字符串 detail）或固定标题索引维度不兼容（结构化 detail，`code` 固定为 title_index_dimension_mismatch），两者都不写图谱
      */
     409: unknown;
     /**

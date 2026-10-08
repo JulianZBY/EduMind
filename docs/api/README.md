@@ -40,8 +40,12 @@
 ```
 
 - 校验失败（`422`）的 `detail` 是**列表**，每项含 `loc` / `msg` / `type`。
-- 业务错误（`4xx`）的 `detail` 是**字符串**，直接面向教师展示（但仍是中文技术措辞，
+- 业务错误（`4xx`）的 `detail` 默认是**字符串**，直接面向教师展示（但仍是中文技术措辞，
   前端如需更适合教师的说法，应自行映射，不要把后端异常原文当界面文案）。
+  **例外**：部分业务错误用结构化 `detail` 携带稳定 `code` 与面向教师的 `message`——
+  例如设置 400（`{code, field, message}`）、冲突裁决维度不兼容 409（`{code, message}`）、
+  未配置云端能力的 503（`{code, message}`，见 [`provider-not-configured.md`](provider-not-configured.md)）。
+  前端对这些错误优先展示 `detail.message`，并按 `detail.code` 机器区分，不匹配文案子串。
 - `5xx` 的 `detail` 是排障信息（例如 `BOCHA_API_KEY 未配置`），不保证对教师友好。
 
 ### 错误码选择

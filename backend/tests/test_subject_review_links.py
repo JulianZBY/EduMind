@@ -308,13 +308,33 @@ def test_real_fixed_dimension_409_preserves_all_state(review_case, title_embedde
         json={"action": action, "revised_content": "修正正文"},
     )
     assert response.status_code == 409
-    assert "维度" in response.json()["detail"]
+    body = response.json()["detail"]
+    assert body["code"] == "title_index_dimension_mismatch"
+    assert "待审" in body["message"]
+    assert "标题索引" in body["message"]
     assert graph_snapshot() == before_graph
     assert index_snapshot(store) == before_index
     with SessionLocal() as db:
         c = db.get(Conflict, conflict_id)
         assert c is not None
         assert (c.status, c.review_action, c.revised_content) == ("待审", None, None)
+
+
+def test_already_reviewed_409_keeps_string_detail(review_case):
+    """已裁决的 409 仍返回字符串 detail，与维度不兼容的结构化 detail 可机器区分。"""
+    case = review_case
+    conflict_id = seed_conflict(case, "定义冲突")
+    assert (
+        client.post(f"/api/v1/conflicts/{conflict_id}/review", json={"action": "保留旧"}).status_code
+        == 200
+    )
+    response = client.post(
+        f"/api/v1/conflicts/{conflict_id}/review", json={"action": "保留旧"}
+    )
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert isinstance(detail, str)
+    assert "已审核" in detail
 
 
 @pytest.mark.asyncio

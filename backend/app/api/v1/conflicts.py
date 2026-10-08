@@ -32,7 +32,10 @@ from app.knowledge.conflict import (
     resolve_conflict,
 )
 from app.knowledge.title_vectors import TITLE_VECTOR_KEY
-from app.knowledge.vector_store import TitleIndexDimensionMismatch
+from app.knowledge.vector_store import (
+    TITLE_INDEX_DIMENSION_MISMATCH_MESSAGE,
+    TitleIndexDimensionMismatch,
+)
 
 router = APIRouter()
 
@@ -437,7 +440,9 @@ async def list_conflicts(
         "`拒绝`：不让它进库，终态 `已拒绝`；`编辑修正后入库`：教师改对了再入库，"
         "**落库的是修正后的内容**（原文留在冲突记录里），终态 `已接受`。\n\n"
         "动作不属于该类别 = `422`（与冲突当前状态无关的请求语义错误）；"
-        "对已裁决的冲突再提交 = `409`（状态冲突，不是请求格式错误）。\n\n"
+        "对已裁决的冲突再提交 = `409`（状态冲突，不是请求格式错误）。"
+        "固定标题索引维度不兼容也是 `409`，但 `detail` 带稳定 `code`（冲突仍保持待审），"
+        "与「已裁决」的字符串 `detail` 区分。\n\n"
         "审核前新知不入知识图谱——「待审」期间图谱里看不到它；"
         '结构冲突的新知可自带关系（`new_knowledge["relations"]`，端点按知识点标题解析），'
         "随「接受新」/「并存」一并入图。"
@@ -468,13 +473,17 @@ async def list_conflicts(
         ),
         404: error_response("冲突不存在", "冲突不存在: c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d"),
         409: json_response_examples(
-            "已裁决或固定标题索引维度不兼容，图谱不变",
+            "已裁决（字符串 detail）或固定标题索引维度不兼容（结构化 detail，"
+            "`code` 固定为 title_index_dimension_mismatch），两者都不写图谱",
             {
                 "已裁决": named("不可重复裁决", {"detail": "该冲突已审核: 已接受"}),
                 "标题索引维度不兼容": named(
-                    "保持待审，不自动重建索引",
+                    "保持待审，需先处理标题索引",
                     {
-                        "detail": "当前标题向量维度与已有索引不兼容。此处不会自动重建索引，请先由维护者处理标题索引，再裁决这条冲突。"
+                        "detail": {
+                            "code": "title_index_dimension_mismatch",
+                            "message": TITLE_INDEX_DIMENSION_MISMATCH_MESSAGE,
+                        }
                     },
                 ),
             },
@@ -512,7 +521,11 @@ async def review_conflict(
     try:
         return await resolve_conflict(conflict_id, req.action, req.revised_content)
     except TitleIndexDimensionMismatch as e:
-        raise HTTPException(status_code=409, detail=str(e)) from e
+        # 与「已裁决」的字符串 detail 区分：带稳定 code，前端按 code 分支，不靠中文子串。
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "title_index_dimension_mismatch", "message": str(e)},
+        ) from e
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except ActionNotAllowed as e:

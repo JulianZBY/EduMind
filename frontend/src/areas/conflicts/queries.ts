@@ -10,7 +10,7 @@
  * 「并存」与「已接受」的呈现不同，本地乐观更新容易把两者画成一样。
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ApiError, apiRequest } from '../../api/client'
+import { ApiError, apiErrorMessage, apiRequest } from '../../api/client'
 import type {
   ListConflictsApiV1ConflictsGetData,
   ListConflictsApiV1ConflictsGetResponse,
@@ -72,7 +72,19 @@ export function useReviewConflict() {
 export function conflictErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 404) return '这条冲突已经不在队列里了，刷新后再看。'
-    if (error.status === 409) return '这条冲突已经裁决过，不能重复提交。'
+    if (error.status === 409) {
+      // 两种 409：已裁决（字符串 detail）与标题索引维度不兼容（结构化 detail，
+      // 稳定 code 判别，不靠中文子串）。后者仍保持待审，不能用「已裁决」误导教师。
+      const detail = (error.payload as { detail?: unknown } | null)?.detail
+      if (
+        detail !== null &&
+        typeof detail === 'object' &&
+        (detail as { code?: unknown }).code === 'title_index_dimension_mismatch'
+      ) {
+        return apiErrorMessage(error, '这条冲突暂时不能裁决，稍后重试一次。')
+      }
+      return '这条冲突已经裁决过，不能重复提交。'
+    }
     if (error.status === 422) return '这个动作不适用于这类冲突，或者缺少需要的内容。'
   }
   return '后端没有回应或返回了错误，稍后重试一次。'
