@@ -30,6 +30,7 @@ def _set_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
     finally:
         cursor.close()
 
+
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
@@ -43,6 +44,7 @@ _LEGACY_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("documents", "failure_reason", "TEXT DEFAULT ''"),
     ("prep_sessions", "title_edited", "BOOLEAN DEFAULT 0"),
 )
+
 
 def _ensure_sqlite_columns(bind=None) -> None:
     """轻量幂等迁移：补列 + 回填（默认库为 SQLite）。
