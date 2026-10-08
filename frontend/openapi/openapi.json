@@ -722,6 +722,9 @@
             "title": "Is Reference",
             "type": "boolean"
           },
+          "literature_note": {
+            "$ref": "#/components/schemas/LiteratureNoteView"
+          },
           "parsed_at": {
             "anyOf": [
               {
@@ -754,7 +757,8 @@
           "parsed_at",
           "conflict_count",
           "chunk_count",
-          "chunks"
+          "chunks",
+          "literature_note"
         ],
         "title": "DocumentDetail",
         "type": "object"
@@ -1214,6 +1218,29 @@
         "title": "KeyItem",
         "type": "object"
       },
+      "KnowledgeIndexEntry": {
+        "description": "文献笔记的知识点索引条目：`id` 是知识图谱节点，可直接定位到该知识点。",
+        "example": {
+          "id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f",
+          "title": "TCP三次握手"
+        },
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "KnowledgeIndexEntry",
+        "type": "object"
+      },
       "KnowledgePointCount": {
         "description": "题库筛选项：一个考查知识点及它的题目数。",
         "properties": {
@@ -1332,6 +1359,58 @@
           "doc_id"
         ],
         "title": "KnowledgeSourceRef",
+        "type": "object"
+      },
+      "LiteratureNoteView": {
+        "description": "文献笔记（CONTEXT.md「文献笔记」，ADR-0007）：资料的摘要卡 = 资料概要 + 知识点索引。\n\n`status` 口径：`已生成` = 概要与索引可用；`未配置` = 对话模型未配置、笔记没有生成\n（分块与解析照常入库），界面据此给「去设置页」引导；`未生成` = 解析未到终态\n（处理中 / 失败）或概要生成没有成功——不返回假摘要。",
+        "example": {
+          "knowledge_index": [
+            {
+              "id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f",
+              "title": "一次函数"
+            }
+          ],
+          "source": "教学资料",
+          "status": "已生成",
+          "summary": "本资料系统讲解一次函数的定义、图像与 k、b 的几何意义，适合初中代数备课。"
+        },
+        "properties": {
+          "knowledge_index": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeIndexEntry"
+            },
+            "title": "Knowledge Index",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "教学资料",
+              "网页"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "已生成",
+              "未配置",
+              "未生成"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "source",
+          "summary",
+          "knowledge_index"
+        ],
+        "title": "LiteratureNoteView",
         "type": "object"
       },
       "Message": {
@@ -4625,7 +4704,7 @@
     },
     "/api/v1/documents/{document_id}": {
       "get": {
-        "description": "一份教学资料的全部信息：解析状态与参考资料标记（与列表同一口径），外加解析完成时间、待审冲突数，以及入库的分块明细（可回溯到来源资料）。\n\n`chunks` 只返回前 200 个分块，`chunk_count` 是该资料的分块总数；资料仍在 `处理中` 时 `parsed_at` 为空、`chunks` 为空——列表与详情的状态都会随后台解析自动变化，客户端无需手动刷新。",
+        "description": "一份教学资料的全部信息：解析状态与参考资料标记（与列表同一口径），外加解析完成时间、待审冲突数、入库的分块明细（可回溯到来源资料），以及这份资料的**文献笔记**（资料概要 + 知识点索引，ADR-0007）。\n\n`literature_note.status` 口径：`已生成` = 概要与索引可用；`未配置` = 对话模型未配置、笔记没有生成（分块与解析照常入库），界面据此给「去设置页」引导，接口不返回假摘要；`未生成` = 解析未到终态或概要生成没有成功。\n\n`chunks` 只返回前 200 个分块，`chunk_count` 是该资料的分块总数；资料仍在 `处理中` 时 `parsed_at` 为空、`chunks` 为空——列表与详情的状态都会随后台解析自动变化，客户端无需手动刷新。",
         "operationId": "get_document_api_v1_documents__document_id__get",
         "parameters": [
           {
@@ -4658,6 +4737,17 @@
                   "filename": "一次函数讲义.pdf",
                   "id": "7f6e5d4c-3b2a-4918-8776-655443322110",
                   "is_reference": true,
+                  "literature_note": {
+                    "knowledge_index": [
+                      {
+                        "id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f",
+                        "title": "一次函数"
+                      }
+                    ],
+                    "source": "教学资料",
+                    "status": "已生成",
+                    "summary": "本资料系统讲解一次函数的定义、图像与 k、b 的几何意义，适合初中代数备课。"
+                  },
                   "parsed_at": "2026-09-24T10:30:00",
                   "status": "已完成"
                 },

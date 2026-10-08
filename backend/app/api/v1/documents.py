@@ -23,6 +23,7 @@ from fastapi import (
     Path as PathParam,
 )
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.openapi_examples import (
@@ -34,7 +35,13 @@ from app.api.openapi_examples import (
 )
 from app.config import settings
 from app.db import get_session
-from app.db.models import Document
+from app.db.models import Document, LiteratureNote
+from app.knowledge.literature_note import (
+    SOURCE_DOCUMENT,
+    STATUS_GENERATED,
+    STATUS_PENDING,
+    STATUS_UNCONFIGURED,
+)
 from app.knowledge.pipeline import parse_document
 from app.knowledge.storage import save_upload
 from app.knowledge.vector_store import VectorStore
@@ -87,11 +94,52 @@ class DocumentChunk(BaseModel):
     content: str
 
 
+class KnowledgeIndexEntry(BaseModel):
+    """文献笔记的知识点索引条目：`id` 是知识图谱节点，可直接定位到该知识点。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f", "title": "TCP三次握手"}
+        }
+    )
+
+    id: str
+    title: str
+
+
+class LiteratureNoteView(BaseModel):
+    """文献笔记（CONTEXT.md「文献笔记」，ADR-0007）：资料的摘要卡 = 资料概要 + 知识点索引。
+
+    `status` 口径：`已生成` = 概要与索引可用；`未配置` = 对话模型未配置、笔记没有生成
+    （分块与解析照常入库），界面据此给「去设置页」引导；`未生成` = 解析未到终态
+    （处理中 / 失败）或概要生成没有成功——不返回假摘要。
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "status": "已生成",
+                "source": "教学资料",
+                "summary": "本资料系统讲解一次函数的定义、图像与 k、b 的几何意义，适合初中代数备课。",
+                "knowledge_index": [
+                    {"id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f", "title": "一次函数"}
+                ],
+            }
+        }
+    )
+
+    status: Literal["已生成", "未配置", "未生成"]
+    source: Literal["教学资料", "网页"]
+    summary: str  # 资料概要；未配置 / 未生成时为空字符串（不返回假摘要）
+    knowledge_index: list[KnowledgeIndexEntry]  # 可点进知识图谱的知识点索引
+
+
 class DocumentDetail(DocumentView):
     parsed_at: datetime | None  # 解析完成时间；处理中为空
     conflict_count: int  # 待审冲突数，对应状态「有冲突」
     chunk_count: int  # 该资料入库的分块总数
     chunks: list[DocumentChunk]  # 详情页展示的头 CHUNK_PREVIEW_LIMIT 个分块
+    literature_note: LiteratureNoteView  # 文献笔记（ADR-0007）：资料的管理入口
 
 
 class ReferenceRequest(BaseModel):
@@ -118,6 +166,28 @@ def _document_or_404(db: Session, document_id: str) -> Document:
     if doc is None:
         raise HTTPException(status_code=404, detail=f"资料不存在: {document_id}")
     return doc
+
+
+def _literature_note_view(db: Session, doc: Document) -> LiteratureNoteView:
+    """资料的文献笔记视图：行缺席（处理中 / 失败 / 存量老资料）时如实报「未生成」。"""
+    note = (
+        db.execute(select(LiteratureNote).where(LiteratureNote.doc_id == doc.id))
+        .scalars()
+        .one_or_none()
+    )
+    if note is None:
+        return LiteratureNoteView(
+            status=STATUS_PENDING, source=SOURCE_DOCUMENT, summary="", knowledge_index=[]
+        )
+    return LiteratureNoteView(
+        status=cast(
+            Literal["已生成", "未配置", "未生成"],
+            note.status if note.status in (STATUS_GENERATED, STATUS_UNCONFIGURED) else STATUS_PENDING,
+        ),
+        source=cast(Literal["教学资料", "网页"], note.source),
+        summary=note.summary or "",
+        knowledge_index=[KnowledgeIndexEntry(**entry) for entry in (note.knowledge_index or [])],
+    )
 
 
 @router.post(
@@ -273,7 +343,11 @@ async def list_documents(db: Annotated[Session, Depends(get_session)]):
     summary="教学资料详情",
     description=(
         "一份教学资料的全部信息：解析状态与参考资料标记（与列表同一口径），"
-        "外加解析完成时间、待审冲突数，以及入库的分块明细（可回溯到来源资料）。\n\n"
+        "外加解析完成时间、待审冲突数、入库的分块明细（可回溯到来源资料），"
+        "以及这份资料的**文献笔记**（资料概要 + 知识点索引，ADR-0007）。\n\n"
+        "`literature_note.status` 口径：`已生成` = 概要与索引可用；`未配置` = 对话模型"
+        "未配置、笔记没有生成（分块与解析照常入库），界面据此给「去设置页」引导，"
+        "接口不返回假摘要；`未生成` = 解析未到终态或概要生成没有成功。\n\n"
         "`chunks` 只返回前 200 个分块，`chunk_count` 是该资料的分块总数；"
         "资料仍在 `处理中` 时 `parsed_at` 为空、`chunks` 为空——"
         "列表与详情的状态都会随后台解析自动变化，客户端无需手动刷新。"
@@ -297,6 +371,14 @@ async def list_documents(db: Annotated[Session, Depends(get_session)]):
                         "content": "一次函数：形如 y=kx+b（k≠0）的函数。",
                     }
                 ],
+                "literature_note": {
+                    "status": "已生成",
+                    "source": "教学资料",
+                    "summary": "本资料系统讲解一次函数的定义、图像与 k、b 的几何意义，适合初中代数备课。",
+                    "knowledge_index": [
+                        {"id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f", "title": "一次函数"}
+                    ],
+                },
             },
         ),
         404: error_response(
@@ -318,6 +400,7 @@ async def get_document(
         conflict_count=doc.conflict_count or 0,
         chunk_count=chunk_count,
         chunks=[DocumentChunk(**c) for c in chunks],
+        literature_note=_literature_note_view(db, doc),
     )
 
 

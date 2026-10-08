@@ -459,6 +459,7 @@ export type DocumentDetail = {
      * Is Reference
      */
     is_reference: boolean;
+    literature_note: LiteratureNoteView;
     /**
      * Parsed At
      */
@@ -757,6 +758,22 @@ export type KeyItem = {
 };
 
 /**
+ * KnowledgeIndexEntry
+ *
+ * 文献笔记的知识点索引条目：`id` 是知识图谱节点，可直接定位到该知识点。
+ */
+export type KnowledgeIndexEntry = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
  * KnowledgePointCount
  *
  * 题库筛选项：一个考查知识点及它的题目数。
@@ -826,6 +843,34 @@ export type KnowledgeSourceRef = {
      * Filename
      */
     filename?: string | null;
+};
+
+/**
+ * LiteratureNoteView
+ *
+ * 文献笔记（CONTEXT.md「文献笔记」，ADR-0007）：资料的摘要卡 = 资料概要 + 知识点索引。
+ *
+ * `status` 口径：`已生成` = 概要与索引可用；`未配置` = 对话模型未配置、笔记没有生成
+ * （分块与解析照常入库），界面据此给「去设置页」引导；`未生成` = 解析未到终态
+ * （处理中 / 失败）或概要生成没有成功——不返回假摘要。
+ */
+export type LiteratureNoteView = {
+    /**
+     * Knowledge Index
+     */
+    knowledge_index: Array<KnowledgeIndexEntry>;
+    /**
+     * Source
+     */
+    source: '教学资料' | '网页';
+    /**
+     * Status
+     */
+    status: '已生成' | '未配置' | '未生成';
+    /**
+     * Summary
+     */
+    summary: string;
 };
 
 /**

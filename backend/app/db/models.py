@@ -202,6 +202,36 @@ class Document(Base):
     failure_reason: Mapped[str] = mapped_column(Text, default="")
 
 
+class LiteratureNote(Base):
+    """文献笔记（CONTEXT.md「文献笔记」，ADR-0007）：一份教学资料入库时自动生成的摘要卡。
+
+    内容 = 资料概要 + 由该资料提取的知识点索引；与教学资料 1:1（doc_id 唯一约束兑底），
+    资料的管理入口（查看 / 删除 / 关联治理）落在它上面。对话模型未配置时笔记不生成，
+    只落「未配置」状态——详情给去设置页的引导，不返回假摘要（AGENTS.md 铁律）。
+    """
+
+    __tablename__ = "literature_notes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    # 所属教学资料：一份资料至多一张文献笔记（唯一索引是 1:1 的兑底约束）
+    doc_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("documents.id"), unique=True, index=True
+    )
+    # 来源：教学资料（上传入库）/ 网页（「联网检索并入库」的结果页，票 10 接入本管道）
+    source: Mapped[str] = mapped_column(String(20), default="教学资料")
+    # 生成状态：已生成（概要与索引可用）/ 未配置（对话模型未配置，详情给引导）
+    status: Mapped[str] = mapped_column(String(20), default="未生成")
+    # 资料概要：对话模型生成的两三句话；未配置 / 未生成时为空（不放假摘要）
+    summary: Mapped[str] = mapped_column(Text, default="")
+    # 知识点索引：由本资料提取并已入图谱的知识点 [{id, title}]，条目可点进知识图谱
+    knowledge_index: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
+
+
 class Conflict(Base):
     __tablename__ = "conflicts"
 

@@ -7,6 +7,7 @@ from datetime import datetime
 from app.core.errors import ProviderNotConfigured
 from app.db import SessionLocal
 from app.db.models import Document
+from app.knowledge.literature_note import build_note
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,9 @@ async def parse_document(doc_id: str) -> str:
             if chunks:
                 await index_chunks(doc_id, chunks)
             conflict_count = await extract_and_save_knowledge(doc_id, result)
+            # 文献笔记（ADR-0007）：知识提取完成后生成摘要卡——概要 + 本资料的知识点索引。
+            # 尽力而为：对话模型未配置时只落「未配置」状态，不影响解析主流程。
+            await build_note(doc_id, result)
         except Exception as exc:
             # 后台任务入口：吞掉异常仅记日志——失败经 doc.status=「失败」观测即可，
             # 重抛只会打断 FastAPI 后台任务且无所收益（ticket #11：失败不拖垮其他格式解析）
