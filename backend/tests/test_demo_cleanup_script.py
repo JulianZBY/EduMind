@@ -146,7 +146,9 @@ def _vec_conn(demo_script, vectors_db: Path) -> sqlite3.Connection:
 def test_gate_blocks_when_document_count_mismatch(demo_script, tmp_path):
     main_db = tmp_path / "edumind.db"
     main = _make_main_db(main_db, extra_doc=True)
-    plan = demo_script.build_plan(main, _vec_conn(demo_script, tmp_path / "vectors.db"), tmp_path / "uploads")
+    plan = demo_script.build_plan(
+        main, _vec_conn(demo_script, tmp_path / "vectors.db"), tmp_path / "uploads"
+    )
     problems = demo_script.find_gate_problems(main, plan)
     assert any("documents" in p for p in problems)
     main.close()
@@ -155,7 +157,9 @@ def test_gate_blocks_when_document_count_mismatch(demo_script, tmp_path):
 def test_gate_blocks_when_prep_session_references_demo_doc(demo_script, tmp_path):
     main_db = tmp_path / "edumind.db"
     main = _make_main_db(main_db, reference_doc_ids=[DOC_IDS[0]])
-    plan = demo_script.build_plan(main, _vec_conn(demo_script, tmp_path / "vectors.db"), tmp_path / "uploads")
+    plan = demo_script.build_plan(
+        main, _vec_conn(demo_script, tmp_path / "vectors.db"), tmp_path / "uploads"
+    )
     problems = demo_script.find_gate_problems(main, plan)
     assert any("reference_doc_ids" in p for p in problems)
     assert any(DOC_IDS[0] in p for p in problems)
@@ -252,7 +256,9 @@ def test_execute_refuses_when_gate_fails(demo_script, tmp_path):
     uploads = tmp_path / "uploads"
     _make_uploads(uploads)
     with pytest.raises(demo_script.CleanupRefused):
-        demo_script.execute_cleanup(main, vec, main_db, tmp_path / "vectors.db", uploads, tmp_path / "backup")
+        demo_script.execute_cleanup(
+            main, vec, main_db, tmp_path / "vectors.db", uploads, tmp_path / "backup"
+        )
     # 拒绝即零副作用
     assert main.execute("SELECT COUNT(*) FROM documents").fetchone()[0] == 3
     assert sorted(p.name for p in uploads.iterdir()) == sorted(ALL_UPLOAD_FILES)

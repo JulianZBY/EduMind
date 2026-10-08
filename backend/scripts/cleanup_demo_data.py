@@ -153,14 +153,18 @@ def build_plan(main: sqlite3.Connection, vec: sqlite3.Connection, uploads_dir: P
                 (doc_marks,),
             ).fetchall()
         ]
-        plan.chunk_rows = [
-            ChunkRow(*row)
-            for row in vec.execute(
-                "SELECT id, doc_id, chunk_index FROM chunks WHERE doc_id IN "
-                "(SELECT value FROM json_each(?)) ORDER BY id",
-                (doc_marks,),
-            ).fetchall()
-        ] if _table_exists(vec, "chunks") else []
+        plan.chunk_rows = (
+            [
+                ChunkRow(*row)
+                for row in vec.execute(
+                    "SELECT id, doc_id, chunk_index FROM chunks WHERE doc_id IN "
+                    "(SELECT value FROM json_each(?)) ORDER BY id",
+                    (doc_marks,),
+                ).fetchall()
+            ]
+            if _table_exists(vec, "chunks")
+            else []
+        )
     if _table_exists(vec, "node_titles"):
         plan.node_title_rows = [
             NodeTitleRow(*row)
