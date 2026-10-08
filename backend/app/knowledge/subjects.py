@@ -93,11 +93,11 @@ def maintain_subject(
     if subject_id and subject is None:
         raise SubjectError(404, "学科不存在。")
     if subject and subject.name == UNCLASSIFIED:
-        raise SubjectError(422, "「未分类」用于归类兜底，不能更名或删除。")
+        raise SubjectError(409, "「未分类」用于归类兜底，不能更名或删除。")
     if name is not None:
         name = name.strip()
         if not name or len(name) > 100 or "\n" in name or "\r" in name:
-            raise SubjectError(422, "学科名称须为一行，包含 1～100 个字符。")
+            raise SubjectError(400, "学科名称须为一行，包含 1～100 个字符。")
         if subject is None:
             subject = Subject(name=name)
             db.add(subject)
@@ -106,7 +106,7 @@ def maintain_subject(
     elif subject:
         db.delete(subject)
     else:
-        raise SubjectError(422, "请填写学科名称。")
+        raise SubjectError(400, "请填写学科名称。")
     try:
         db.flush()
         result = {"id": subject.id, "name": subject.name}

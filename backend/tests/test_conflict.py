@@ -16,6 +16,7 @@ import app.knowledge.pipeline as pipeline_module
 import app.knowledge.vector_store as vector_store_module
 from app.db import SessionLocal, init_db
 from app.db.models import Document, KnowledgeEdge, KnowledgeNode
+from app.knowledge.title_vectors import title_vector_space
 from app.knowledge.vector_store import VectorStore
 from app.main import app
 from tests.support.fakes import FakeEmbedder, FakeLLM
@@ -89,7 +90,7 @@ async def _seed_node(title: str, content: str, store: VectorStore) -> str:
     finally:
         db.close()
     emb = (await FakeEmbedder().embed([title]))[0]
-    store.add_node_title(node_id, title, emb)
+    store.add_node_title(node_id, title, emb, space=title_vector_space(FakeEmbedder(), len(emb)))
     return node_id
 
 
@@ -203,11 +204,16 @@ async def test_review_accept_new_replaces_old(monkeypatch, tmp_path):
     try:
         assert db.get(KnowledgeNode, old_id) is None
         edges = db.query(KnowledgeEdge).filter(KnowledgeEdge.from_node == new_node.id).all()
-        assert [e.to_node for e in edges] == [helper_id], "旧节点的边应重挂到新节点"
+        assert any(e.to_node == helper_id and e.relation_type == "前置依赖" for e in edges), (
+            "旧节点的边应重挂到新节点"
+        )
+        assert any(e.to_node == helper_id and e.relation_type == "相关关联" for e in edges)
     finally:
         db.close()
 
-    hits = store.search_node_titles((await FakeEmbedder().embed([title]))[0], k=5)
+    hits = store.search_node_titles(
+        (await FakeEmbedder().embed([title]))[0], k=5, space=title_vector_space(FakeEmbedder(), 8)
+    )
     hit_ids = {h["node_id"] for h in hits}
     assert old_id not in hit_ids and new_node.id in hit_ids, "标题索引应同步替换"
 

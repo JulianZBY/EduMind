@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.knowledge.vector_store import VectorStore
+from app.knowledge.vector_store import TitleIndexDimensionMismatch, VectorStore
 
 
 def test_add_and_search(tmp_path):
@@ -42,7 +42,7 @@ def test_add_dimension_mismatch_friendly_error(tmp_path):
 def test_node_title_dimension_mismatch_friendly_error(tmp_path):
     store = VectorStore(str(tmp_path / "t.db"))
     store.add_node_title("n1", "甲", [1.0, 0.0])
-    with pytest.raises(RuntimeError, match="维度"):
+    with pytest.raises(TitleIndexDimensionMismatch, match="维度"):
         store.add_node_title("n2", "乙", [1.0, 0.0, 0.0])
     with pytest.raises(RuntimeError, match="维度"):
         store.search_node_titles([1.0, 0.0, 0.0, 0.0])

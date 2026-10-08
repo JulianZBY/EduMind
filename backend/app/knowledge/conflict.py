@@ -19,6 +19,9 @@ from app.core.llm.parsing import parse_json
 from app.core.llm.task_routing import get_llm_for
 from app.db import SessionLocal
 from app.db.models import Conflict, KnowledgeEdge, KnowledgeNode
+from app.knowledge.graph import _add_edge, related_candidates, supplement_related
+from app.knowledge.subjects import list_subjects, normalize_subject
+from app.knowledge.title_vectors import TITLE_VECTOR_KEY, saved_title_vector, title_vector_record
 
 # 「冲突比对」任务：模型档位在设置页按任务选，未设置回落全局默认（CONTEXT.md「任务级模型」）。
 # 入口仍叫 get_llm：既有测试用它替换对话能力（monkeypatch.setattr(本模块, "get_llm", ...)）。
@@ -65,6 +68,10 @@ RELATION_TYPES = ("前置依赖", "父子包含", "推导关系", "相关关联"
 NEW_NODE_ID = "__new__"
 
 
+class AlreadyReviewed(ValueError):
+    """已裁决的状态冲突；与配置／服务错误分开映射。"""
+
+
 class ActionNotAllowed(ValueError):
     """动作不属于该类别的动作集合（请求语义错误，路由层映射为 422）。
 
@@ -92,6 +99,7 @@ async def detect_conflicts(
     """
     db = SessionLocal()
     from app.knowledge.vector_store import VectorStore
+
     store = VectorStore()
     embedder = get_embedder()
     try:
@@ -114,7 +122,8 @@ async def detect_conflicts(
                 candidates[exact.id] = exact
             # 近名预筛：标题向量阈值内候选（同名已入 candidates，按 id 去重）
             emb = (await embedder.embed([title]))[0]
-            for hit in store.search_node_titles(emb, k=5):
+            vector = title_vector_record(title, emb, embedder)
+            for hit in store.search_node_titles(emb, k=5, space=vector["space"]):
                 if hit["distance"] > settings.conflict_distance_threshold:
                     continue
                 node = db.get(KnowledgeNode, hit["node_id"])
@@ -131,7 +140,7 @@ async def detect_conflicts(
                             user_id=user_id,
                             doc_id=doc_id,
                             category="定义冲突",
-                            new_knowledge=n,
+                            new_knowledge={**n, TITLE_VECTOR_KEY: vector},
                             existing_knowledge={
                                 "id": old.id,
                                 "title": old.title,
@@ -170,13 +179,14 @@ async def resolve_conflict(
     端点在被替换的旧节点上时改挂到新知，详见 `_apply_proposed_relations`。
     """
     from app.knowledge.vector_store import VectorStore
+
     db = SessionLocal()
     try:
         conflict = db.get(Conflict, conflict_id)
         if conflict is None:
             raise LookupError(f"冲突不存在: {conflict_id}")
         if conflict.status != "待审":
-            raise ValueError(f"该冲突已审核: {conflict.status}")
+            raise AlreadyReviewed(f"该冲突已审核: {conflict.status}")
 
         category = conflict.category or "定义冲突"
         allowed = ACTIONS_BY_CATEGORY.get(category)
@@ -188,26 +198,40 @@ async def resolve_conflict(
         old_id = (conflict.existing_knowledge or {}).get("id")
         old = db.get(KnowledgeNode, old_id) if old_id else None
 
+        # 写入前算好／复用向量并预检固定维度，避免任何图谱或旧索引副作用后才拒绝。
+        vector = None
+        if action in ("接受新", "并存", "照常入库", "编辑修正后入库"):
+            data = conflict.new_knowledge or {}
+            title = (data.get("title") or (old.title if action == "接受新" and old else "")).strip()
+            embedder = get_embedder()
+            vector = saved_title_vector(data, title, embedder)
+            if vector is None:
+                vector = title_vector_record(title, (await embedder.embed([title]))[0], embedder)
+            VectorStore().check_title_dimension(len(vector["values"]))
+        node = None
         if action == "接受新":
-            node = await _insert_node(db, conflict, inherit=old)
+            node = await _insert_node(db, conflict, inherit=old, vector=vector)
             if old is not None:
                 _rehang_edges(db, old, node)
                 db.delete(old)
                 VectorStore().remove_node_title(old.id)
             _apply_proposed_relations(db, conflict, node, replaced_title=old.title if old else None)
         elif action == "并存":
-            node = await _insert_node(db, conflict)
+            node = await _insert_node(db, conflict, vector=vector)
             _apply_proposed_relations(db, conflict, node)
         elif action == "照常入库":
-            await _insert_node(db, conflict)
+            node = await _insert_node(db, conflict, vector=vector)
         elif action == "编辑修正后入库":
             revised = (revised_content or "").strip()
             if not revised:
                 # 路由层已用请求体校验拦住，这里是服务层兜底（调用方绕过 API 时不静默丢内容）
                 raise ActionNotAllowed("编辑修正后入库需要修正后的内容")
-            await _insert_node(db, conflict, content=revised)
+            node = await _insert_node(db, conflict, content=revised, vector=vector)
             conflict.revised_content = revised
         # 剩下的 保留旧 / 拒绝：丢弃新知（新节点从未入图，无需回滚），图谱不动
+
+        if node is not None and vector is not None:
+            supplement_related(db, node, vector["values"], vector["space"])
 
         conflict.status = STATUS_BY_ACTION[action]
         conflict.review_action = action
@@ -261,24 +285,7 @@ def _apply_proposed_relations(
         to_id = title_to_id.get((relation.get("to_title") or "").strip())
         if not from_id or not to_id or from_id == to_id:
             continue
-        exists = (
-            db.query(KnowledgeEdge)
-            .filter(
-                KnowledgeEdge.from_node == from_id,
-                KnowledgeEdge.to_node == to_id,
-                KnowledgeEdge.relation_type == relation_type,
-            )
-            .first()
-        )
-        if exists is None:
-            db.add(
-                KnowledgeEdge(
-                    user_id=conflict.user_id,
-                    from_node=from_id,
-                    to_node=to_id,
-                    relation_type=relation_type,
-                )
-            )
+        _add_edge(db, conflict.user_id, from_id, to_id, relation_type)
 
 
 def _node_ref(node: KnowledgeNode) -> dict:
@@ -296,7 +303,10 @@ def _dedupe_edges(edges: list[dict]) -> list[dict]:
     seen: set[tuple[str, str, str]] = set()
     result: list[dict] = []
     for edge in edges:
-        key = (edge["from"], edge["to"], edge["relation_type"])
+        endpoints = (edge["from"], edge["to"])
+        if edge["relation_type"] == "相关关联":
+            endpoints = tuple(sorted(endpoints))
+        key = (*endpoints, edge["relation_type"])
         if key in seen:
             continue
         seen.add(key)
@@ -308,8 +318,8 @@ def preview_structure(db: Session, conflict: Conflict) -> dict | None:
     """结构冲突的「图谱现状 vs 三种裁决终态」：以冲突知识点为中心的一跳邻域子图。
 
     终态图与裁决走**同一套语义**（接受新 = 新知顶替旧节点 + 旧节点的边重挂；保留旧 = 不动；
-    并存 = 双留 + 新知自带的关系入图），因此图上画的终态就是裁决后图谱的样子
-    ——这是 ADR-0004 的验收项，不是装饰。旧节点已不存在（如已被别的裁决删掉）时返回 None。
+    并存 = 双留 + 新知自带的关系入图），兼容信息齐全且图谱／设置稳定时，完整终态与裁决一致
+    ——历史信息不足时显式标为不完整，见 ADR-0008。旧节点已不存在（如已被别的裁决删掉）时返回 None。
 
     新知的节点 id 用占位符 `NEW_NODE_ID`：真实 id 要等裁决入库后才生成。
     """
@@ -344,7 +354,7 @@ def preview_structure(db: Session, conflict: Conflict) -> dict | None:
     new_ref = {"id": NEW_NODE_ID, "title": (new_data.get("title") or "").strip(), "is_new": True}
 
     def proposed(title_to_id: dict[str, str]) -> list[dict]:
-        """新知自带的关系（端点按标题解析；只画两端都在这张终态图里的）。"""
+        """新知自带的关系按实际入库的全图标题解析；其端点也展开到图示。"""
         result: list[dict] = []
         for relation in new_data.get("relations") or []:
             relation_type = (relation.get("relation") or "").strip()
@@ -356,11 +366,71 @@ def preview_structure(db: Session, conflict: Conflict) -> dict | None:
                 result.append({"from": from_id, "to": to_id, "relation_type": relation_type})
         return result
 
+    try:
+        vector = saved_title_vector(new_data, new_ref["title"], get_embedder())
+    except ValueError:
+        vector = None  # 配置未就绪：读取仍可展示确定的本地图，不调用云端。
+    from app.knowledge.vector_store import TitleIndexDimensionMismatch, VectorStore
+
+    complete = vector is not None
+    if vector:
+        complete = VectorStore().title_space_complete(vector["space"], len(vector["values"]))
+        try:
+            VectorStore().check_title_dimension(len(vector["values"]))
+        except TitleIndexDimensionMismatch:
+            vector = None
+    names = {subject.name for subject in list_subjects(db)}
+
+    def with_related(
+        refs: list[dict], edges: list[dict], inherit: bool
+    ) -> tuple[list[dict], list[dict]]:
+        subject = normalize_subject(
+            new_data.get("subject") or (old.subject if inherit else None), names
+        )
+        candidates = related_candidates(
+            db,
+            conflict.user_id,
+            subject,
+            vector["values"] if vector else None,
+            vector["space"] if vector else None,
+            (old.id,) if inherit else (),
+        )
+        refs = list(refs)
+        for other_id in candidates:
+            if all(ref["id"] != other_id for ref in refs):
+                other = db.get(KnowledgeNode, other_id)
+                if other:
+                    refs.append(_node_ref(other))
+        # 展开新增候选后，保留这些点之间既有关系，避免预览隐藏局部连线。
+        for edge in edges:
+            for endpoint in (edge["from"], edge["to"]):
+                if endpoint != NEW_NODE_ID and all(ref["id"] != endpoint for ref in refs):
+                    other = db.get(KnowledgeNode, endpoint)
+                    if other:
+                        refs.append(_node_ref(other))
+        ids = [ref["id"] for ref in refs if ref["id"] != NEW_NODE_ID]
+        edges = list(edges) + [
+            _edge_ref(edge)
+            for edge in db.query(KnowledgeEdge)
+            .filter(
+                KnowledgeEdge.from_node.in_(ids),
+                KnowledgeEdge.to_node.in_(ids),
+            )
+            .all()
+        ]
+        edges.extend(
+            {"from": NEW_NODE_ID, "to": other_id, "relation_type": "相关关联"}
+            for other_id in candidates
+        )
+        return refs, _dedupe_edges(edges)
+
     # 接受新：旧节点让位给新知，旧节点的边改挂到新知（命中旧标题的关系也改挂）
     accept_nodes = [node for node in current_nodes if node.id != old.id]
-    accept_refs = [_node_ref(node) for node in accept_nodes] + [new_ref]
-    accept_titles = {ref["title"]: ref["id"] for ref in accept_refs}
-    accept_titles.setdefault(old.title, NEW_NODE_ID)
+    accept_new_ref = {**new_ref, "title": new_ref["title"] or old.title}
+    accept_refs = [_node_ref(node) for node in accept_nodes] + [accept_new_ref]
+    accept_titles = _node_ids_by_title(db, conflict.user_id)
+    accept_titles[accept_new_ref["title"]] = NEW_NODE_ID
+    accept_titles[old.title] = NEW_NODE_ID
     accept_edges = [
         {
             "from": NEW_NODE_ID if edge["from"] == old.id else edge["from"],
@@ -372,10 +442,17 @@ def preview_structure(db: Session, conflict: Conflict) -> dict | None:
 
     # 并存：新旧双节点都保留，新知自带的关系一并入图
     coexist_refs = current_refs + [new_ref]
-    coexist_titles = {ref["title"]: ref["id"] for ref in coexist_refs}
+    coexist_titles = _node_ids_by_title(db, conflict.user_id)
+    coexist_titles[new_ref["title"]] = NEW_NODE_ID
     coexist_edges = current_edges + proposed(coexist_titles)
 
+    accept_refs, accept_edges = with_related(accept_refs, accept_edges, True)
+    coexist_refs, coexist_edges = with_related(coexist_refs, coexist_edges, False)
     return {
+        "complete": complete,
+        "reason": ""
+        if complete
+        else "预览不完整：缺少兼容的标题向量，或已有索引的模型／维度不兼容。图示仅包含可确定的关系；继续裁决时将尝试补全关联，固定维度不兼容时仍保持待审。",
         "current": {"nodes": current_refs, "edges": _dedupe_edges(current_edges)},
         "outcomes": [
             {
@@ -406,6 +483,7 @@ async def _insert_node(
     conflict: Conflict,
     inherit: KnowledgeNode | None = None,
     content: str | None = None,
+    vector: dict | None = None,
 ) -> KnowledgeNode:
     """按待审新知建节点（接受新时可继承旧节点属性），并写入标题索引。
 
@@ -428,7 +506,9 @@ async def _insert_node(
     )
     db.add(node)
     db.flush()
-    emb = (await get_embedder().embed([node.title]))[0]
     from app.knowledge.vector_store import VectorStore
-    VectorStore().add_node_title(node.id, node.title, emb)
+
+    if vector is None:
+        raise ValueError("入库前必须准备标题向量。")
+    VectorStore().add_node_title(node.id, node.title, vector["values"], space=vector["space"])
     return node

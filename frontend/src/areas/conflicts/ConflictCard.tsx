@@ -57,6 +57,8 @@ export function ConflictCard({ conflict, pending, onDecide }: ConflictCardProps)
 
         {category === '结构冲突' && conflict.structure_preview ? (
           <StructureOutcomes
+            complete={conflict.structure_preview.complete}
+            reason={conflict.structure_preview.reason}
             current={conflict.structure_preview.current}
             outcomes={conflict.structure_preview.outcomes}
           />

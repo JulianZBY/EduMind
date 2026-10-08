@@ -80,14 +80,14 @@ def test_reserved_and_invalid_subject_names():
         "未分类",
     } <= names
     fallback = next(s for s in subjects if s["name"] == "未分类")
-    assert client.delete(f"/api/v1/knowledge/subjects/{fallback['id']}").status_code == 422
+    assert client.delete(f"/api/v1/knowledge/subjects/{fallback['id']}").status_code == 409
     assert (
         client.patch(
             f"/api/v1/knowledge/subjects/{fallback['id']}", json={"name": "其他"}
         ).status_code
-        == 422
+        == 409
     )
-    for name in ("", "   ", "a" * 101, "两行\n名称"):
+    for name in ("", "   ", "a" * 101):
         assert client.post("/api/v1/knowledge/subjects", json={"name": name}).status_code == 422
 
 
@@ -147,6 +147,7 @@ def test_related_edges_same_subject_and_cross_subject_semantics(monkeypatch, tmp
         [{"title": titles[0], "content": "正文", "subject": "数学"}],
         [],
         title_embeddings={titles[0]: embedding},
+        title_spaces={titles[0]: "test-space"},
     )
     save_knowledge("default", [{"title": titles[1], "content": "正文", "subject": "数学"}], [])
     save_knowledge(
@@ -154,12 +155,14 @@ def test_related_edges_same_subject_and_cross_subject_semantics(monkeypatch, tmp
         [{"title": titles[2], "content": "正文", "subject": "物理"}],
         [],
         title_embeddings={titles[2]: embedding},
+        title_spaces={titles[2]: "test-space"},
     )
     save_knowledge(
         "default",
         [{"title": titles[3], "content": "无关正文", "subject": "历史"}],
         [],
         title_embeddings={titles[3]: [-v for v in embedding]},
+        title_spaces={titles[3]: "test-space"},
     )
     with SessionLocal() as db:
         nodes = db.scalars(select(KnowledgeNode).where(KnowledgeNode.title.in_(titles))).all()
@@ -328,3 +331,32 @@ async def test_pipeline_persists_classification_and_chapter(monkeypatch, tmp_pat
         assert node.subject == (subject_value if subject_value == "数学" else "未分类")
         assert node.chapter == "第1章"
         assert node.source_docs == ["source-doc"]
+        from app.core.embedding.factory import get_embedder
+        from app.knowledge.title_vectors import title_vector_space
+        from app.knowledge.vector_store import VectorStore
+
+        conn = VectorStore()._connect()
+        try:
+            row = conn.execute(
+                "SELECT t.space,length(v.embedding) FROM node_titles t "
+                "JOIN node_title_embeddings v ON t.rowid=v.rowid WHERE t.node_id=?",
+                (node.id,),
+            ).fetchone()
+            assert row is not None
+            assert row[0] == title_vector_space(get_embedder(), row[1] // 4)
+        finally:
+            conn.close()
+
+
+@pytest.mark.parametrize("method", ["POST", "PATCH"])
+def test_subject_name_business_error_is_400_but_framework_errors_are_422(method):
+    subject = client.post("/api/v1/knowledge/subjects", json={"name": uuid.uuid4().hex}).json()
+    url = "/api/v1/knowledge/subjects" + (f"/{subject['id']}" if method == "PATCH" else "")
+    response = client.request(method, url, json={"name": "两行\n名称"})
+    assert response.status_code == 400
+    assert isinstance(response.json()["detail"], str)
+    for payload in ({}, {"name": 42}, {"name": "a" * 101}, {"name": ""}):
+        response = client.request(method, url, json=payload)
+        assert response.status_code == 422
+        assert isinstance(response.json()["detail"], list)
+    client.delete(f"/api/v1/knowledge/subjects/{subject['id']}")

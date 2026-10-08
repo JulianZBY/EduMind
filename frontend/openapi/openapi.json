@@ -3629,8 +3629,13 @@
         "type": "object"
       },
       "StructurePreview": {
-        "description": "「图谱现状 vs 三种裁决终态」（仅待审的结构冲突带它）。\n\n以冲突知识点为中心的一跳邻域子图；终态图与实际裁决走的是一套语义，\n因此图上画的终态就是裁决后图谱的样子。",
+        "description": "「图谱现状 vs 三种裁决终态」（仅待审的结构冲突带它）。\n\n以冲突知识点为中心的一跳邻域子图；终态图与实际裁决走的是一套语义，\n完整且图谱／设置稳定时，图示与裁决一致；信息不足时显式提示。",
         "properties": {
+          "complete": {
+            "description": "是否包含可确定的全部入库关联；缺少兼容向量时为 false",
+            "title": "Complete",
+            "type": "boolean"
+          },
           "current": {
             "$ref": "#/components/schemas/StructureGraph"
           },
@@ -3640,9 +3645,16 @@
             },
             "title": "Outcomes",
             "type": "array"
+          },
+          "reason": {
+            "description": "预览不完整的中文说明；完整时为空",
+            "title": "Reason",
+            "type": "string"
           }
         },
         "required": [
+          "complete",
+          "reason",
           "current",
           "outcomes"
         ],
@@ -4218,7 +4230,7 @@
     },
     "/api/v1/conflicts": {
       "get": {
-        "description": "返回待审及已裁决的冲突，每条带**类别**（定义冲突 / 结构冲突 / 常识存疑）与新旧知识对照（`new_knowledge` / `existing_knowledge`）、差异说明。\n\n结构冲突另带 `structure_preview`：「图谱现状 vs 三种裁决终态」的小图数据（以冲突知识点为中心的一跳邻域），供审核界面在按下按钮前就画出图谱会变成什么样。\n\n**当前只有定义冲突由检测产出**（ADR-0006）：结构冲突与常识存疑的检测逻辑尚未实现，两类冲突的形态与裁决动作已就位，因此在队列里出现要等检测落地。",
+        "description": "返回待审及已裁决的冲突，每条带**类别**（定义冲突 / 结构冲突 / 常识存疑）与新旧知识对照（`new_knowledge` / `existing_knowledge`）、差异说明。\n\n结构冲突另带 `structure_preview`：「图谱现状 vs 三种裁决终态」的小图数据（冲突知识点的一跳邻域及新关联端点），读取只使用本地保存信息，不调用云端向量化。缺少兼容向量时 complete=false 并说明尚未预览的关联，可继续裁决尝试补全。\n\n**当前只有定义冲突由检测产出**（ADR-0006）：结构冲突与常识存疑的检测逻辑尚未实现，两类冲突的形态与裁决动作已就位，因此在队列里出现要等检测落地。",
         "operationId": "list_conflicts_api_v1_conflicts_get",
         "parameters": [
           {
@@ -4330,6 +4342,7 @@
                           },
                           "status": "待审",
                           "structure_preview": {
+                            "complete": false,
                             "current": {
                               "edges": [
                                 {
@@ -4436,7 +4449,8 @@
                                 ],
                                 "status": "并存"
                               }
-                            ]
+                            ],
+                            "reason": "缺少兼容的标题向量，预览仅包含可确定的关系。"
                           }
                         }
                       ]
@@ -4548,12 +4562,23 @@
           "409": {
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "该冲突已审核: 已接受"
+                "examples": {
+                  "已裁决": {
+                    "summary": "不可重复裁决",
+                    "value": {
+                      "detail": "该冲突已审核: 已接受"
+                    }
+                  },
+                  "标题索引维度不兼容": {
+                    "summary": "保持待审，不自动重建索引",
+                    "value": {
+                      "detail": "当前标题向量维度与已有索引不兼容。此处不会自动重建索引，请先由维护者处理标题索引，再裁决这条冲突。"
+                    }
+                  }
                 }
               }
             },
-            "description": "该冲突已被裁决过，不能重复提交"
+            "description": "已裁决或固定标题索引维度不兼容，图谱不变"
           },
           "422": {
             "content": {
@@ -5760,6 +5785,16 @@
             },
             "description": "已新增学科"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "学科名称须为一行，包含 1～100 个字符。"
+                }
+              }
+            },
+            "description": "名称内容不可接受"
+          },
           "409": {
             "content": {
               "application/json": {
@@ -5846,7 +5881,7 @@
             },
             "description": "学科不存在"
           },
-          "422": {
+          "409": {
             "content": {
               "application/json": {
                 "example": {
@@ -5855,6 +5890,16 @@
               }
             },
             "description": "兜底项不能删除"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "500": {
             "content": {
@@ -5911,6 +5956,16 @@
             },
             "description": "已更名学科"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "学科名称须为一行，包含 1～100 个字符。"
+                }
+              }
+            },
+            "description": "名称内容不可接受"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -5925,11 +5980,11 @@
             "content": {
               "application/json": {
                 "example": {
-                  "detail": "学科名称已在清单内，请使用其他名称。"
+                  "detail": "「未分类」用于归类兜底，不能更名或删除。"
                 }
               }
             },
-            "description": "名称重复"
+            "description": "名称重复或兜底项不可更名"
           },
           "422": {
             "content": {

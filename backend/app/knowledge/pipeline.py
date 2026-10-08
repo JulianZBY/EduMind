@@ -124,7 +124,10 @@ async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
         to_save = [n for n in nodes if id(n) not in held]
         if to_save:
             titles = sorted({(n.get("title") or "").strip() for n in to_save} - {""})
-            embeddings = await get_embedder().embed(titles)
+            embedder = get_embedder()
+            embeddings = await embedder.embed(titles)
+            from app.knowledge.title_vectors import title_vector_space
+
             await asyncio.to_thread(
                 save_knowledge,
                 "default",
@@ -132,6 +135,9 @@ async def extract_and_save_knowledge(doc_id: str, text: str) -> int:
                 edges,
                 source_doc_id=doc_id,
                 title_embeddings=dict(zip(titles, embeddings)),
+                title_spaces={
+                    t: title_vector_space(embedder, len(e)) for t, e in zip(titles, embeddings)
+                },
             )
         return len(pending)
     except ProviderNotConfigured as exc:

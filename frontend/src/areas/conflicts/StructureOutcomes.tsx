@@ -47,15 +47,24 @@ function Frame({ title, meta, graph }: FrameProps) {
 export interface StructureOutcomesProps {
   current: StructureGraph
   outcomes: readonly StructureOutcome[]
+  complete: boolean
+  reason: string
 }
 
-export function StructureOutcomes({ current, outcomes }: StructureOutcomesProps) {
+export function StructureOutcomes({ current, outcomes, complete, reason }: StructureOutcomesProps) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-black/60">
         按下按钮之前先看清：这是冲突知识点周围的图谱现状，以及三种裁决之后它会变成什么样。
-        图上的终态就是裁决后图谱的样子。
+        {complete
+          ? '在图谱与设置未变化时，图上的终态就是裁决后图谱的样子。'
+          : '此处尚未包含所有可能的关联。'}
       </p>
+      {!complete ? (
+        <p role="status" className="rounded-none border-2 border-[#ff3366] p-2 text-sm text-black">
+          {reason}
+        </p>
+      ) : null}
       <div className="grid gap-3 lg:grid-cols-2">
         <Frame title="图谱现状" meta="裁决前" graph={current} />
         {outcomes.map((outcome) => (

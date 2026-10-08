@@ -92,6 +92,9 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_columns()
     initialize_subjects(engine, seed=seed_subjects)
+    from app.knowledge.vector_store import VectorStore
+
+    VectorStore().migrate_title_spaces()
     # 单用户假设：无鉴权，所有数据挂在 default 用户下，预留多用户扩展
     with SessionLocal() as db:
         if not db.query(User).filter(User.id == "default").first():

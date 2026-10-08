@@ -2215,14 +2215,26 @@ export type StructureOutcome = {
  * 「图谱现状 vs 三种裁决终态」（仅待审的结构冲突带它）。
  *
  * 以冲突知识点为中心的一跳邻域子图；终态图与实际裁决走的是一套语义，
- * 因此图上画的终态就是裁决后图谱的样子。
+ * 完整且图谱／设置稳定时，图示与裁决一致；信息不足时显式提示。
  */
 export type StructurePreview = {
+    /**
+     * Complete
+     *
+     * 是否包含可确定的全部入库关联；缺少兼容向量时为 false
+     */
+    complete: boolean;
     current: StructureGraph;
     /**
      * Outcomes
      */
     outcomes: Array<StructureOutcome>;
+    /**
+     * Reason
+     *
+     * 预览不完整的中文说明；完整时为空
+     */
+    reason: string;
 };
 
 /**
@@ -2584,7 +2596,7 @@ export type ReviewConflictApiV1ConflictsConflictIdReviewPostErrors = {
      */
     404: unknown;
     /**
-     * 该冲突已被裁决过，不能重复提交
+     * 已裁决或固定标题索引维度不兼容，图谱不变
      */
     409: unknown;
     /**
@@ -3086,6 +3098,10 @@ export type CreateSubjectApiV1KnowledgeSubjectsPostData = {
 
 export type CreateSubjectApiV1KnowledgeSubjectsPostErrors = {
     /**
+     * 名称内容不可接受
+     */
+    400: unknown;
+    /**
      * 名称重复
      */
     409: unknown;
@@ -3128,12 +3144,18 @@ export type DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteErrors = {
     /**
      * 兜底项不能删除
      */
-    422: unknown;
+    409: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
     /**
      * 未捕获的服务端错误:进程存活但本次请求失败,前端应提示重试。
      */
     500: unknown;
 };
+
+export type DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteError = DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteErrors[keyof DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteErrors];
 
 export type DeleteSubjectApiV1KnowledgeSubjectsSubjectIdDeleteResponses = {
     /**
@@ -3158,11 +3180,15 @@ export type RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchData = {
 
 export type RenameSubjectApiV1KnowledgeSubjectsSubjectIdPatchErrors = {
     /**
+     * 名称内容不可接受
+     */
+    400: unknown;
+    /**
      * 学科不存在
      */
     404: unknown;
     /**
-     * 名称重复
+     * 名称重复或兜底项不可更名
      */
     409: unknown;
     /**

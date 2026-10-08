@@ -66,6 +66,7 @@ def save_knowledge(
     edges: list[dict],
     source_doc_id: str | None = None,
     title_embeddings: dict[str, list[float]] | None = None,
+    title_spaces: dict[str, str] | None = None,
 ) -> int:
     """存节点 + 边（title 映射到节点 id），返回节点数。
 
@@ -99,14 +100,21 @@ def save_knowledge(
             saved.append(node)
             emb = (title_embeddings or {}).get(title)
             if emb:
-                VectorStore().add_node_title(node.id, title, emb)
+                VectorStore().add_node_title(
+                    node.id, title, emb, space=(title_spaces or {}).get(title)
+                )
         # 仅解析已入库的端点；被冲突检测暂扣的节点不会由建边路径重新入图。
         for e in edges:
             f = title_to_id.get((e.get("from") or "").strip())
             t = title_to_id.get((e.get("to") or "").strip())
             _add_edge(db, user_id, f, t, e.get("relation_type", ""))
         for node in saved:
-            _supplement_related(db, node, (title_embeddings or {}).get(node.title))
+            supplement_related(
+                db,
+                node,
+                (title_embeddings or {}).get(node.title),
+                (title_spaces or {}).get(node.title),
+            )
         db.commit()
         return len(title_to_id)
     finally:
@@ -134,40 +142,55 @@ def _add_edge(
         )
 
 
-def _supplement_related(db: Session, node: KnowledgeNode, embedding: list[float] | None) -> None:
-    """按主学科与标题语义补弱关联：各最多 5 个候选，不把「未分类」当学科连接。
-
-    标题近邻复用已有向量索引与检索距离阈值，不再次调用模型；两端须已入图。
-    """
+def related_candidates(
+    db: Session,
+    user_id: str,
+    subject: str,
+    embedding: list[float] | None,
+    space: str | None,
+    excluded_ids: tuple[str, ...] = (),
+) -> list[str]:
+    """预览／入库共用只读规划：学科与明确同空间的标题语义各至多五个候选。"""
     from app.config import settings
     from app.knowledge.vector_store import VectorStore
 
     candidates: set[str] = set()
-    if node.subject != UNCLASSIFIED:
+    if subject != UNCLASSIFIED:
         candidates.update(
             db.scalars(
                 select(KnowledgeNode.id)
                 .where(
-                    KnowledgeNode.user_id == node.user_id,
-                    KnowledgeNode.subject == node.subject,
-                    KnowledgeNode.id != node.id,
+                    KnowledgeNode.user_id == user_id,
+                    KnowledgeNode.subject == subject,
+                    KnowledgeNode.id.not_in(excluded_ids),
                 )
                 .order_by(KnowledgeNode.created_at.desc(), KnowledgeNode.id)
                 .limit(5)
             )
         )
-    if embedding:
-        semantic_count = 0
-        for hit in VectorStore().search_node_titles(embedding, k=6):
+    if embedding and space:
+        for hit in VectorStore().search_node_titles(
+            embedding, k=5, space=space, excluded_ids=excluded_ids
+        ):
             if hit["distance"] > settings.retrieval_distance_threshold:
                 continue
             other = db.get(KnowledgeNode, hit["node_id"])
-            if other and other.user_id == node.user_id and other.id != node.id:
+            if other and other.user_id == user_id and other.id not in excluded_ids:
                 candidates.add(other.id)
-                semantic_count += 1
-                if semantic_count == 5:
-                    break
-    for other_id in sorted(candidates):
+    return sorted(candidates)
+
+
+def supplement_related(
+    db: Session,
+    node: KnowledgeNode,
+    embedding: list[float] | None,
+    space: str | None,
+) -> None:
+    """实际建点且旧点删除／边重挂完成后补边；待审只规划，不调用此写入口。"""
+    db.flush()
+    for other_id in related_candidates(
+        db, node.user_id, node.subject, embedding, space, (node.id,)
+    ):
         _add_edge(db, node.user_id, node.id, other_id, "相关关联")
 
 

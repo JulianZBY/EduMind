@@ -498,6 +498,7 @@ def get_subjects(db: Annotated[Session, Depends(get_session)]):
     description="教师将新学科加入清单，即时用于后续知识点归类。名称须唯一，不自动重新归类已有知识点。",
     responses={
         201: json_response("已新增学科", {"id": "subject-astronomy", "name": "天文学"}),
+        400: error_response("名称内容不可接受", "学科名称须为一行，包含 1～100 个字符。"),
         409: error_response("名称重复", "学科名称已在清单内，请使用其他名称。"),
         422: VALIDATION_ERROR,
         500: internal_error(),
@@ -515,8 +516,9 @@ def create_subject(req: SubjectNameRequest, db: Annotated[Session, Depends(get_s
     description="更名在同一事务中更新该学科的所有知识点，不留下清单外名称。「未分类」不可更名。",
     responses={
         200: json_response("已更名学科", {"id": "subject-math", "name": "数学与应用"}),
+        400: error_response("名称内容不可接受", "学科名称须为一行，包含 1～100 个字符。"),
         404: error_response("学科不存在", "学科不存在。"),
-        409: error_response("名称重复", "学科名称已在清单内，请使用其他名称。"),
+        409: error_response("名称重复或兜底项不可更名", "「未分类」用于归类兜底，不能更名或删除。"),
         422: VALIDATION_ERROR,
         500: internal_error(),
     },
@@ -536,7 +538,7 @@ def rename_subject(
     responses={
         200: json_response("已删除的学科", {"id": "subject-math", "name": "数学"}),
         404: error_response("学科不存在", "学科不存在。"),
-        422: error_response("兜底项不能删除", "「未分类」用于归类兜底，不能更名或删除。"),
+        409: error_response("兜底项不能删除", "「未分类」用于归类兜底，不能更名或删除。"),
         500: internal_error(),
     },
 )

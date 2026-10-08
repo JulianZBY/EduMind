@@ -27,9 +27,12 @@ from app.db import get_session
 from app.db.models import Conflict
 from app.knowledge.conflict import (
     ActionNotAllowed,
+    AlreadyReviewed,
     preview_structure,
     resolve_conflict,
 )
+from app.knowledge.title_vectors import TITLE_VECTOR_KEY
+from app.knowledge.vector_store import TitleIndexDimensionMismatch
 
 router = APIRouter()
 
@@ -123,9 +126,11 @@ class StructurePreview(BaseModel):
     """「图谱现状 vs 三种裁决终态」（仅待审的结构冲突带它）。
 
     以冲突知识点为中心的一跳邻域子图；终态图与实际裁决走的是一套语义，
-    因此图上画的终态就是裁决后图谱的样子。
+    完整且图谱／设置稳定时，图示与裁决一致；信息不足时显式提示。
     """
 
+    complete: bool = Field(description="是否包含可确定的全部入库关联；缺少兼容向量时为 false")
+    reason: str = Field(description="预览不完整的中文说明；完整时为空")
     current: StructureGraph
     outcomes: list[StructureOutcome]
 
@@ -170,7 +175,9 @@ def _conflict_item(db: Session, conflict: Conflict) -> dict:
         "id": conflict.id,
         "doc_id": conflict.doc_id,
         "category": conflict.category or "定义冲突",
-        "new_knowledge": conflict.new_knowledge,
+        "new_knowledge": {k: v for k, v in conflict.new_knowledge.items() if k != TITLE_VECTOR_KEY}
+        if conflict.new_knowledge
+        else None,
         "existing_knowledge": conflict.existing_knowledge,
         "diff_description": conflict.diff_description,
         "status": conflict.status,
@@ -189,7 +196,8 @@ def _conflict_item(db: Session, conflict: Conflict) -> dict:
         "返回待审及已裁决的冲突，每条带**类别**（定义冲突 / 结构冲突 / 常识存疑）与"
         "新旧知识对照（`new_knowledge` / `existing_knowledge`）、差异说明。\n\n"
         "结构冲突另带 `structure_preview`：「图谱现状 vs 三种裁决终态」的小图数据"
-        "（以冲突知识点为中心的一跳邻域），供审核界面在按下按钮前就画出图谱会变成什么样。\n\n"
+        "（冲突知识点的一跳邻域及新关联端点），读取只使用本地保存信息，不调用云端向量化。"
+        "缺少兼容向量时 complete=false 并说明尚未预览的关联，可继续裁决尝试补全。\n\n"
         "**当前只有定义冲突由检测产出**（ADR-0006）：结构冲突与常识存疑的检测逻辑尚未实现，"
         "两类冲突的形态与裁决动作已就位，因此在队列里出现要等检测落地。"
     ),
@@ -252,6 +260,8 @@ def _conflict_item(db: Session, conflict: Conflict) -> dict:
                                 "revised_content": None,
                                 "review_action": None,
                                 "structure_preview": {
+                                    "complete": False,
+                                    "reason": "缺少兼容的标题向量，预览仅包含可确定的关系。",
                                     "current": {
                                         "nodes": [
                                             {
@@ -457,7 +467,18 @@ async def list_conflicts(
             },
         ),
         404: error_response("冲突不存在", "冲突不存在: c1a2b3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d"),
-        409: error_response("该冲突已被裁决过，不能重复提交", "该冲突已审核: 已接受"),
+        409: json_response_examples(
+            "已裁决或固定标题索引维度不兼容，图谱不变",
+            {
+                "已裁决": named("不可重复裁决", {"detail": "该冲突已审核: 已接受"}),
+                "标题索引维度不兼容": named(
+                    "保持待审，不自动重建索引",
+                    {
+                        "detail": "当前标题向量维度与已有索引不兼容。此处不会自动重建索引，请先由维护者处理标题索引，再裁决这条冲突。"
+                    },
+                ),
+            },
+        ),
         422: json_response_examples(
             "动作不属于该冲突类别的动作集合，或请求体校验失败"
             "（未知动作 / 「编辑修正后入库」缺修正后的内容）",
@@ -490,10 +511,12 @@ async def review_conflict(
     """裁决待审冲突：动作按类别差异化，终态与裁决动作一一对应。"""
     try:
         return await resolve_conflict(conflict_id, req.action, req.revised_content)
+    except TitleIndexDimensionMismatch as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except ActionNotAllowed as e:
         # 动作与该类别不匹配：与状态无关的请求语义错误，故是 422 而不是 409
         raise HTTPException(status_code=422, detail=str(e)) from e
-    except ValueError as e:
+    except AlreadyReviewed as e:
         raise HTTPException(status_code=409, detail=str(e)) from e

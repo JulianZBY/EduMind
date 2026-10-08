@@ -26,6 +26,10 @@ def _dim_mismatch(path: str, exc: sqlite3.OperationalError) -> None:
     ) from exc
 
 
+class TitleIndexDimensionMismatch(ValueError):
+    """当前标题向量与固定索引维度不兼容，不能自动删除或重建既有索引。"""
+
+
 class VectorStore:
     def __init__(self, db_path: str | None = None):
         # 未显式指定时读配置：测试通过 VECTORS_DB_PATH 环境变量隔离，不污染开发库
@@ -174,13 +178,19 @@ class VectorStore:
 
     # ---- 知识点标题索引（冲突检测近名预筛用，ADR-0006，余弦距离）----
 
-    def add_node_title(self, node_id: str, title: str, embedding: list[float]) -> None:
+    def add_node_title(
+        self, node_id: str, title: str, embedding: list[float], space: str | None = None
+    ) -> None:
         """入库/更新知识点标题向量（同 node_id 幂等覆盖）。"""
+        self.check_title_dimension(len(embedding))
         conn = self._connect()
         try:
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS node_titles (node_id TEXT PRIMARY KEY, title TEXT)"
             )
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(node_titles)")}
+            if "space" not in columns:
+                conn.execute("ALTER TABLE node_titles ADD COLUMN space TEXT")
             old = conn.execute(
                 "SELECT rowid FROM node_titles WHERE node_id = ?", (node_id,)
             ).fetchone()
@@ -193,34 +203,125 @@ class VectorStore:
                 f"USING vec0(embedding float[{dim}] distance_metric=cosine)"
             )
             cur = conn.execute(
-                "INSERT INTO node_titles(node_id, title) VALUES (?, ?)", (node_id, title)
+                "INSERT INTO node_titles(node_id, title, space) VALUES (?, ?, ?)",
+                (node_id, title, space),
             )
             conn.execute(
                 "INSERT INTO node_title_embeddings(rowid, embedding) VALUES (?, ?)",
                 (cur.lastrowid, json.dumps(embedding)),
             )
             conn.commit()
-        except sqlite3.OperationalError as e:
-            if "Dimension mismatch" in str(e):
-                _dim_mismatch(self.db_path, e)
+        except Exception:
+            conn.rollback()  # 更新失败时同时恢复已删除的标题行与 vec0 向量。
             raise
         finally:
             conn.close()
 
-    def search_node_titles(self, embedding: list[float], k: int = 5) -> list[dict]:
-        """KNN 检索标题（余弦距离），返回 [{node_id, title, distance}]。空表返回 []。"""
+    def migrate_title_spaces(self) -> None:
+        """已有标题表仅幂等补可空身份列；未知旧向量不冒充当前模型。"""
+        conn = self._connect()
+        try:
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(node_titles)")}
+            if columns and "space" not in columns:
+                conn.execute("ALTER TABLE node_titles ADD COLUMN space TEXT")
+                conn.commit()
+        finally:
+            conn.close()
+
+    def check_title_dimension(self, dimension: int) -> None:
+        """在写图谱或删除旧标题前预检物理维度；空索引允许首次初始化。"""
         conn = self._connect()
         try:
             exists = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='node_title_embeddings'"
+                "SELECT 1 FROM sqlite_master WHERE name='node_title_embeddings'"
+            ).fetchone()
+            if not exists:
+                return
+            # vec0 的实际 BLOB 长度是固定 float32 维度，不依赖当前配置。
+            row = conn.execute(
+                "SELECT length(embedding) FROM node_title_embeddings LIMIT 1"
+            ).fetchone()
+            if row and row[0] != dimension * 4:
+                raise TitleIndexDimensionMismatch(
+                    "当前标题向量维度与已有索引不兼容。此处不会自动重建索引，"
+                    "请先由维护者处理标题索引，再裁决这条冲突。"
+                )
+            if row is None:
+                # 空表也保留固定维度；用 vec0 声明核对。
+                import re
+
+                sql = conn.execute(
+                    "SELECT sql FROM sqlite_master WHERE name='node_title_embeddings'"
+                ).fetchone()[0]
+                match = re.search(r"float\[(\d+)\]", sql)
+                if match and int(match[1]) != dimension:
+                    raise TitleIndexDimensionMismatch(
+                        "当前标题向量维度与已有索引不兼容。此处不会自动重建索引，请先由维护者处理标题索引，再裁决这条冲突。"
+                    )
+        finally:
+            conn.close()
+
+    def title_space_complete(self, space: str, dimension: int) -> bool:
+        """读取不写库：未知身份／其他空间的既有标题无法承诺其语义关联。"""
+        try:
+            self.check_title_dimension(dimension)
+        except TitleIndexDimensionMismatch:
+            return False
+        conn = self._connect()
+        try:
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(node_titles)")}
+            if not columns:
+                return True
+            if "space" not in columns:
+                return conn.execute("SELECT count(*) FROM node_titles").fetchone()[0] == 0
+            return (
+                conn.execute(
+                    "SELECT count(*) FROM node_titles WHERE space IS NULL OR space != ?", (space,)
+                ).fetchone()[0]
+                == 0
+            )
+        finally:
+            conn.close()
+
+    def search_node_titles(
+        self,
+        embedding: list[float],
+        k: int = 5,
+        *,
+        space: str | None = None,
+        excluded_ids: tuple[str, ...] = (),
+    ) -> list[dict]:
+        """仅明确同空间的标题参与 KNN；None 只供旧未知身份数据的低层检验。"""
+        conn = self._connect()
+        try:
+            exists = conn.execute(
+                "SELECT name FROM sqlite_master WHERE name='node_title_embeddings'"
             ).fetchone()
             if not exists:
                 return []
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(node_titles)")}
+            if space is not None and "space" not in columns:
+                return []
+            condition = (
+                "space = ?"
+                if space is not None
+                else ("space IS NULL" if "space" in columns else "1=1")
+            )
+            params: list = [space] if space is not None else []
+            if excluded_ids:
+                condition += " AND node_id NOT IN (" + ",".join("?" for _ in excluded_ids) + ")"
+                params.extend(excluded_ids)
+            if not conn.execute(
+                f"SELECT 1 FROM node_titles WHERE {condition} LIMIT 1", params
+            ).fetchone():
+                return []
             rows = conn.execute(
                 "SELECT t.node_id, t.title, v.distance "
-                "FROM node_title_embeddings v JOIN node_titles t ON t.rowid = v.rowid "
-                "WHERE v.embedding MATCH ? AND k = ? ORDER BY v.distance",
-                (json.dumps(embedding), k),
+                "FROM node_title_embeddings v JOIN node_titles t ON t.rowid=v.rowid "
+                "WHERE v.embedding MATCH ? AND k = ? "
+                f"AND v.rowid IN (SELECT rowid FROM node_titles WHERE {condition}) "
+                "ORDER BY v.distance, t.rowid",
+                [json.dumps(embedding), k, *params],
             ).fetchall()
             return [{"node_id": r[0], "title": r[1], "distance": r[2]} for r in rows]
         except sqlite3.OperationalError as e:

@@ -273,3 +273,31 @@ class FakeTranscriber(Transcriber):
 
     async def transcribe(self, file_path: str) -> str:
         return self._transcript
+
+
+class TitleVectorEmbedder(Embedder):
+    """标题空间回归替身：记录调用，可模拟模型／实际维度切换与服务失败。"""
+
+    name = "title-vector-test"
+
+    def __init__(self, dimension: int = 8, model: str = "model-a") -> None:
+        self.dimensions = dimension
+        self.model = model
+        self.base_url = "https://example.test/v1"
+        self.calls: list[list[str]] = []
+        self.fail = False
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        self.calls.append(list(texts))
+        if self.fail:
+            raise RuntimeError("标题向量服务失败。")
+        return [[1.0] + [0.0] * (self.dimensions - 1) for _ in texts]
+
+
+class ContradictingLLM(FakeLLM):
+    """定义冲突回归：只让冲突比对返回矛盾，其余沿用离线提取。"""
+
+    async def chat(self, messages: list[ChatMessage], **kwargs) -> ChatResult:
+        if "判断两段知识描述是否相互矛盾" in messages[-1].content:
+            return ChatResult(content='{"conflict": true, "description": "定义矛盾。"}')
+        return await super().chat(messages, **kwargs)
