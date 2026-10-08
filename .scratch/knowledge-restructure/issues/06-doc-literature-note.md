@@ -24,10 +24,11 @@
 
 ## 交付记录（2026-10-08，票 06 implement）
 
-- **分支**：`pi-subagents/t06-eb5c1ed-919c-s0-t0`；**commit**：`4960eb7`（feat(knowledge): 文献笔记——模型、入库管道与资料详情呈现）
+- **分支**：`pi-subagents/t06-eb5c1ed-919c-s0-t0`；**commit**：`4960eb7`（feat(knowledge): 文献笔记——模型、入库管道与资料详情呈现）+ `13e190b`（style: ruff format 归一触碰文件，纯格式无语义）
 - **命令与结果**：
   - `cd backend && uv sync --frozen` ✓；`cd frontend && npm install` ✓（冷 worktree 首次装依赖）
   - `uv run pytest -q` → **395 passed**（含新增 3 条文献笔记契约测试）；`cd frontend && npm run lint` → ✓（check:classes 109 文件 0 违规 + oxlint）；`npm run build` → ✓（tsc -b + vite）；`npm run check:routes` → ✓ 七路由可达
+  - 格式化收尾后复跑（最终树口径）：`uv run pytest -q` → 395 passed；`uv run ruff check . --ignore EXE002` → All checks passed；仓库自配 pyright 对 4 个触碰文件 → 0 errors；前端四文件自绿灯后未再变动，lint/build/check:routes 结果仍有效
   - `uv run ruff check .` → 代码级零发现；本机报 147 条 EXE002 全部为 fuse 挂载强制 777 的存量伪象（142 个未触碰文件同样中招；`--ignore EXE002` → All checks passed；git 提交实录 mode 100644）
   - 仓库自配 pyright（钉 `.venv`）对全部触碰文件 0 errors
 - **新建**：`backend/app/knowledge/literature_note.py`（文献笔记管道：概要生成 + 1:1 落库 + 知识点索引）、`backend/tests/test_literature_note.py`
