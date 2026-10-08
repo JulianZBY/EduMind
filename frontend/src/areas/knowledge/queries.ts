@@ -11,16 +11,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { ApiError, apiErrorMessage, apiRequest } from '../../api/client'
 import type {
+  DeleteDocumentApiV1DocumentsDocumentIdDeleteData,
+  DeleteDocumentRequest,
+  DocumentDeletePreview,
+  DocumentDeleteResult,
   DocumentDetail,
   DocumentListResponse,
   DocumentView,
   GetDocumentApiV1DocumentsDocumentIdGetData,
+  GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetData,
   ListDocumentsApiV1DocumentsGetData,
   ReferenceRequest,
   SetReferenceApiV1DocumentsDocumentIdReferencePatchData,
   UploadDocumentApiV1DocumentsUploadPostData,
 } from '../../api/generated'
 import { hasProcessing, isProcessing } from './status'
+import { conflictKeys } from '../conflicts/queries'
+import { graphKeys } from '../knowledge-graph/queries'
+import { questionKeys } from '../question-bank/queries'
 
 /** URL 一律从生成的 schema 取（`npm run gen:api`），改后端路径时这里会编译报错。 */
 const documentsUrl: ListDocumentsApiV1DocumentsGetData['url'] = '/api/v1/documents'
@@ -29,6 +37,10 @@ const detailUrlTemplate: GetDocumentApiV1DocumentsDocumentIdGetData['url'] =
   '/api/v1/documents/{document_id}'
 const referenceUrlTemplate: SetReferenceApiV1DocumentsDocumentIdReferencePatchData['url'] =
   '/api/v1/documents/{document_id}/reference'
+const deletePreviewUrlTemplate: GetDocumentDeletePreviewApiV1DocumentsDocumentIdDeletePreviewGetData['url'] =
+  '/api/v1/documents/{document_id}/delete-preview'
+const deleteDocumentUrlTemplate: DeleteDocumentApiV1DocumentsDocumentIdDeleteData['url'] =
+  '/api/v1/documents/{document_id}'
 
 /** 把生成 URL 模板里的路径参数换成实际 id（编码后拼，仍然不手写路径）。 */
 function documentUrl(template: string, documentId: string): string {
@@ -43,6 +55,8 @@ export const knowledgeKeys = {
   all: ['knowledge'] as const,
   list: () => [...knowledgeKeys.all, 'list'] as const,
   detail: (documentId: string) => [...knowledgeKeys.all, 'detail', documentId] as const,
+  /** 删除前预览：只在对话框打开时拉取，不算详情的一部分。 */
+  deletePreview: (documentId: string) => [...knowledgeKeys.all, 'delete-preview', documentId] as const,
 }
 
 /** 接口错误翻成教师能读的一句话（400 的 `detail.message` 本身就是面向教师的文案）。 */
@@ -166,6 +180,51 @@ export function useSetDocumentReference() {
     onSettled: (_data, _error, input) => {
       queryClient.invalidateQueries({ queryKey: knowledgeKeys.list() })
       queryClient.invalidateQueries({ queryKey: knowledgeKeys.detail(input.documentId) })
+    },
+  })
+}
+
+/** 删除前预览：按默认勾选口径列出这次删除会发生的每一件事（票 07，级联不静默）。 */
+export function useDocumentDeletePreview(documentId: string | undefined) {
+  return useQuery({
+    queryKey: knowledgeKeys.deletePreview(documentId ?? ''),
+    enabled: Boolean(documentId),
+    queryFn: ({ signal }) =>
+      apiRequest<DocumentDeletePreview>(
+        documentUrl(deletePreviewUrlTemplate, documentId ?? ''),
+        { signal },
+      ),
+    // 预览永远当下重算：知识点与题目在变，陈旧后果不能拿来让教师确认
+    staleTime: 0,
+    gcTime: 0,
+  })
+}
+
+export interface DeleteDocumentInput {
+  documentId: string
+  deleteSingleSourceKnowledge: boolean
+}
+
+/**
+ * 删除教学资料（按规则级联）：删除牵动四个区——知识库列表/详情、知识图谱、
+ * 冲突队列、题库考查关系，成功后一并失效重取。
+ */
+export function useDeleteDocument() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: DeleteDocumentInput) =>
+      apiRequest<DocumentDeleteResult>(documentUrl(deleteDocumentUrlTemplate, input.documentId), {
+        method: 'DELETE',
+        body: {
+          delete_single_source_knowledge: input.deleteSingleSourceKnowledge,
+        } satisfies DeleteDocumentRequest,
+      }),
+    onSuccess: () => {
+      // 删除牵动四个区：知识库、知识图谱、冲突队列、题库考查关系，全部失效重取
+      queryClient.invalidateQueries({ queryKey: knowledgeKeys.all })
+      queryClient.invalidateQueries({ queryKey: graphKeys.all })
+      queryClient.invalidateQueries({ queryKey: conflictKeys.all })
+      queryClient.invalidateQueries({ queryKey: questionKeys.all })
     },
   })
 }

@@ -22,7 +22,7 @@ from fastapi import (
 from fastapi import (
     Path as PathParam,
 )
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -36,6 +36,15 @@ from app.api.openapi_examples import (
 from app.config import settings
 from app.db import get_session
 from app.db.models import Document, LiteratureNote
+from app.knowledge.cascade import (
+    PROCESSING_DELETE_MESSAGE,
+    AffectedQuestion,
+    DocumentProcessingError,
+    preview_delete,
+)
+from app.knowledge.cascade import (
+    delete_document as cascade_delete_document,
+)
 from app.knowledge.literature_note import (
     SOURCE_DOCUMENT,
     STATUS_GENERATED,
@@ -148,6 +157,135 @@ class ReferenceRequest(BaseModel):
     model_config = ConfigDict(json_schema_extra={"example": {"is_reference": True}})
 
     is_reference: bool
+
+
+class KnowledgePointRefView(BaseModel):
+    """级联涉及的一个知识点（id 可定位到知识图谱）。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f", "title": "一次函数"}
+        }
+    )
+
+    id: str
+    title: str
+
+
+class AffectedQuestionView(BaseModel):
+    """被题目考查的知识点牵出的题目：删除后题目保留、考查关系置空。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+                "content": "下列函数中，属于一次函数的是？",
+                "knowledge_titles": ["一次函数的定义"],
+            }
+        }
+    )
+
+    id: str
+    content: str  # 题干（对话框里展示，供教师指认是哪道题）
+    knowledge_titles: list[str]  # 被删知识点标题：删后置空的就是这几条考查关系
+
+
+class DocumentDeletePreview(BaseModel):
+    """删除前预览：按默认勾选（删单来源知识点）口径列出全部后果，不另加也不隐瞒。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "document_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                "filename": "一次函数讲义.pdf",
+                "chunk_count": 12,
+                "literature_note_present": True,
+                "pending_conflict_count": 1,
+                "knowledge_single_source": [
+                    {"id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f", "title": "一次函数"}
+                ],
+                "knowledge_multi_source": [
+                    {"id": "4d5e6f70-8a9b-4c2d-9e3f-5a6b7c8d9e0f", "title": "函数的概念"}
+                ],
+                "affected_questions": [
+                    {
+                        "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+                        "content": "下列函数中，属于一次函数的是？",
+                        "knowledge_titles": ["一次函数"],
+                    }
+                ],
+            }
+        }
+    )
+
+    document_id: str
+    filename: str
+    chunk_count: int  # 必删：该资料入库的分块与向量
+    literature_note_present: bool  # 必删：文献笔记（缺席时如实报 false）
+    pending_conflict_count: int  # 必删：引用该资料的待审冲突（撤下；已裁决的不动）
+    # 仅来源于该资料的知识点：默认删除，对话框可勾选改为保留（保留者清空该来源引用）
+    knowledge_single_source: list[KnowledgePointRefView]
+    # 多来源知识点：摘除该来源引用、节点保留
+    knowledge_multi_source: list[KnowledgePointRefView]
+    # 被题目考查的知识点牵出的题目：确认后题目保留、考查关系置空
+    affected_questions: list[AffectedQuestionView]
+
+
+class DeleteDocumentRequest(BaseModel):
+    """删除资料的勾选项：对话框交代的选项之外没有隐藏开关（未知字段拒收）。"""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"example": {"delete_single_source_knowledge": True}},
+    )
+
+    delete_single_source_knowledge: bool = Field(
+        default=True,
+        description=(
+            "同时删除仅来源于此资料的知识点（对话框默认勾选）。false 时这些知识点保留、"
+            "来源引用清空，被题目考查的关系也原样保留。"
+        ),
+    )
+
+
+class DocumentDeleteResult(BaseModel):
+    """删除结果回执：每条规则的执行事实，供界面回执与对账。"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "document_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                "filename": "一次函数讲义.pdf",
+                "chunks_deleted": 12,
+                "literature_note_deleted": True,
+                "conflicts_withdrawn": 1,
+                "knowledge_deleted": [
+                    {"id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f", "title": "一次函数"}
+                ],
+                "knowledge_kept": [
+                    {"id": "4d5e6f70-8a9b-4c2d-9e3f-5a6b7c8d9e0f", "title": "函数的概念"}
+                ],
+                "questions_cleared": [
+                    {
+                        "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+                        "content": "下列函数中，属于一次函数的是？",
+                        "knowledge_titles": ["一次函数"],
+                    }
+                ],
+                "file_removed": True,
+            }
+        }
+    )
+
+    document_id: str
+    filename: str
+    chunks_deleted: int  # 清掉的分块与向量
+    literature_note_deleted: bool  # 文献笔记是否删掉（原本缺席时为 false）
+    conflicts_withdrawn: int  # 撤下的待审冲突数（已裁决的冲突是史实留痕，不动）
+    knowledge_deleted: list[KnowledgePointRefView]  # 已删除的知识点及其关系边
+    knowledge_kept: list[KnowledgePointRefView]  # 保留的知识点（该来源引用已清空 / 摘除）
+    questions_cleared: list[AffectedQuestionView]  # 考查关系被置空的题目（题目本身保留）
+    file_removed: bool  # 落盘文件是否删掉（已不在时为 false）
 
 
 def _view(doc: Document) -> DocumentView:
@@ -445,3 +583,160 @@ async def set_reference(
     db.commit()
     db.refresh(doc)
     return _view(doc)
+
+
+@router.get(
+    "/documents/{document_id}/delete-preview",
+    response_model=DocumentDeletePreview,
+    tags=["知识库"],
+    summary="删除教学资料前预览级联后果",
+    description=(
+        "删除对话框的数据源：按默认勾选（删单来源知识点）口径，把这次删除会发生的"
+        "每一件事列出来，不另加也不隐瞒。\n\n"
+        "- **必删**：该资料的全部分块与向量（`chunk_count`）、文献笔记"
+        "（`literature_note_present`，原本缺席时如实报 `false`）、引用该资料的待审冲突"
+        "（`pending_conflict_count`，撤下；含新知来自本资料、旧知识点来源含本资料、"
+        "新旧快照明确引用本资料的待审冲突，已裁决记录不动）。\n"
+        "- `knowledge_single_source`：仅来源于该资料的知识点，默认删除；对话框可勾选"
+        "改为保留（保留者清空该来源引用）。\n"
+        "- `knowledge_multi_source`：多来源知识点，摘除该来源引用、节点保留。\n"
+        "- `affected_questions`：被题目考查的知识点牵出的题目——确认后**题目保留**、"
+        "考查关系置空；只统计将随默认删除的单来源知识点，多来源知识点保留、其考查关系不受影响。\n\n"
+        "生成物历史版本的溯源文本不改写（史实留痕）。本端点不调用云端能力，"
+        "未配置供应商也能预览与删除。"
+    ),
+    responses={
+        200: json_response(
+            "删除后果预览（默认勾选口径）",
+            {
+                "document_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                "filename": "一次函数讲义.pdf",
+                "chunk_count": 12,
+                "literature_note_present": True,
+                "pending_conflict_count": 1,
+                "knowledge_single_source": [
+                    {"id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f", "title": "一次函数"}
+                ],
+                "knowledge_multi_source": [],
+                "affected_questions": [
+                    {
+                        "id": "3f2b1a09-8c7d-4e6f-9a1b-2c3d4e5f6a7b",
+                        "content": "下列函数中，属于一次函数的是？",
+                        "knowledge_titles": ["一次函数"],
+                    }
+                ],
+            },
+        ),
+        404: error_response(
+            "资料不存在：id 不属于任何一份已上传的教学资料",
+            "资料不存在: 7f6e5d4c-3b2a-4918-8776-655443322110",
+        ),
+        500: internal_error(),
+    },
+)
+async def get_document_delete_preview(
+    document_id: Annotated[str, PathParam(description="教学资料 id，取自上传响应或资料列表")],
+    db: Annotated[Session, Depends(get_session)],
+):
+    doc = _document_or_404(db, document_id)
+    chunk_count, _ = VectorStore().list_doc_chunks(document_id, limit=0)
+    data = preview_delete(db, doc, chunk_count)
+    return DocumentDeletePreview(
+        document_id=data.document_id,
+        filename=data.filename,
+        chunk_count=data.chunk_count,
+        literature_note_present=data.literature_note_present,
+        pending_conflict_count=data.pending_conflict_count,
+        knowledge_single_source=[
+            KnowledgePointRefView(id=ref.id, title=ref.title)
+            for ref in data.knowledge_single_source
+        ],
+        knowledge_multi_source=[
+            KnowledgePointRefView(id=ref.id, title=ref.title)
+            for ref in data.knowledge_multi_source
+        ],
+        affected_questions=[_affected_question_view(q) for q in data.affected_questions],
+    )
+
+
+def _affected_question_view(question: AffectedQuestion) -> AffectedQuestionView:
+    return AffectedQuestionView(
+        id=question.id,
+        content=question.content,
+        knowledge_titles=question.knowledge_titles,
+    )
+
+
+@router.delete(
+    "/documents/{document_id}",
+    response_model=DocumentDeleteResult,
+    tags=["知识库"],
+    summary="删除教学资料（按规则级联）",
+    description=(
+        "删除一份教学资料的记录与原始文件，并按已确认的规则完成级联，无隐藏级联：\n\n"
+        "- **必删**：该资料的分块与向量、文献笔记、引用该资料的待审冲突（撤下）；"
+        "待审冲突包括新知来自本资料、旧知识点来源含本资料或新旧快照明确引用本资料，"
+        "不因单来源知识点选择保留而免于撤下，已裁决记录不动；\n"
+        "- **知识点**：仅来源于该资料的默认删（`delete_single_source_knowledge=false` "
+        "改为保留，保留者清空该来源引用）；多来源知识点摘除该来源、节点保留；"
+        "关系边随节点走；\n"
+        "- **被题目考查的知识点**：题目保留，仅移除对被删知识点的考查关系（删除前请先调 "
+        "`GET /documents/{document_id}/delete-preview` 列出受影响题目）；\n"
+        "- 生成物历史版本的溯源文本不改写（史实留痕）。\n\n"
+        "响应回执逐条报告执行事实（删了什么、留了什么），供界面回执与对账。"
+        "删除不调用云端能力，未配置供应商也能删除。"
+        "处理中资料暂不可删除（409），请等待处理结束后再试。"
+    ),
+    responses={
+        200: json_response(
+            "删除完成（回执含全部级联事实）",
+            {
+                "document_id": "7f6e5d4c-3b2a-4918-8776-655443322110",
+                "filename": "一次函数讲义.pdf",
+                "chunks_deleted": 12,
+                "literature_note_deleted": True,
+                "conflicts_withdrawn": 1,
+                "knowledge_deleted": [
+                    {"id": "2c1d0e9f-8a7b-4c6d-9e2f-1a3b5c7d9e1f", "title": "一次函数"}
+                ],
+                "knowledge_kept": [],
+                "questions_cleared": [],
+                "file_removed": True,
+            },
+        ),
+        404: error_response(
+            "资料不存在：id 不属于任何一份已上传的教学资料",
+            "资料不存在: 7f6e5d4c-3b2a-4918-8776-655443322110",
+        ),
+        409: error_response("资料正在处理中，暂不可删除", PROCESSING_DELETE_MESSAGE),
+        422: VALIDATION_ERROR,
+        500: internal_error(),
+    },
+)
+async def delete_document(
+    document_id: Annotated[str, PathParam(description="教学资料 id，取自上传响应或资料列表")],
+    req: DeleteDocumentRequest,
+    db: Annotated[Session, Depends(get_session)],
+):
+    doc = _document_or_404(db, document_id)
+    try:
+        result = cascade_delete_document(
+            db, doc, delete_single_source_knowledge=req.delete_single_source_knowledge
+        )
+    except DocumentProcessingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return DocumentDeleteResult(
+        document_id=result.document_id,
+        filename=result.filename,
+        chunks_deleted=result.chunks_deleted,
+        literature_note_deleted=result.literature_note_deleted,
+        conflicts_withdrawn=result.conflicts_withdrawn,
+        knowledge_deleted=[
+            KnowledgePointRefView(id=ref.id, title=ref.title) for ref in result.knowledge_deleted
+        ],
+        knowledge_kept=[
+            KnowledgePointRefView(id=ref.id, title=ref.title) for ref in result.knowledge_kept
+        ],
+        questions_cleared=[_affected_question_view(q) for q in result.questions_cleared],
+        file_removed=result.file_removed,
+    )

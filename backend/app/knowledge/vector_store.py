@@ -144,6 +144,39 @@ class VectorStore:
         finally:
             conn.close()
 
+    def delete_doc(self, doc_id: str) -> int:
+        """按资料清理分块与向量（删除资料级联，票 07），返回清掉的分块数。
+
+        chunk_embeddings 的 rowid 即 chunks.id，先查后删避免留下悬空的向量行；
+        空库 / 该资料无分块时返回 0，不抛错。
+        """
+        conn = self._connect()
+        try:
+            exists = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='chunks'"
+            ).fetchone()
+            if not exists:
+                return 0
+            ids = [
+                r[0]
+                for r in conn.execute("SELECT id FROM chunks WHERE doc_id = ?", (doc_id,)).fetchall()
+            ]
+            if not ids:
+                return 0
+            placeholders = ",".join("?" * len(ids))
+            emb_exists = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='chunk_embeddings'"
+            ).fetchone()
+            if emb_exists:
+                conn.execute(
+                    f"DELETE FROM chunk_embeddings WHERE rowid IN ({placeholders})", ids
+                )
+            conn.execute(f"DELETE FROM chunks WHERE id IN ({placeholders})", ids)
+            conn.commit()
+            return len(ids)
+        finally:
+            conn.close()
+
     def list_doc_chunks(self, doc_id: str, limit: int = 200) -> tuple[int, list[dict]]:
         """按次序取某份资料的分块：返回 (分块总数, 至多 limit 条分块)。
 

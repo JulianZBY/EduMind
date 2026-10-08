@@ -8,6 +8,7 @@ from app.core.errors import ProviderNotConfigured
 from app.db import SessionLocal
 from app.db.models import Document
 from app.knowledge.literature_note import build_note
+from app.knowledge.storage import normalize_stored_path
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,8 @@ async def parse_document(doc_id: str) -> str:
             raise ValueError(f"文档不存在: {doc_id}")
         try:
             parser = get_parser(doc.file_type)
-            result = await parser.parse(doc.file_path)
+            # 读侧路径规范化（票 07）：存量 Windows 分隔符的路径统一为 POSIX 再交给解析器
+            result = await parser.parse(normalize_stored_path(doc.file_path))
             chunks = get_chunker().chunk(result)
             if chunks:
                 await index_chunks(doc_id, chunks)

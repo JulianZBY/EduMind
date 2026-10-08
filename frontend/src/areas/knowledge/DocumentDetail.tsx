@@ -6,12 +6,14 @@
  * 资料仍在「处理中」时这里会随轮询自动刷新到终态。
  */
 import { Link, useParams } from 'react-router'
+import { useState } from 'react'
 import type { DocumentChunk, DocumentDetail as DocumentDetailPayload, LiteratureNoteView } from '../../api/generated'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
 import { ProviderMissingNotice } from '../settings/ProviderMissingNotice'
 import { cn } from '../../lib/cn'
+import { DeleteDocumentDialog } from './DeleteDocumentDialog'
 import { DocumentStatusBadge } from './DocumentStatus'
 import { isProcessing, STATUS_NOTE } from './status'
 import type { ParseStatus } from './status'
@@ -129,6 +131,7 @@ function KnowledgeIndex({ entries }: { entries: LiteratureNoteView['knowledge_in
 function DetailHeader({ document }: { document: DocumentDetailPayload }) {
   const setReference = useSetDocumentReference()
   const { toast } = useToast()
+  const [deleting, setDeleting] = useState(false)
 
   function toggleReference() {
     setReference.mutate(
@@ -152,16 +155,32 @@ function DetailHeader({ document }: { document: DocumentDetailPayload }) {
         <span className="text-xs uppercase">{document.file_type}</span>
         <DocumentStatusBadge status={document.status} />
       </div>
-      <Button
-        size="sm"
-        variant={document.is_reference ? 'accent' : 'default'}
-        aria-pressed={document.is_reference}
-        disabled={setReference.isPending}
-        title="标记为参考资料后，备课检索会加权，生成物里会溯源到这份资料。"
-        onClick={toggleReference}
-      >
-        {document.is_reference ? '取消参考资料标记' : '标记为参考资料'}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant={document.is_reference ? 'accent' : 'default'}
+          aria-pressed={document.is_reference}
+          disabled={setReference.isPending}
+          title="标记为参考资料后，备课检索会加权，生成物里会溯源到这份资料。"
+          onClick={toggleReference}
+        >
+          {document.is_reference ? '取消参考资料标记' : '标记为参考资料'}
+        </Button>
+        <Button
+          size="sm"
+          disabled={isProcessing(document.status)}
+          title={isProcessing(document.status)
+            ? '教学资料正在处理中，暂不可删除。请等待处理结束后再试。'
+            : '删除这份资料：联动后果会在对话框里一次交代清楚。'}
+          onClick={() => setDeleting(true)}
+        >
+          删除资料
+        </Button>
+      </div>
+      {isProcessing(document.status) ? (
+        <p className="text-xs text-black/60">教学资料正在处理中，暂不可删除。请等待处理结束后再试。</p>
+      ) : null}
+      {deleting ? <DeleteDocumentDialog document={document} onClose={() => setDeleting(false)} /> : null}
     </header>
   )
 }
