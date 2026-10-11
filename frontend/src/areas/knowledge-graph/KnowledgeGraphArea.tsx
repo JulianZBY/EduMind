@@ -140,7 +140,9 @@ export function KnowledgeGraphWorkbench() {
   const edges = activeGraph.data?.edges ?? []
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    // h-full：MainPanel 内容区是 overflow-auto 滚动容器（非 flex 上下文），flex-1 拿不到高度；
+    // 画布要视口填满（自带缩放平移，不吃外层滚动），用 h-full 锁定。
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
           <FilterMenu
