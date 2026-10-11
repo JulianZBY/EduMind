@@ -36,3 +36,5 @@ e2e-artifacts/
 EduMind-demo/
 # .scratch：本地 issue 跟踪与一次性向导/验收脚本等工作痕迹
 .scratch/
+# .pi：pi 编码代理的本地会话目录
+.pi/
