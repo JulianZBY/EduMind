@@ -216,7 +216,9 @@ export function buildGraphModel(tree: KnowledgeTree, collapsed: ReadonlySet<stri
   // 同向同关系的重复边会撞 React Flow 的唯一 id 约定，重复时补序号
   const seenOverlayIds = new Map<string, number>()
   const overlayEdges = overlaySource
-    .filter((edge) => visible.has(edge.from) && visible.has(edge.to))
+    .filter(
+      (edge) => edge.from !== edge.to && visible.has(edge.from) && visible.has(edge.to), // 自环叠加边渲染为零长线不可见，不渲染
+    )
     .map((edge) => {
       const base = `overlay:${edge.from}>${edge.relation_type}>${edge.to}`
       const nth = (seenOverlayIds.get(base) ?? 0) + 1

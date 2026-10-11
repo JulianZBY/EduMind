@@ -78,10 +78,10 @@ test('buildTree：端点不在节点表里的父子边降级为叠加边，不�
   assert.deepEqual(tree.demotedEdges.map((edge) => `${edge.from}>${edge.to}`), ['ghost>a'])
 })
 
-test('buildGraphModel：同向同关系的重复叠加边 id 不撞（补序号）', () => {
+test('buildGraphModel：同向同关系的重复叠加边 id 不撞（补序号）；自环叠加边不渲染', () => {
   const tree = buildTree(
     [node('a'), node('b')],
-    [link('a', 'b', '相关关联'), link('a', 'b', '相关关联')],
+    [link('a', 'b', '相关关联'), link('a', 'b', '相关关联'), link('a', 'a', '推导关系')],
   )
   const model = buildGraphModel(tree, new Set())
   assert.deepEqual(

@@ -75,7 +75,6 @@ function KnowledgeFlowNodeView({ data }: NodeProps<KnowledgeFlowNode>) {
       style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
       className={cn(
         'flex items-stretch rounded-none border-2 bg-white transition-colors duration-150',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black',
         selected ? 'border-[#ff3366]' : 'border-black',
       )}
     >
@@ -299,7 +298,9 @@ export function GraphCanvas({
             nodesConnectable={false}
             elementsSelectable
             proOptions={{ hideAttribution: false }}
-            className="bg-white"
+            // 键盘焦点落在 React Flow 的外层包裹层（.react-flow__node 携 tabIndex），
+            // 焦点环样式须挂在那里（风格 §3：可见且非浏览器默认蓝圈）
+            className="rounded-none bg-white [&_.react-flow__node:focus-visible]:outline-2 [&_.react-flow__node:focus-visible]:outline-offset-2 [&_.react-flow__node:focus-visible]:outline-black"
           >
             <CanvasToolbar fitKey={positions} />
           </ReactFlow>
