@@ -1,6 +1,6 @@
 # EduMind 模块化重构与前端重定制
 
-Status: ready-for-agent
+Status: done（15 张工单全部交付；spec 历史使命完成）
 
 ## 问题陈述
 

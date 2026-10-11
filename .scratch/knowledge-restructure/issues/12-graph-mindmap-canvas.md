@@ -84,3 +84,20 @@ elk worker 全局一份，异步布局带序号防重入（spike 说的 mermaid 
 - mermaid 依赖保留原因如上；移除依赖的前置是冲突审核区先退场（可另开票）。
 - elk 布局失败（worker 异常）时兜底：全部节点叠原点显示，图仍可点可拖，无层次——
   代码内有 `shortcut:` 注释标明升级时机。
+
+## 协调者复核（2026-10-11，独立复验）
+
+- 双轴评审（Standards/Spec 并行 fresh 子代理）报 11 项：修 7 判断性留 4（见交付记录）；
+  修正后 fresh-context 只读复核逐项验证：7 项中 6 项闭环，**焦点环一项未有效闭环**——
+  样式挂在内层 div，而 React Flow v12 的 `tabIndex` 在外层 `.react-flow__node` 包裹层，
+  `:focus-visible` 匹配不到后代；另新报 P2：非 CONTAINS 自环关系边渲染为零长线。
+  裁决 **OK with notes**（均不阻塞）。
+- 窄修 **3b5c83c**：焦点环改挂 ReactFlow 根的 arbitrary variant
+  （`[&_.react-flow__node:focus-visible]:outline-*`，落点即真实焦点元素）；
+  自环叠加边不渲染（`buildGraphModel` 过滤 `from===to`，测试同步）。复跑
+  `npm test` 10/10、lint、build 全绿。
+- 其余检查通过：nodeTypes 稳定引用、Handle 零尺寸、elk 防重入 + model 绑定防旧坐标回显、
+  render 期 reset 为 React 官方条件模式；改动全在 Ownership 内；禁用 class/四态/duration 合规；
+  mermaid 确认仍被 conflicts 区使用，依赖保留成立。
+- 教师配合视检（缩放/折叠/下钻手感与视觉）按票面【收尾】留待教师，不阻塞交付。
+- **Status: done（独立复验通过）**

@@ -1,6 +1,6 @@
 # EduMind 知识库重构（污染根修 + Zettelkasten 式演进）
 
-Status: ready-for-agent
+Status: done（全部工单交付并独立复验通过；教师收尾项——票04/07/09/12 的人工冒烟与视检——不阻塞，见各票）
 
 ## 问题陈述
 
