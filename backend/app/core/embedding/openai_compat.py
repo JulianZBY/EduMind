@@ -6,6 +6,11 @@ from app.core.embedding.base import Embedder
 
 DEFAULT_TIMEOUT = 120.0
 
+# 单次 /embeddings 请求的 input 条数上限：千问 MaaS 实测 11 条即 400
+# （服务端原文 "batch size ... should not be larger than 10"），取 10 对其他
+# OpenAI 兼容家也安全（它们的上限普遍 ≥10，多拆只会多几个请求不会错）。
+EMBED_BATCH_MAX = 10
+
 
 class OpenAICompatEmbedder(Embedder):
     name = "openai_compat"
@@ -31,15 +36,19 @@ class OpenAICompatEmbedder(Embedder):
     async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        payload: dict = {"model": self.model, "input": list(texts)}
-        if self.dimensions:
-            payload["dimensions"] = self.dimensions
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        vectors: list[list[float]] = []
         async with httpx.AsyncClient(timeout=self.timeout, transport=self._transport) as client:
-            r = await client.post(f"{self.base_url}/embeddings", headers=headers, json=payload)
-            r.raise_for_status()
-            data = r.json()
-        return self._vectors(data, len(texts))
+            # 分批串行：大文档几百块不能一批发（服务商单请求 input 上限），串行避免限速
+            for start in range(0, len(texts), EMBED_BATCH_MAX):
+                batch = texts[start : start + EMBED_BATCH_MAX]
+                payload: dict = {"model": self.model, "input": list(batch)}
+                if self.dimensions:
+                    payload["dimensions"] = self.dimensions
+                r = await client.post(f"{self.base_url}/embeddings", headers=headers, json=payload)
+                r.raise_for_status()
+                vectors.extend(self._vectors(r.json(), len(batch)))
+        return vectors
 
     @staticmethod
     def _vectors(data: dict, expected: int) -> list[list[float]]:

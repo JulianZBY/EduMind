@@ -162,6 +162,58 @@ async def test_qwen_dialect_embeddings_carry_dimensions():
     assert len(vectors[0]) == 1024
 
 
+class _EchoEmbedRecorder:
+    """按每次请求的 input 长度回同等条数向量的桩（分批测试用：每批响应匹配该批输入）。"""
+
+    def __init__(self) -> None:
+        self.batches: list[list[str]] = []
+
+    @property
+    def transport(self) -> httpx.MockTransport:
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            inputs = body["input"]
+            self.batches.append(inputs)
+            data = [{"index": i, "embedding": [float(i)]} for i in range(len(inputs))]
+            return httpx.Response(200, json={"data": data})
+
+        return httpx.MockTransport(handler)
+
+
+async def test_embedder_splits_batches_at_ten():
+    """分批契约：单请求 input 不超过 10 条（千问 MaaS 实测上限，11 条即 400），
+    超出自动拆批串行请求，向量按原顺序拼接——大文档几百块不再整批被拒。"""
+    rec = _EchoEmbedRecorder()
+    embedder = OpenAICompatEmbedder(
+        base_url=QWEN_BASE,
+        model="text-embedding-v3",
+        api_key="sk-dash",
+        transport=rec.transport,
+    )
+
+    vectors = await embedder.embed([f"第{i}块" for i in range(25)])
+
+    assert [len(b) for b in rec.batches] == [10, 10, 5]  # 25 块拆三批，无一批超限
+    assert len(vectors) == 25
+    assert vectors[9] == [9.0] and vectors[10] == [0.0]  # 批界处顺序仍正确（第 10/11 块来自不同批）
+
+
+async def test_embedder_within_limit_stays_single_request():
+    """恰在上限内不浪费请求：10 条输入仍是一个请求。"""
+    rec = _EchoEmbedRecorder()
+    embedder = OpenAICompatEmbedder(
+        base_url=SILICONFLOW_BASE,
+        model="BAAI/bge-large-zh-v1.5",
+        api_key="sk-sf",
+        transport=rec.transport,
+    )
+
+    vectors = await embedder.embed([f"块{i}" for i in range(10)])
+
+    assert len(rec.batches) == 1
+    assert len(vectors) == 10
+
+
 async def test_content_parts_response_is_joined():
     """响应差异：部分兼容服务把 content 返回为 parts 数组，按文本部分拼接。"""
     rec = _Recorder(
