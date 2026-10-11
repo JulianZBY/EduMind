@@ -157,7 +157,7 @@ export function KnowledgeGraphWorkbench() {
           />
           {filtered ? (
             <Button size="sm" onClick={clearFilters}>
-              清除过滤
+              返回全图
             </Button>
           ) : null}
         </div>
@@ -165,9 +165,11 @@ export function KnowledgeGraphWorkbench() {
           <span className="text-xs text-black/60">
             {neighborhoodMode
               ? `邻域子图 · 以选中的知识点为中心，向外 ${depth} 跳`
-              : filtered
-                ? '全图（已按学科 / 章节过滤）'
-                : '全图'}
+              : subject !== null
+                ? '已下钻到这个学科的知识点子图'
+                : chapter !== null
+                  ? '全图（已按章节过滤）'
+                  : '全图'}
           </span>
           {neighborhoodMode ? (
             <Button size="sm" onClick={() => navigateTo(selectedId, null)}>
@@ -199,6 +201,9 @@ export function KnowledgeGraphWorkbench() {
             edges={edges}
             selectedId={selectedId}
             onSelect={(nodeId) => navigateTo(nodeId, depth)}
+            onDrillSubject={
+              neighborhoodMode || subject !== null ? null : (value) => setFilter(SUBJECT_PARAM, value)
+            }
             emptyTitle={filtered ? '这个范围里没有知识点' : '图谱还是空的'}
             emptyDescription={
               filtered
