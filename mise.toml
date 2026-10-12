@@ -4,21 +4,26 @@
 # 日常：  mise run dev      （前后端一起起，Ctrl+C 停）
 # 门禁：  mise run check    （lint + test + build + routes）
 # 单跑：  mise run dev:backend / dev:frontend / test:backend …
+#
+# Python：mise 管解释器 + venv（见 [env]），依赖由 pip 按 backend/requirements.txt 安装。
 
 [tools]
-# 与 backend/uv.lock (revision 3) 生成时同版本，避免 lockfile churn
-uv = "0.13.0"
+python = "3.14"
 # node 由 mise 提供；npm 随 node 一起，同属 mise 管理
 node = "26"
 
+[env]
+# 进目录时创建并激活后端 venv（python -m venv，自带 pip）
+_.python.venv = { path = "backend/.venv", create = true }
+
 # ── 安装依赖 ──────────────────────────────────────────────
 [tasks.setup]
-description = "安装前后端依赖（uv sync + npm ci）"
+description = "安装前后端依赖（pip install -r requirements.txt + npm ci）"
 depends = ["setup:backend", "setup:frontend"]
 
 [tasks."setup:backend"]
 dir = "backend"
-run = "uv sync"
+run = "pip install -r requirements.txt"
 
 [tasks."setup:frontend"]
 dir = "frontend"
@@ -28,7 +33,7 @@ run = "npm ci"
 [tasks."dev:backend"]
 dir = "backend"
 description = "后端 uvicorn @ 127.0.0.1:8000"
-run = "uv run uvicorn app.main:app --host 127.0.0.1 --port 8000"
+run = "uvicorn app.main:app --host 127.0.0.1 --port 8000"
 
 [tasks."dev:frontend"]
 dir = "frontend"
@@ -42,7 +47,7 @@ depends = ["dev:backend", "dev:frontend"]
 # ── lint ─────────────────────────────────────────────────
 [tasks."lint:backend"]
 dir = "backend"
-run = "uv run ruff check ."
+run = "ruff check ."
 
 [tasks."lint:frontend"]
 dir = "frontend"
@@ -55,7 +60,7 @@ depends = ["lint:backend", "lint:frontend"]
 # ── 测试 ─────────────────────────────────────────────────
 [tasks."test:backend"]
 dir = "backend"
-run = "uv run pytest -q"
+run = "pytest -q"
 
 [tasks."test:frontend"]
 dir = "frontend"
