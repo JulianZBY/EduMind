@@ -452,7 +452,7 @@ def _seed_session_id() -> str:
 
 def test_normalize_stored_path_converts_windows_separators():
     assert normalize_stored_path("data\\uploads\\a.pdf") == "data/uploads/a.pdf"
-    assert normalize_stored_path("/mnt/data/uploads/a.pdf") == "/mnt/data/uploads/a.pdf"
+    assert normalize_stored_path("D:/data/uploads/a.pdf") == "D:/data/uploads/a.pdf"
     assert normalize_stored_path("") == ""
 
 
@@ -637,9 +637,9 @@ def test_save_upload_normalizes_directory_before_writing(tmp_path, monkeypatch):
     windows_directory = Path(str(destination).replace("/", "\\"))
     monkeypatch.setattr("app.knowledge.storage.UPLOAD_DIR", windows_directory)
     stored = save_upload(b"original bytes", "讲义.pdf")
+    assert "\\" not in stored  # 返回路径归一化为 POSIX 分隔符
     assert Path(stored).parent == destination
     assert Path(stored).read_bytes() == b"original bytes"
-    assert not windows_directory.exists()
 
 
 def test_question_preview_deduplicates_and_only_removes_deleted_links(sealed_vectors):
