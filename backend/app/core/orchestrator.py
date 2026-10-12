@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from typing import cast
 
 from app.core.errors import GenerationFailed, ProviderNotConfigured
 from app.core.intent import TeachingIntent, wants_interactive_content
@@ -59,12 +60,12 @@ async def orchestrate(intent: TeachingIntent, reference_doc_ids: list[str] | Non
             "请到「设置」页检查对话模型的配置。"
         )
 
-    slides: list[dict] = ppt_slides
+    slides: list[dict] = cast(list[dict], ppt_slides)
     # 课件主题化：页面角色差异化版式 + 风格偏好映射配色主题（简约/学术/活泼）在渲染层生效
     # render_* 是同步的 python-pptx/docx 渲染 + 落盘：放线程池，不阻塞事件循环
     ppt_path = await asyncio.to_thread(render_ppt, slides, style=intent_dict.get("style", ""))
 
-    word: dict = word_data
+    word: dict = cast(dict, word_data)
     word_path = await asyncio.to_thread(render_word, word, references=references)
     # 提纲与课件 / 教案同形：正文 + 落盘文件（版本记录与落盘文件一一对应）
     outline_text = str(outline or "")

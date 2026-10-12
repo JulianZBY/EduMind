@@ -1,6 +1,7 @@
 """PPT 解析：python-pptx，抽取每页文本。"""
 
 from pptx import Presentation
+from pptx.shapes.autoshape import Shape
 
 from app.knowledge.parsers.base import Parser
 
@@ -12,7 +13,7 @@ class PptParser(Parser):
         for i, slide in enumerate(prs.slides, 1):
             texts = []
             for shape in slide.shapes:
-                if shape.has_text_frame:
+                if isinstance(shape, Shape) and shape.has_text_frame:
                     texts.append(shape.text_frame.text)
             slides.append(f"## 第{i}页\n" + "\n".join(texts))
         return "\n\n".join(slides)

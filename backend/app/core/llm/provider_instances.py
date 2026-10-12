@@ -16,7 +16,7 @@ import httpx
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from app.core.dialects import DIALECTS
+from app.core.dialects import DIALECTS, Dialect
 from app.core.llm.providers.openai_compat import OpenAICompatProvider
 from app.db import SessionLocal
 from app.db.models import LLMProviderInstance, ProviderModel
@@ -42,11 +42,15 @@ def instance_dialects() -> dict[str, str]:
     return {row.id: row.provider for row in list_instances()}
 
 
+def _dialect(instance: LLMProviderInstance) -> Dialect | None:
+    return DIALECTS.get(instance.provider)
+
+
 def effective_base_url(instance: LLMProviderInstance) -> str:
     """实例的生效地址：覆盖优先，其次方言预设（自定义服务没有预设，必须填覆盖）。"""
     if instance.base_url:
         return instance.base_url
-    dialect = DIALECTS.get(instance.provider)
+    dialect = _dialect(instance)
     if dialect is None:
         return ""
     return dialect.base_url
@@ -56,7 +60,7 @@ def effective_model(instance: LLMProviderInstance) -> str:
     """实例的默认模型：覆盖优先，其次方言预设的对话模型。"""
     if instance.model:
         return instance.model
-    dialect = DIALECTS.get(instance.provider)
+    dialect = _dialect(instance)
     if dialect is None:
         return ""
     return dialect.chat_model
@@ -70,7 +74,7 @@ def _resolve(instance: LLMProviderInstance, model_override: str = "") -> object:
     if not instance.api_key:
         raise ValueError(f"「{instance.label}」还没有粘贴 API Key")
     model = model_override or effective_model(instance)
-    dialect = DIALECTS.get(instance.provider)
+    dialect = _dialect(instance)
     return OpenAICompatProvider(
         base_url=base_url,
         model=model,
