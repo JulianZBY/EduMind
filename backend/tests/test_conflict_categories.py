@@ -161,7 +161,7 @@ def _promised(outcome: dict) -> tuple[set[str], set[tuple[str, str, str]]]:
     return set(title_by_id.values()), edges
 
 
-# ---- 验收项 1：category 落库 + 存量数据回填 ----
+# 验收项 1：category 落库 + 存量数据回填
 
 
 def test_legacy_conflict_rows_are_backfilled_to_definition_category(tmp_path):
@@ -220,7 +220,7 @@ def test_new_conflict_rows_default_to_definition_category_and_list_exposes_it():
     assert structure_id not in {c["id"] for c in _list_conflicts(category="定义冲突")}
 
 
-# ---- 验收项 2：三类别的审核动作各有行为测试 ----
+# 验收项 2：三类别的审核动作各有行为测试
 
 
 @pytest.mark.parametrize(
@@ -304,7 +304,7 @@ def test_common_sense_conflict_two_choices_and_reject():
     assert stored is not None and stored["review_action"] == "拒绝"
 
 
-# ---- 验收项 3：编辑修正后入库落的是修正后的内容 ----
+# 验收项 3：编辑修正后入库落的是修正后的内容
 
 
 def test_corrected_content_lands_in_graph_and_original_stays_on_record():
@@ -337,7 +337,7 @@ def test_corrected_content_lands_in_graph_and_original_stays_on_record():
     assert entry["review_action"] == "编辑修正后入库", "终态都是已接受，靠 review_action 分辨出路"
 
 
-# ---- 验收项 4：结构冲突的三个终态图与实际裁决后的图谱变化一致 ----
+# 验收项 4：结构冲突的三个终态图与实际裁决后的图谱变化一致
 
 
 @pytest.mark.parametrize(
@@ -414,7 +414,7 @@ def test_structure_preview_is_absent_for_other_categories_and_after_review():
     assert _entry(structure_id, category="结构冲突")["structure_preview"] is None
 
 
-# ---- 动作集合按类别收窄 + 状态边界 ----
+# 动作集合按类别收窄 + 状态边界
 
 
 def test_action_not_in_category_keeps_conflict_pending():

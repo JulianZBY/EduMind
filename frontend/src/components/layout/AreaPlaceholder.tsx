@@ -10,7 +10,7 @@ export interface AreaPlaceholderProps {
 }
 
 /**
- * 票 04 的各区空壳：只保证「可导航、风格到位、密度正确」。
+ * 的各区空壳：只保证「可导航、风格到位、密度正确」。
  * 真正的业务功能由后续票（06/08/09/10/11/12/13）在各区目录里替换本组件。
  */
 export function AreaPlaceholder({ title, description, paramKey, objectLabel }: AreaPlaceholderProps) {

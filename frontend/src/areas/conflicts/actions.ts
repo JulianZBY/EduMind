@@ -8,7 +8,7 @@
  * - 动作取值来自生成的 schema（`ReviewRequest['action']`），后端一改，`tsc` 就报——
  *   不在这里手抄接口类型；
  * - 后端的动作集合（`ACTIONS_BY_CATEGORY`）是唯一事实源，本表只是它的呈现；
- *   两者一致有可复现校验（见票 11 交付记录里的临时比对脚本）。
+ *   两者一致有可复现校验。
  */
 import type { ReviewRequest } from '../../api/generated'
 

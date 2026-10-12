@@ -2,8 +2,8 @@
  * 备课会话区（二级侧栏 = 会话列表，主区 = 对话轴）。
  *
  * 本区是教师的日常主线：发起备课、回答追问、看生成结果。全部事实源在服务端（ADR-0002）：
- * 会话列表、历史、追问粒度与参考资料都从 API 读写，浏览器侧不存会话（票 04 已把浏览器里的
- * 会话整体退场）。生成结果并排显示在对话旁（票 08 的 `GenerationPreview`），它的版本数据与
+ * 会话列表、历史、追问粒度与参考资料都从 API 读写，浏览器侧不存会话（已把浏览器里的
+ * 会话整体退场）。生成结果并排显示在对话旁（`GenerationPreview`），它的版本数据与
  * 生成物区同源；历史版本中心仍住生成物区。
  */
 import { Outlet, useParams } from 'react-router'
@@ -33,7 +33,7 @@ export function LessonPrepIndex() {
         description="左列是全部备课会话：新建一次备课，或选中一条继续。会话与历史存在服务端，刷新、换设备都不丢。"
         action={
           <>
-            {/* 新建即开（票 04）：零表单直接建会话并进入，不再弹层 */}
+            {/* 新建即开：零表单直接建会话并进入，不再弹层 */}
             <Button disabled={newSession.creating} onClick={newSession.openNewSession}>
               {newSession.creating ? '正在新建…' : '新建备课会话'}
             </Button>
@@ -56,7 +56,7 @@ export function LessonPrepSession() {
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1">
       <ConversationAxis sessionId={sessionId} />
-      {/* 生成结果就在对话旁：并排预览课件 / 教案 / 提纲（票 08）。对话轴行为不变。 */}
+      {/* 生成结果就在对话旁：并排预览课件 / 教案 / 提纲。对话轴行为不变。 */}
       <GenerationPreview sessionId={sessionId} />
     </div>
   )

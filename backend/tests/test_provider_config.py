@@ -51,7 +51,7 @@ def _write(tmp_path, payload) -> str:
     return str(path)
 
 
-# ---- 解析与校验 ----
+# 解析与校验
 
 
 def test_load_normalizes_a_valid_entry(tmp_path):
@@ -122,7 +122,7 @@ def test_missing_file_and_broken_json_are_not_fatal(tmp_path):
     assert provider_config.load_entries(Path(broken)) == []
 
 
-# ---- 并入目录与工厂 ----
+# 并入目录与工厂
 
 
 def test_merge_puts_the_provider_into_the_catalog():

@@ -1,4 +1,4 @@
-"""备课会话一轮对话的行为测试（票 05）：持久化 + 状态机收编 + 意图增量累积 + 语义跳过。
+"""备课会话一轮对话的行为测试：持久化 + 状态机收编 + 意图增量累积 + 语义跳过。
 
 只断言 HTTP 响应与数据变迁（ADR-0002 与 spec 的测试决策），不断言内部函数调用；
 被替换的只是 LLM 能力替身（见 `tests/session_support.py`）。
@@ -64,7 +64,7 @@ def _session_row(session_id: str) -> PrepSession | None:
         db.close()
 
 
-# ---- 会话内一轮对话：落库 + 换设备回看 ----
+# 会话内一轮对话：落库 + 换设备回看
 
 
 def test_session_turns_persist_history_for_other_devices(install_semantic_llm):
@@ -170,7 +170,7 @@ def test_chat_without_session_stays_stateless(install_semantic_llm):
     assert len(client.get("/api/v1/sessions").json()["sessions"]) == before
 
 
-# ---- 跳过追问：语义判定（正反例） ----
+# 跳过追问：语义判定（正反例）
 
 
 def test_skip_clarification_accepts_a_synonym_phrasing(install_semantic_llm):
@@ -204,7 +204,7 @@ def test_negated_generation_is_not_treated_as_skip(install_semantic_llm):
     assert llm.skip_prompts and negated in llm.skip_prompts[-1]
 
 
-# ---- 意图按会话增量累积 ----
+# 意图按会话增量累积
 
 
 def test_session_intent_accumulation_matches_full_reanalysis(install_semantic_llm):
@@ -264,11 +264,11 @@ def test_incremental_intent_analyzes_only_the_new_turn(install_semantic_llm):
     assert sum(len(text) for text in incremental_texts) < len(full_text)
 
 
-# ---- 会话命名三态（票 04：零表单直开 + 自动命名 + 手动改名锁存）----
+# 会话命名三态（零表单直开 + 自动命名 + 手动改名锁存）
 
 
 def test_title_three_states_create_auto_then_manual_lock(install_semantic_llm):
-    """票 04 三态：创建即开是「未命名备课」；首条教师消息自动命名；手动改名后不再自动覆盖。"""
+    """三态：创建即开是「未命名备课」；首条教师消息自动命名；手动改名后不再自动覆盖。"""
     install_semantic_llm(learned=LEARNED)
     created = _create()
     assert created["title"] == "未命名备课"  # 创建即开：零表单，先叫未命名备课
@@ -292,7 +292,7 @@ def test_title_three_states_create_auto_then_manual_lock(install_semantic_llm):
     assert locked["title"] == manual
 
 
-# ---- 口径与不变式 ----
+# 口径与不变式
 
 
 def test_api_layer_holds_no_clarify_or_skip_judgement():
@@ -318,7 +318,7 @@ def test_api_layer_holds_no_clarify_or_skip_judgement():
 
 
 def test_db_models_docstring_points_to_existing_docs():
-    """票 01 登记的断链已修：模型文件的文档指针指向仓库内真实存在的文件。"""
+    """登记的断链已修：模型文件的文档指针指向仓库内真实存在的文件。"""
     repo_root = Path(api_package.__file__).resolve().parents[3]
     source = (repo_root / "backend" / "app" / "db" / "models.py").read_text(encoding="utf-8")
 

@@ -1,4 +1,4 @@
-"""票 03 一次性清理脚本的测试（.scratch/knowledge-restructure/issues/03-orphan-output-cleanup.md）。
+"""一次性清理脚本的测试（.scratch/knowledge-restructure/issues/03-orphan-output-cleanup.md）。
 
 脚本不是产品代码、不改行为：这里只测它的保留口径与门禁——
 「保留 = 文件名出现在 artifact_versions.filename，或被 session_messages.artifacts 引用；
@@ -111,7 +111,7 @@ def scene(tmp_path, orphan_script):
     yield Scene(main_db, output, sqlite3.connect(main_db), gate)
 
 
-# ---- 计划：保留口径与对账 ----
+# 计划：保留口径与对账
 
 
 def test_plan_keeps_versions_and_message_refs_deletes_rest(orphan_script, scene):
@@ -155,7 +155,7 @@ def test_gate_blocks_when_keep_below_minimum(orphan_script, scene):
     assert any("99" in p for p in problems)
 
 
-# ---- dry-run：只出清单，不落任何写 ----
+# dry-run：只出清单，不落任何写
 
 
 def test_dry_run_changes_nothing(orphan_script, scene, capsys):
@@ -168,7 +168,7 @@ def test_dry_run_changes_nothing(orphan_script, scene, capsys):
     assert ORPHAN_FILES[0] in out and KEEP_FILES[0] in out
 
 
-# ---- 真删：孤儿全清、保留原样、tar 备份可查 ----
+# 真删：孤儿全清、保留原样、tar 备份可查
 
 
 def test_execute_deletes_orphans_keeps_referenced_and_tars_backup(orphan_script, scene, tmp_path):

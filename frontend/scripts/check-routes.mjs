@@ -21,7 +21,7 @@ const frontendDir = resolve(scriptDir, '..')
 /**
  * 把一段 JSX 渲染成完整 HTML 字符串。
  *
- * 区是 React.lazy 拆分的（M6）：懒组件首帧处于挂起态，`renderToStaticMarkup` 只能渲染
+ * 区是 React.lazy 拆分的：懒组件首帧处于挂起态，`renderToStaticMarkup` 只能渲染
  * 同步可完成的部分，会停在外壳/加载态上。这里改用流式渲染并等 `onAllReady`——等所有懒
  * 组件就绪后再收完整 HTML，所以下面的文案断言校验的仍是各区的真实内容。
  */
@@ -43,7 +43,7 @@ function renderToHtml(element) {
   })
 }
 
-/** 票 04 的验收口径：六区 + 设置共七条一级路由，默认落在备课会话区。 */
+/** 验收口径：六区 + 设置共七条一级路由，默认落在备课会话区。 */
 const EXPECTED_AREAS = [
   { id: 'lesson-prep', path: '/lesson-prep', label: '备课会话', isDefault: true },
   { id: 'knowledge', path: '/knowledge', label: '知识库' },
@@ -57,9 +57,9 @@ const EXPECTED_AREAS = [
 const failures = []
 const check = (ok, message) => {
   if (ok) {
-    console.log(`  ✓ ${message}`)
+    console.log(`  [ok] ${message}`)
   } else {
-    console.error(`  ✗ ${message}`)
+    console.error(`  [fail] ${message}`)
     failures.push(message)
   }
 }
@@ -159,7 +159,7 @@ try {
     ...EXPECTED_AREAS.map((area) => ({ path: area.path, expect: area.label })),
     { path: '/lesson-prep/session-abc', expect: 'session-abc' },
     { path: '/settings', expect: '供应商' },
-    // 冲突审核的队列是服务端数据（票 11 起按类别取数），SSR 渲染时停在取数态，
+    // 冲突审核的队列是服务端数据（按类别取数），SSR 渲染时停在取数态，
     // 故这里断言面板自己的文案（带类别名）而不是空状态标题——它同样证明 ?category= 选中了该分区。
     { path: '/conflicts?category=structure', expect: '正在取「结构冲突」队列' },
     { path: '/no-such-area', expect: '这个地址不存在' },

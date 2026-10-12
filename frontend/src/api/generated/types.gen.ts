@@ -1158,7 +1158,7 @@ export type ProposalListResponse = {
 /**
  * ProposalView
  *
- * 一条新学科提议（票 09）：名称、AI 理由与涉及的知识点标题。
+ * 一条新学科提议：名称、AI 理由与涉及的知识点标题。
  */
 export type ProposalView = {
     /**

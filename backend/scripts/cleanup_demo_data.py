@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""一次性清理脚本：TCP 演示数据全清（票 02，.scratch/knowledge-restructure/issues/02-demo-data-cleanup.md）。
+"""一次性清理脚本：TCP 演示数据全清（.scratch/knowledge-restructure/issues/02-demo-data-cleanup.md）。
 
 教师已批准全删（2026-10-08）。默认 **dry-run**：只打印将删的每一行 / 每一文件清单；
 真删必须显式加 `--execute`。执行前置门禁：现场计数必须与票面核实值逐一相符、
@@ -284,7 +284,7 @@ def dry_run(main: sqlite3.Connection, vec: sqlite3.Connection, uploads_dir: Path
     if problems:
         print("\n== 门禁不过（拒绝执行）==")
         for p in problems:
-            print(f"  ✗ {p}")
+            print(f"  - {p}")
         return 2
     print("\n门禁通过：现场与票面核实值逐项相符。加 --execute 真删。")
     return 0
@@ -319,7 +319,7 @@ def execute_cleanup(
     plan = build_plan(main, vec, uploads_dir)
     problems = find_gate_problems(main, plan)
     if problems:
-        detail = "\n".join(f"  ✗ {p}" for p in problems)
+        detail = "\n".join(f"  - {p}" for p in problems)
         raise CleanupRefused(f"门禁不过，拒绝执行（零副作用）：\n{detail}")
 
     questions_before = main.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
@@ -397,7 +397,7 @@ def execute_cleanup(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="票 02：TCP 演示数据清理（默认 dry-run）")
+    parser = argparse.ArgumentParser(description="TCP 演示数据清理（默认 dry-run）")
     parser.add_argument("--execute", action="store_true", help="真删（默认只 dry-run）")
     parser.add_argument(
         "--dry-run",

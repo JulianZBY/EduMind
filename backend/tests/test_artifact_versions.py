@@ -1,4 +1,4 @@
-"""生成物全版本留痕（票 07）：生成即入库 / 版本列表·详情·下载 / 以历史版本为基线修改。
+"""生成物全版本留痕：生成即入库 / 版本列表·详情·下载 / 以历史版本为基线修改。
 
 只经 HTTP 缝断言**响应与数据变迁**（不断言任何内部函数调用）；「版本 ↔ 文件」一一对应
 按真实落盘内容核验——落盘目录经 conftest 的 `isolated_output_dir` 重定向到临时目录。
@@ -34,7 +34,7 @@ def _isolated_outputs(isolated_output_dir):
     return isolated_output_dir
 
 
-# ---- HTTP 助手 ----
+# HTTP 助手
 
 
 def _create(**payload) -> dict:
@@ -96,7 +96,7 @@ def _version_rows(session_id: str) -> list[ArtifactVersion]:
         db.close()
 
 
-# ---- 生成即入库 + 版本号单调递增 ----
+# 生成即入库 + 版本号单调递增
 
 
 def test_each_generation_records_a_version_with_monotonic_numbers():
@@ -163,7 +163,7 @@ def test_generation_message_carries_version_ids():
     assert _group(listing, "提纲")["versions"][0]["id"] == outline["version_id"]
 
 
-# ---- 版本列表 / 详情 / 下载 ----
+# 版本列表 / 详情 / 下载
 
 
 def test_version_detail_and_download_return_that_versions_own_file():
@@ -270,7 +270,7 @@ def test_deleting_a_session_removes_its_version_records():
     assert client.get(f"/api/v1/sessions/{created['id']}/artifacts").status_code == 404
 
 
-# ---- 以历史版本为基线继续修改 ----
+# 以历史版本为基线继续修改
 
 
 def test_revise_from_a_historical_version_creates_a_new_version_and_keeps_the_old_one():
@@ -426,7 +426,7 @@ def test_revise_on_session_without_that_artifact_returns_404():
     assert "基线" in r.json()["detail"]
 
 
-# ---- 试卷 / 互动内容也走同一条版本入库路径 ----
+# 试卷 / 互动内容也走同一条版本入库路径
 
 
 def test_exam_and_interactive_generation_record_versions():
@@ -482,11 +482,11 @@ def test_generation_with_unknown_session_returns_404():
     assert "会话不存在" in r.json()["detail"]
 
 
-# ---- 接口纪律：新端点不得缺 response_model（票 04 的欠账）----
+# 接口纪律：新端点不得缺 response_model（欠账）
 
 
 def test_new_endpoints_declare_a_response_model():
-    """票 04 指出 16 个操作只有 6 个带 response_model：本票新增 / 改动的 JSON 端点一律不得缺。"""
+    """指出 16 个操作只有 6 个带 response_model：本票新增 / 改动的 JSON 端点一律不得缺。"""
     schema = app.openapi()
 
     def _has_model(path: str, method: str) -> bool:

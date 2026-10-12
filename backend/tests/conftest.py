@@ -10,11 +10,11 @@
 - OUTPUT_DIR：生成物落盘目录（否则每跑一轮测试就往 backend/data/output 写入几十个文件，
   和教师的真实生成物混在一起；`isolated_output_dir` 夹具只覆盖显式声明它的用例）
 
-**密封隔离**（票 14 收口，产品不再有假数据兜底后沿用）：云端 provider 一律不配（代码默认空），
+**密封隔离**（收口，产品不再有假数据兜底后沿用）：云端 provider 一律不配（代码默认空），
 环境变量优先级高于 `.env`，因此即使开发者 `.env` 里写着 `LLM_PROVIDER=qwen` + 真实 Key，
 测试仍不会调用真实服务；需要 LLM / 转写 / 搜索的用例挂 `tests/support` 里的替身
 （离线、确定、零成本）。检索 / 分块策略仍钉默认档——少钉一个都会出现
-「本机全绿、CI 或换台机器红」的假失败（票 13 报告口径）。
+「本机全绿、CI 或换台机器红」的假失败（报告口径）。
 """
 
 import os
@@ -30,7 +30,7 @@ os.environ.setdefault("UPLOAD_DIR", str(_tmp / "uploads"))
 os.environ.setdefault("OUTPUT_DIR", str(_tmp / "output"))
 # 供应商扩展配置文件：测试一律不读开发机上的 providers.json（要测扩展的用例自己指定路径）
 os.environ.setdefault("PROVIDERS_CONFIG", "")
-# ---- 密封：能力 provider 与 Key（见文件头「密封隔离」）----
+# 密封：能力 provider 与 Key（见文件头「密封隔离」）
 # 云端 provider 一律不配（代码默认空）：产品无假数据兜底，未配置时相关能力抛
 # ProviderNotConfigured。测试需要 LLM / 转写 / 搜索时挂 tests/support 里的替身
 # （FakeLLM / FakeTranscriber / FakeSearch / FakeEmbedder），离线、确定、零成本。
@@ -60,9 +60,9 @@ for _name in (
     os.environ.setdefault(_name, "")
 
 
-# ---- 票 05 的公共接缝：LLM 能力替身与生成物落盘隔离（app 模块在函数体内导入，
+# 公共接缝：LLM 能力替身与生成物落盘隔离（app 模块在函数体内导入，
 # 保证上面的环境变量先落地；见文件头的不变式）----
-# ---- 默认假 LLM：所有测试默认挂 tests/support 里的替身（离线、确定、零成本）----
+# 默认假 LLM：所有测试默认挂 tests/support 里的替身（离线、确定、零成本）
 # 需要「未配置」状态的用例（如设置页测试）自行把 llm_provider 设回空并清缓存。
 
 

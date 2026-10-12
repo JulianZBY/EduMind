@@ -1,4 +1,4 @@
-"""票 02 一次性清理脚本的测试（.scratch/knowledge-restructure/issues/02-demo-data-cleanup.md）。
+"""一次性清理脚本的测试（.scratch/knowledge-restructure/issues/02-demo-data-cleanup.md）。
 
 脚本不是产品代码、不改行为：这里只测它的计划构建 / 门禁 / 删除范围——
 用临时库 + 真实 VectorStore（sqlite-vec，本地扩展，离线确定性）复刻票面核实过的现场，
@@ -139,7 +139,7 @@ def _vec_conn(demo_script, vectors_db: Path) -> sqlite3.Connection:
     return demo_script.connect_vectors(str(vectors_db))
 
 
-# ---- 门禁：现场计数与票面核实值对不上就拒绝 ----
+# 门禁：现场计数与票面核实值对不上就拒绝
 
 
 def test_gate_blocks_when_document_count_mismatch(demo_script, tmp_path):
@@ -165,7 +165,7 @@ def test_gate_blocks_when_prep_session_references_demo_doc(demo_script, tmp_path
     main.close()
 
 
-# ---- 计划：清单与票面逐项对账 ----
+# 计划：清单与票面逐项对账
 
 
 def test_build_plan_lists_exact_ticket_inventory(demo_script, scene):
@@ -181,7 +181,7 @@ def test_build_plan_lists_exact_ticket_inventory(demo_script, scene):
     assert sorted(f.name for f in plan.uploads_delete) == sorted(ALL_UPLOAD_FILES)
 
 
-# ---- dry-run：只出清单，不落任何写 ----
+# dry-run：只出清单，不落任何写
 
 
 def test_dry_run_changes_nothing(demo_script, scene, capsys):
@@ -207,7 +207,7 @@ def test_dry_run_on_already_clean_library_reports_noop(demo_script, scene, tmp_p
     assert "已清理" in capsys.readouterr().out
 
 
-# ---- 真删：范围恰为演示数据，questions 不动，备份可查 ----
+# 真删：范围恰为演示数据，questions 不动，备份可查
 
 
 def test_execute_deletes_demo_scope_and_keeps_questions(demo_script, scene, tmp_path):

@@ -624,7 +624,7 @@ def delete_subject(subject_id: str, db: Annotated[Session, Depends(get_session)]
 
 
 class ProposalView(BaseModel):
-    """一条新学科提议（票 09）：名称、AI 理由与涉及的知识点标题。"""
+    """一条新学科提议：名称、AI 理由与涉及的知识点标题。"""
 
     model_config = ConfigDict(from_attributes=True)
 

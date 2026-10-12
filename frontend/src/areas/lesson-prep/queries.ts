@@ -1,14 +1,13 @@
 /**
  * 备课会话区的服务端状态（TanStack Query）：会话列表 / 历史 / 一轮对话 / 上传与参考资料绑定。
  *
- * 事实源在服务端（ADR-0002）：浏览器里没有、也不该有会话事实——浏览器侧会话存储已在票 04
- * 退场，本区不得再引入任何浏览器侧的会话事实源。本文件分两层：
+ * 事实源在服务端（ADR-0002）：浏览器里没有、也不该有会话事实——浏览器侧会话存储已退场，本区不得再引入任何浏览器侧的会话事实源。本文件分两层：
  *
  * - **数据层**（`fetchSessions` / `createSession` / `sendTurn` …）是普通 async 函数：只发请求、
  *   返回生成的 schema 类型，可脱离 React 直接调用（验收时可拿真后端跑一遍）；
  * - **hooks 层**只做缓存、失效与乐观改写（乐观改写也在服务端事实回归时被覆盖）。
  *
- * query key 一律以 `lessonPrepKeys.all` 打头（票 04 的扩展点约定）。
+ * query key 一律以 `lessonPrepKeys.all` 打头（扩展点约定）。
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
@@ -82,7 +81,7 @@ export function artifactFileUrl(filename: string, options: { openInTab?: boolean
   return options.openInTab ? `${base}?inline=true` : base
 }
 
-// ---- 数据层（不依赖 React，可单独调用）----
+// 数据层（不依赖 React，可单独调用）
 
 /** 会话列表（最近使用在前；带关键词则按标题过滤）。 */
 export async function fetchSessions(
@@ -184,7 +183,7 @@ export async function setSessionReferences(
   return updateSession(sessionId, { reference_doc_ids: [...docIds] }, signal)
 }
 
-// ---- query key ----
+// query key
 
 export const lessonPrepKeys = {
   all: ['lesson-prep'] as const,
@@ -196,7 +195,7 @@ export const lessonPrepKeys = {
   knowledgeDocuments: () => [...lessonPrepKeys.all, 'knowledge-documents'] as const,
 }
 
-// ---- 缓存改写（纯函数，便于单独核对）----
+// 缓存改写（纯函数，便于单独核对）
 
 /**
  * 一轮对话的乐观追加：先把教师这句话写进缓存，教师看到自己的话立刻出现在轴上；
@@ -233,7 +232,7 @@ function replaceSessionSummary(
   return history ? { ...history, session } : history
 }
 
-// ---- hooks 层 ----
+// hooks 层
 
 /**
  * 会话列表。挂载即重取：服务端才是事实源，别处新建/改名的会话进来就能看到；
@@ -278,7 +277,7 @@ export function useCreateSession() {
 }
 
 /**
- * 新建即开（票 04）：零表单直接 `POST /api/v1/sessions`，成功即导航进这次备课。
+ * 新建即开：零表单直接 `POST /api/v1/sessions`，成功即导航进这次备课。
  * 新建弹窗已退场：不填标题（先叫「未命名备课」）、不选粒度（默认「标准」，会话内可改）、
  * 不勾参考资料（备课中随时挂）。失败不导航，调用处给出重试出路。
  */

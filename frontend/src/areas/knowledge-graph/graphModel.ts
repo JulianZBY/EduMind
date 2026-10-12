@@ -1,7 +1,7 @@
 /**
- * 知识图谱画布模型（票 12）：后端图数据 → React Flow 画布模型的转换纯函数。
+ * 知识图谱画布模型：后端图数据 → React Flow 画布模型的转换纯函数。
  *
- * 核心划分（ADR-0007 + 票 11 spike 裁决）：**「父子包含」边构成树骨架**（唯一参与 elk
+ * 核心划分（ADR-0007）：**「父子包含」边构成树骨架**（唯一参与 elk
  * 布局的边，`elk.direction='RIGHT'`）；其余三种关系与降级边是**叠加边**——只渲染、
  * 绝不参与布局（spike 实测全喂引擎会凭空多 ~500 处交叉、画布膨胀 2–4×）。
  *
@@ -266,7 +266,7 @@ export interface ElkLayoutResult {
   readonly children?: readonly { id?: string; x?: number; y?: number; width?: number; height?: number }[]
 }
 
-/** 票 11 spike 裁决的落地配置：layered / RIGHT / 紧凑间距；只喂树边。 */
+/** 落地配置：layered / RIGHT / 紧凑间距；只喂树边。 */
 const ELK_OPTIONS: Record<string, string> = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
@@ -276,7 +276,7 @@ const ELK_OPTIONS: Record<string, string> = {
 }
 
 /** 画布模型 → elk 布局图（返回 elkjs 的 `ElkNode`，可直接交给 `ELK.layout`）：
- * 叠加边绝不进布局（spike 实测，见票 11 交付记录）。 */
+ * 叠加边绝不进布局（spike 实测）。 */
 export function toElkGraph(model: GraphModel): ElkNode {
   const graph: ElkLayoutGraph = {
     id: 'knowledge-graph',

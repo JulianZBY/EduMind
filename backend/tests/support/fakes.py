@@ -17,7 +17,7 @@ from app.core.search.base import WebSearch
 FAKE_LLM_PROVIDER = "test-fake-llm"
 
 
-# ---- 对话替身（原产品内的假实现：按提示词标记返回固定结构） ----
+# 对话替身（原产品内的假实现：按提示词标记返回固定结构）
 
 FAKE_HTML = """<!DOCTYPE html>
 <html lang="zh">
@@ -205,7 +205,7 @@ class FakeLLM(LLMProvider):
 class OffListSubjectLLM(FakeLLM):
     """清单外学科替身：模型无视学科清单、自造清单外学科名。
 
-    测「未分类」兜底（票 08）：无论提示词怎么约束，
+    测「未分类」兜底：无论提示词怎么约束，
     全部知识点都带同一个清单外的 subject 回来。
     """
 
@@ -220,7 +220,7 @@ class OffListSubjectLLM(FakeLLM):
 
 
 class ProposalLLM(FakeLLM):
-    """新学科提议替身（票 09）：知识照常离线提取，节点带清单外学科（归「未分类」），
+    """新学科提议替身：知识照常离线提取，节点带清单外学科（归「未分类」），
     另按构造参数回放一条提议 payload——合法与非法形状都由此测。
     """
 
@@ -246,7 +246,7 @@ class PromptCapturingLLM(FakeLLM):
         return await super().chat(messages, **kwargs)
 
 
-# ---- 向量化替身（原产品内的假实现：以文本长度为特征的确定性向量） ----
+# 向量化替身（原产品内的假实现：以文本长度为特征的确定性向量）
 
 FAKE_EMBED_DIM = 8
 
@@ -258,7 +258,7 @@ class FakeEmbedder(Embedder):
         return [[len(t) * 1.0] * FAKE_EMBED_DIM for t in texts]
 
 
-# ---- 搜索替身（原产品内的假实现：带标记的占位结果） ----
+# 搜索替身（原产品内的假实现：带标记的占位结果）
 
 FAKE_SEARCH_MARK = "（测试替身网络搜索）"
 
@@ -285,7 +285,7 @@ class FakeSearch(WebSearch):
         ]
 
 
-# ---- 转写替身（原产品内的假实现：固定文字稿） ----
+# 转写替身（原产品内的假实现：固定文字稿）
 
 FAKE_TRANSCRIPT = "（测试替身录音转写）本段录音讲解计算机网络概述与 TCP 三次握手。"
 

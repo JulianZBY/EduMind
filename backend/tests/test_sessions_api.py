@@ -1,4 +1,4 @@
-"""备课会话 API（票 05）：创建 / 列表 / 历史 / 重命名 / 删除，全部经 HTTP 缝。
+"""备课会话 API：创建 / 列表 / 历史 / 重命名 / 删除，全部经 HTTP 缝。
 
 事实源在服务端（ADR-0002）：这里只断言 HTTP 响应与库里的数据变迁，不断言内部函数调用。
 落盘隔离沿用 conftest（DATABASE_URL / VECTORS_DB_PATH / UPLOAD_DIR 均指向临时目录）。
@@ -41,7 +41,7 @@ def _message_rows(session_id: str) -> list[SessionMessage]:
         db.close()
 
 
-# ---- 创建 ----
+# 创建
 
 
 def test_create_session_returns_teacher_facing_summary():
@@ -63,7 +63,7 @@ def test_create_session_returns_teacher_facing_summary():
 
 
 def test_create_session_defaults_title_and_granularity():
-    """零表单新建（票 04）：初始名「未命名备课」，追问粒度为标准，参考资料为空。"""
+    """零表单新建：初始名「未命名备课」，追问粒度为标准，参考资料为空。"""
     created = _create()
 
     assert created["title"] == "未命名备课"
@@ -78,7 +78,7 @@ def test_create_session_rejects_unknown_granularity():
     assert r.status_code == 422
 
 
-# ---- 列表 ----
+# 列表
 
 
 def test_list_sessions_orders_recent_first_and_filters_by_keyword():
@@ -100,7 +100,7 @@ def test_list_sessions_orders_recent_first_and_filters_by_keyword():
     assert [s["id"] for s in filtered] == [older["id"]]
 
 
-# ---- 历史 ----
+# 历史
 
 
 def test_history_returns_session_with_messages_in_order():
@@ -149,7 +149,7 @@ def test_history_of_unknown_session_returns_404():
     assert "会话不存在" in r.json()["detail"]
 
 
-# ---- 重命名 ----
+# 重命名
 
 
 def test_rename_session_updates_title_and_settings():
@@ -211,7 +211,7 @@ def test_rename_to_blank_title_is_rejected():
     assert row is not None and row.title == "有标题"
 
 
-# ---- 删除 ----
+# 删除
 
 
 def test_delete_session_removes_session_and_messages():

@@ -86,7 +86,7 @@ if (violations.length > 0) {
   console.error('[check:classes] 禁用 class 扫描未通过（docs/style/minimalist-flat.md 第 6 节）：')
   for (const v of violations) {
     const where = `${relative(frontendDir, v.file)}:${v.line}:${v.column}`
-    console.error(`  ✗ 规则 ${v.rule.id} ${v.rule.name} · ${where} · 命中「${v.hit}」`)
+    console.error(`  [fail] 规则 ${v.rule.id} ${v.rule.name} · ${where} · 命中「${v.hit}」`)
   }
   console.error(`[check:classes] 共 ${violations.length} 处违规，${files.length} 个文件已扫描。`)
   process.exit(1)

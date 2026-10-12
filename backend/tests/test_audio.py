@@ -173,7 +173,7 @@ def test_transcription_failure_marks_failed_without_blocking_others(monkeypatch,
     _wait_status(r2.json()["id"], "已完成")
 
 
-# ---- paraformer 云端契约（MockTransport 全流程，不发真实请求）----
+# paraformer 云端契约（MockTransport 全流程，不发真实请求）
 
 
 def _paraformer_handler(httpx_state: dict):

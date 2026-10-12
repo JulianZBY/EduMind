@@ -61,7 +61,7 @@ async def orchestrate(intent: TeachingIntent, reference_doc_ids: list[str] | Non
 
     slides: list[dict] = ppt_slides
     # 课件主题化：页面角色差异化版式 + 风格偏好映射配色主题（简约/学术/活泼）在渲染层生效
-    # render_* 是同步的 python-pptx/docx 渲染 + 落盘：放线程池，不阻塞事件循环（M1）
+    # render_* 是同步的 python-pptx/docx 渲染 + 落盘：放线程池，不阻塞事件循环
     ppt_path = await asyncio.to_thread(render_ppt, slides, style=intent_dict.get("style", ""))
 
     word: dict = word_data
@@ -98,7 +98,7 @@ async def orchestrate(intent: TeachingIntent, reference_doc_ids: list[str] | Non
     return {
         "intent": intent_dict,
         "knowledge_hits": bool(knowledge),
-        # 空命中口径（票 01）：knowledge_hits=False 时用它区分「库为空」与「未命中相关内容」；
+        # 空命中口径：knowledge_hits=False 时用它区分「库为空」与「未命中相关内容」；
         # 回复文案（core/conversation）与前端提示据此诚实二选一，不再一律说「知识库为空」
         "knowledge_empty": retrieval.library_empty,
         "references": references,

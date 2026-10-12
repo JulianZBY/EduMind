@@ -58,7 +58,7 @@ router = APIRouter(on_startup=[apply_stored_settings, ensure_bootstrap_provider_
 NOTE = "改动即时生效、不需要重启；Key 只在写入时接收，回读一律掩码，任何响应与表单都不回显明文。"
 
 
-# ---- 响应模型（前端类型由 OpenAPI 生成，禁止手抄）----
+# 响应模型（前端类型由 OpenAPI 生成，禁止手抄）
 
 
 class ProviderInstanceView(BaseModel):
@@ -212,7 +212,7 @@ class SettingsUpdate(BaseModel):
         }
     )
 
-    # ---- 供应商与全局默认模型 ----
+    # 供应商与全局默认模型
     llm_provider: str | None = Field(
         default=None,
         description="供应商目录里的 id（内置方言 + providers.json 声明的家；取值见 GET /settings/catalog）",
@@ -224,7 +224,7 @@ class SettingsUpdate(BaseModel):
         default=None, description="全局默认对话模型；未设置的任务回落到它"
     )
     llm_vision_model: str | None = Field(default=None, description="多模态模型（图片/视频理解用）")
-    # ---- 各家的 Key（写入接收，回读只回掩码）----
+    # 各家的 Key（写入接收，回读只回掩码）
     llm_api_key: str | None = Field(default=None, description="自定义服务的 API Key")
     qwen_api_key: str | None = Field(default=None, description="千问 API Key")
     deepseek_api_key: str | None = Field(default=None, description="DeepSeek API Key")
@@ -233,14 +233,14 @@ class SettingsUpdate(BaseModel):
     minimax_api_key: str | None = Field(default=None, description="MiniMax API Key")
     ark_api_key: str | None = Field(default=None, description="豆包 API Key")
     siliconflow_api_key: str | None = Field(default=None, description="硅基流动 API Key")
-    # ---- 向量化（独立于对话供应商）----
+    # 向量化（独立于对话供应商）
     embedding_provider: str | None = Field(
         default=None, description="向量化实现；留空 = 跟随对话供应商"
     )
     embedding_base_url: str | None = Field(default=None, description="向量化服务地址（base_url）")
     embedding_model: str | None = Field(default=None, description="向量化模型 ID")
     embedding_api_key: str | None = Field(default=None, description="向量化 API Key")
-    # ---- 其它云端能力 ----
+    # 其它云端能力
     mineru_token: str | None = Field(default=None, description="MinerU 云端 PDF 解析 Token")
     bocha_api_key: str | None = Field(default=None, description="博查网络搜索 Key")
     asr_api_key: str | None = Field(default=None, description="百炼语音转写 Key（paraformer 专用，千问 MaaS 的 Key 不通用）")
@@ -255,20 +255,20 @@ class SettingsUpdate(BaseModel):
         default=None, description="检索策略：vector_graph / vector"
     )
     chunk_strategy: str | None = Field(default=None, description="分块策略：paragraph")
-    # ---- 任务级模型（留空回落全局默认）----
+    # 任务级模型（留空回落全局默认）
     task_provider_intent: str | None = Field(default=None, description="意图分析用的供应商实例 id")
     task_provider_generate: str | None = Field(default=None, description="生成用的供应商实例 id")
     task_provider_conflict: str | None = Field(default=None, description="冲突比对用的供应商实例 id")
     task_model_intent: str | None = Field(default=None, description="意图分析用的模型档位")
     task_model_generate: str | None = Field(default=None, description="生成用的模型档位")
     task_model_conflict: str | None = Field(default=None, description="冲突比对用的模型档位")
-    # ---- 多供应商：默认实例指针（实例本身的增删改走 /settings/providers 端点）----
+    # 多供应商：默认实例指针（实例本身的增删改走 /settings/providers 端点）
     default_provider_instance: str | None = Field(
         default=None, description="全局默认供应商实例 id（留空 = legacy 单供应商路径）"
     )
 
 
-# ---- 生效值装配 ----
+# 生效值装配
 
 
 def _effective(name: str, value: str) -> str:
@@ -834,7 +834,7 @@ def read_catalog():
     )
 
 
-# ---- 供应商实例（多供应商并存：添加 / 改 / 删）----
+# 供应商实例（多供应商并存：添加 / 改 / 删）
 
 
 class ProviderInstanceCreate(BaseModel):

@@ -1,4 +1,4 @@
-"""SQLite 并发配置回归（M2）：WAL + busy_timeout 钉住后台解析与请求线程并发写库。
+"""SQLite 并发配置回归：WAL + busy_timeout 钉住后台解析与请求线程并发写库。
 
 Rigel 的验证评估（G3）指出：`engine.py` 只设了 `check_same_thread=False`，既没开 WAL
 也没给 busy_timeout，后台解析（`pipeline.py` 自建连接）与请求线程并发写同一库存在

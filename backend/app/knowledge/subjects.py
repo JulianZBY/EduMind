@@ -1,4 +1,4 @@
-"""学科清单与归类约束：初始化、维护和入库共用唯一事实源（票 08）。"""
+"""学科清单与归类约束：初始化、维护和入库共用唯一事实源。"""
 
 import uuid
 
@@ -32,7 +32,7 @@ def normalize_subject(value: object, names: set[str]) -> str:
 def validate_subject_name(value: object) -> str:
     """学科名称须为一行、1～100 字符；内容不可接受时抛 SubjectError(400)。
 
-    清单维护与提议批准共用同一口径（票 09 复用品）；仅名称格式校验，
+    清单维护与提议批准共用同一口径（复用品）；仅名称格式校验，
     不判断是否已在清单内——是否重复由写入方的唯一约束兜底。
     """
     name = value.strip() if isinstance(value, str) else ""

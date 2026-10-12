@@ -1,10 +1,10 @@
-"""设置 API（票 13）：读生效配置（Key 掩码）/ 写设置（即时生效）/ 可选目录，全部经 HTTP 缝。
+"""设置 API：读生效配置（Key 掩码）/ 写设置（即时生效）/ 可选目录，全部经 HTTP 缝。
 
 三组断言口径：
 
 1. **响应与数据变迁**：读回的值、来源（设置页 / 引导默认）、库内 `app_settings` 行；
 2. **写穿即时生效**：写完立刻用别的端点或能力工厂观测到新实现（同一进程，不重启）——
-   票 03 遗留的「设置写穿即时生效」就落在这里；
+   「设置写穿即时生效」的遗留就落在这里；
 3. **任务级模型**：页面上「该任务实际用的模型」的可见值 + 它真的进了那条链路的每次对话。
 
 隔离：每个用例前后清空设置库并回落引导默认——共享临时库里不留设置行，避免污染其它用例
@@ -130,7 +130,7 @@ def _by_name(rows: list[dict], key: str = "name") -> dict[str, dict]:
     return {row[key]: row for row in rows}
 
 
-# ---- 读取：引导默认 -
+# 读取：引导默认
 
 
 def test_read_starts_from_bootstrap_defaults():
@@ -204,7 +204,7 @@ def test_catalog_lists_providers_implementations_and_tasks():
     assert [task["id"] for task in catalog["tasks"]] == ["intent", "generate", "conflict"]
 
 
-# ---- 写穿：即时生效（不重启）----
+# 写穿：即时生效（不重启）
 
 
 def test_capability_switch_takes_effect_without_restart():
@@ -281,7 +281,7 @@ def test_stored_settings_survive_a_restart():
     assert asr["source"] == "设置页"
     assert asr["ready"] is True
 
-# ---- 自定义 OpenAI 兼容服务 ----
+# 自定义 OpenAI 兼容服务
 
 
 def test_custom_openai_compatible_service_can_be_configured():
@@ -323,7 +323,7 @@ def test_custom_service_without_key_reports_why_it_is_not_ready():
     assert "LLM_API_KEY" in view["provider"]["reason"]
 
 
-# ---- 任务级模型 ----
+# 任务级模型
 
 
 def test_task_models_fall_back_to_the_global_default():
@@ -395,7 +395,7 @@ async def test_task_level_models_reach_each_call_site(monkeypatch):
     assert _by_name(_get()["tasks"], "task")["intent"]["source"] == "全局默认"
 
 
-# ---- 无效配置：明确错误码与信息 ----
+# 无效配置：明确错误码与信息
 
 
 @pytest.mark.parametrize(
@@ -455,7 +455,7 @@ def test_invalid_write_leaves_earlier_settings_untouched():
     assert _by_name(_get()["capabilities"], "key")["retrieval_strategy"]["value"] == "vector"
 
 
-# ---- 掩码：任何响应都不回显明文 ----
+# 掩码：任何响应都不回显明文
 
 
 def test_key_is_masked_in_every_response():
@@ -495,11 +495,11 @@ def test_empty_value_clears_the_item_back_to_bootstrap():
     assert _stored_rows() == {"retrieval_strategy": "vector"}
 
 
-# ---- 契约守卫 ----
+# 契约守卫
 
 
 def test_settings_operations_all_declare_a_response_model():
-    """票 04 指出 16 个操作只有 6 个带 response_model（前端生成类型退化成 unknown）；本票不许再缺。"""
+    """指出 16 个操作只有 6 个带 response_model（前端生成类型退化成 unknown）；本票不许再缺。"""
     schema = app.openapi()
     checked = 0
     for path, item in schema["paths"].items():
@@ -524,7 +524,7 @@ def test_every_managed_setting_exists_on_the_settings_object():
     assert set(FIELDS) <= set(Settings.model_fields)
 
 
-# ---- 供应商实例（多供应商并存）----
+# 供应商实例（多供应商并存）
 
 
 def _add_provider(payload: dict) -> dict:

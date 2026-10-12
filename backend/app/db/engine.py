@@ -82,8 +82,8 @@ def _ensure_sqlite_columns(bind=None) -> None:
             )
             conn.commit()
         if "documents" in tables:
-            # 资料文件路径统一 POSIX 分隔符（票 07 防御线）：整库自 Windows 迁来时
-            # file_path 残留 `data\uploads\...` 形态，票 02 清理后存量已空；
+            # 资料文件路径统一 POSIX 分隔符（防御线）：整库自 Windows 迁来时
+            # file_path 残留 `data\uploads\...` 形态，清理后存量已空；
             # REPLACE 只改含反斜杠的行，对已是 POSIX 的路径是空操作，天然幂等。
             conn.exec_driver_sql(
                 "UPDATE documents SET file_path = REPLACE(file_path, '\\', '/')"

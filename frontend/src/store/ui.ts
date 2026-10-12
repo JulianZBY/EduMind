@@ -1,10 +1,10 @@
 /**
  * 全局界面状态（zustand）：只放**跨组件**的界面状态。
  *
- * 纪律（ADR-0005 / 票 04）：
+ * 纪律（ADR-0005）：
  * - 服务端数据一律走 TanStack Query，不进这里，也不在浏览器里存第二份事实源；
  * - 组件内部的局部状态（一次开关、一段输入）用 useState，不要图省事塞进来；
- * - 区内专属的界面状态放各区自己的 `src/areas/<area>/store.ts`（票 06 起按需新增）。
+ * - 区内专属的界面状态放各区自己的 `src/areas/<area>/store.ts`（起按需新增）。
  */
 import { create } from 'zustand'
 

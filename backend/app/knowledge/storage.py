@@ -1,7 +1,7 @@
 """文件存储：保存上传的原始资料到本地目录。
 
 资料文件路径的读写统一经 `normalize_stored_path` 规范化为 POSIX 分隔符：整库自 Windows
-迁来时 `documents.file_path` 曾残留 `data\\uploads\\...` 形态，票 02 清理后存量已空，
+迁来时 `documents.file_path` 曾残留 `data\\uploads\\...` 形态，清理后存量已空，
 这里守住的是防御线（写入口 + 引擎迁移链，见 `app/db/engine.py`）。
 """
 

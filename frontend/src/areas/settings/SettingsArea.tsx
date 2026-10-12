@@ -171,7 +171,7 @@ function useSaveFeedback() {
   return { save, submit, error: save.isError ? settingsErrorMessage(save.error) : '' }
 }
 
-// ---- 供应商（多供应商并存，只加家不选模型）----
+// 供应商（多供应商并存，只加家不选模型）
 
 type InstanceView = SettingsViewBody['provider_instances'][number]
 
@@ -342,7 +342,7 @@ function ProviderListPanel({ view, catalog }: { view: SettingsViewBody; catalog:
   )
 }
 
-// ---- 全局默认（从统一模型池选一个具体模型）----
+// 全局默认（从统一模型池选一个具体模型）
 
 function GlobalDefaultPanel({ view }: { view: SettingsViewBody }) {
   const drafts = useDrafts(view)
@@ -465,7 +465,7 @@ function GlobalDefaultPanel({ view }: { view: SettingsViewBody }) {
   )
 }
 
-// ---- 任务级模型（每个任务从统一模型池选模型，默认跟随全局）----
+// 任务级模型（每个任务从统一模型池选模型，默认跟随全局）
 
 function TaskModelPanel({ view }: { view: SettingsViewBody }) {
   const drafts = useDrafts(view)
@@ -597,7 +597,7 @@ function TaskModelPanel({ view }: { view: SettingsViewBody }) {
   )
 }
 
-// ---- 能力实现 ----
+// 能力实现
 
 /**
  * 哪一档实现需要哪个 Key：选到它就在下面显示对应的 Key 输入框。

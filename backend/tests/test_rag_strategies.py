@@ -1,4 +1,4 @@
-"""RAG 策略收编测试（票 03）：分块与检索都是「接口 + 工厂 + 按配置名切换」（ADR-0003）。
+"""RAG 策略收编测试：分块与检索都是「接口 + 工厂 + 按配置名切换」（ADR-0003）。
 
 覆盖：
 - 分块策略按配置选择，调用方（解析管道）零改动；默认档仍是收编前的切法；
@@ -34,8 +34,8 @@ from app.main import app
 
 client = TestClient(app)
 
-# ---- 收编前黄金值 ----
-# 票 03 之前（commit ab39adf）的 retrieve_knowledge 在同一份种子数据上的输出，
+# 收编前黄金值
+# 之前（commit ab39adf）的 retrieve_knowledge 在同一份种子数据上的输出，
 # 逐字段抄录为黄金值：默认档必须与它完全一致。
 GOLDEN_CONTEXT = (
     "=== 知识片段 ===\n参考片段\n\n片段二\n\n片段一\n\n"
@@ -159,13 +159,13 @@ def _retrieve_payload() -> dict:
 
 
 def _retrieve_with(monkeypatch, strategy: str) -> dict:
-    """按指定配置请求一次观测端点（改配置后清工厂缓存，与票 02 的工厂同一口径）。"""
+    """按指定配置请求一次观测端点（改配置后清工厂缓存）。"""
     monkeypatch.setattr(settings, "retrieval_strategy", strategy)
     get_retriever.cache_clear()
     return client.post("/api/v1/knowledge/retrieve", json=_retrieve_payload()).json()
 
 
-# ---- 分块策略 ----
+# 分块策略
 
 
 class _MarkedChunker(Chunker):
@@ -226,7 +226,7 @@ def test_default_chunker_is_legacy_chunking():
     assert get_chunker().chunk(text) == chunk_text(text)
 
 
-# ---- 检索策略：默认档与收编前一致 ----
+# 检索策略：默认档与收编前一致
 
 
 async def test_default_retrieval_matches_pre_refactor_golden():
@@ -257,7 +257,7 @@ async def test_default_retrieval_degrades_to_empty_without_embeddings(monkeypatc
     assert (result.context, result.sources, result.hits, result.graph_nodes) == ("", [], [], [])
 
 
-# ---- 检索策略：纯向量档 ----
+# 检索策略：纯向量档
 
 
 async def test_vector_strategy_drops_graph_keeps_sources_and_reference_boost(monkeypatch):
@@ -274,7 +274,7 @@ async def test_vector_strategy_drops_graph_keeps_sources_and_reference_boost(mon
     assert [h.doc_id for h in result.hits] == ["doc_ref", "doc_hit", "doc_hit"]  # 加权仍生效
 
 
-# ---- 两档差异经 HTTP 可观测 ----
+# 两档差异经 HTTP 可观测
 
 
 def test_retrieve_endpoint_reports_what_was_hit():
@@ -305,7 +305,7 @@ def test_two_strategies_differ_over_http(monkeypatch):
     assert fusion["sources"] == vector["sources"]
 
 
-# ---- 口径与不变式 ----
+# 口径与不变式
 
 
 @pytest.mark.parametrize(

@@ -69,7 +69,7 @@ async def revise_word(word: dict, feedback: str) -> dict:
     return data if data else word
 
 
-# ---- 提纲：修改意见作用在 Markdown 正文上 ----
+# 提纲：修改意见作用在 Markdown 正文上
 
 _REVISE_OUTLINE_PROMPT = """你是教学设计师。根据教师的修改意见，调整已有的教学提纲。
 
@@ -98,7 +98,7 @@ async def revise_outline(text: str, feedback: str) -> str:
     return revised.strip() if isinstance(revised, str) and revised.strip() else text
 
 
-# ---- 试卷：修改意见作用在题目集合上（改后的题目仍入题库）----
+# 试卷：修改意见作用在题目集合上（改后的题目仍入题库）
 
 _REVISE_EXAM_PROMPT = """你是出题专家。根据教师的修改意见，调整已有试卷的题目。
 
@@ -135,7 +135,7 @@ async def revise_exam(questions: list[dict], feedback: str, n: int | None = None
     return questions
 
 
-# ---- 互动内容：修改意见作用在单文件 HTML 上 ----
+# 互动内容：修改意见作用在单文件 HTML 上
 
 # 提示词里保留「HTML5 互动学习小游戏」这一句：网关按它走互动内容生成，测试替身也按它命中固定 HTML；
 # 无 Key 时互动内容的修改同样能走通（与生成路径同一口径）。

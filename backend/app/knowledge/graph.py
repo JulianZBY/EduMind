@@ -48,7 +48,7 @@ async def extract_knowledge(text: str) -> tuple[list[dict], list[dict], dict | N
 
     返回 (nodes, edges, proposal)：proposal 为 {"subject", "reason"}，
     清单内学科都不合适时由模型提出；清单内名称／未分类／空／多行／超长／非字符串
-    均视为无提议（与清单维护的名称口径一致，票 09）。
+    均视为无提议（与清单维护的名称口径一致）。
     """
     from app.core.llm.base import ChatMessage
     from app.core.llm.factory import get_llm

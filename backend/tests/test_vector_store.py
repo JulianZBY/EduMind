@@ -27,7 +27,7 @@ def test_search_returns_k_results(tmp_path):
     assert len(results) == 4
 
 
-# ---- 维度冲突（切换 embedding provider 后）人话报错 ----
+# 维度冲突（切换 embedding provider 后）人话报错
 
 
 def test_add_dimension_mismatch_friendly_error(tmp_path):

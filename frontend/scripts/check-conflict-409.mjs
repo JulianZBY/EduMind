@@ -22,9 +22,9 @@ const REAL_DIMENSION_MESSAGE =
 const failures = []
 const check = (ok, message) => {
   if (ok) {
-    console.log(`  ✓ ${message}`)
+    console.log(`  [ok] ${message}`)
   } else {
-    console.error(`  ✗ ${message}`)
+    console.error(`  [fail] ${message}`)
     failures.push(message)
   }
 }

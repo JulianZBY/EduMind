@@ -131,7 +131,7 @@ function toFlowEdge(canvasEdge: CanvasEdge): Edge {
   }
 }
 
-/** 画布左下角「适应画布」按钮（票 12）+ 布局变化后自动对齐视口。 */
+/** 画布左下角「适应画布」按钮+ 布局变化后自动对齐视口。 */
 function CanvasToolbar({ fitKey }: { fitKey: unknown }) {
   const { fitView } = useReactFlow()
   const firstFit = useRef(true)
@@ -155,8 +155,8 @@ function CanvasToolbar({ fitKey }: { fitKey: unknown }) {
 }
 
 /**
- * 图谱画布（票 12 重做）：React Flow 思维导图。
- * 树骨架（父子包含）由 elk 异步分层布局（票 11 裁决：layered / RIGHT，只喂树边，
+ * 图谱画布（重做）：React Flow 思维导图。
+ * 树骨架（父子包含）由 elk 异步分层布局（裁决：layered / RIGHT，只喂树边，
  * 叠加边绝不参与布局）；前置依赖 / 推导关系 / 相关关联以线型叠加在同一画布。
  * 滚轮缩放、拖拽平移为 React Flow 内建；节点折叠只藏子树不删数据。
  */
@@ -203,7 +203,7 @@ export function GraphCanvas({
     [initialSet],
   )
 
-  // elk 异步布局，序号防重入（票 11 spike：mermaid 的 ELK 同款成熟模式）；
+  // elk 异步布局，序号防重入（spike：mermaid 的 ELK 同款成熟模式）；
   // 布局结果与 model 绑定存放，新 model 布局完成前不回显旧坐标
   const [layout, setLayout] = useState<{
     model: GraphModel

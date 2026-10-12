@@ -1,7 +1,7 @@
 /**
  * 生成物区的服务端状态（TanStack Query）：版本列表 / 版本详情 / 修改意见 / 按需生成。
  *
- * **版本数据只有一个事实源**（CONTEXT.md 第 3 节、ADR-0002）：票 07 的三个版本端点。
+ * **版本数据只有一个事实源**（CONTEXT.md 第 3 节、ADR-0002）：三个版本端点。
  * 备课会话区的生成物面板与生成物区共用本文件的 hooks 与 query key（同一份缓存），
  * 所以两处的当前版本、历史版本、版本号必然一致——浏览器里不存在第二份版本列表。
  *
@@ -82,7 +82,7 @@ export function artifactDownloadUrl(
   return options.openInTab ? `${base}?inline=true` : base
 }
 
-// ---- 数据层（不依赖 React，可单独调用）----
+// 数据层（不依赖 React，可单独调用）
 
 /** 某次备课的全部生成物版本（按类别分组，含当前版本与全部历史版本）。 */
 export async function fetchArtifactVersions(
@@ -181,7 +181,7 @@ export async function generateInteractive(
   )
 }
 
-// ---- query key ----
+// query key
 
 /**
  * query key 一律以 `artifactKeys.all` 打头。
@@ -200,7 +200,7 @@ export const artifactKeys = {
   sessionList: (keyword: string) => [...artifactKeys.sessionLists(), keyword] as const,
 }
 
-// ---- hooks 层 ----
+// hooks 层
 
 /**
  * 某次备课的全部生成物版本。挂载即重取：刚生成 / 刚修改完再进来必须看到最新版本，

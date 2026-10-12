@@ -1,7 +1,7 @@
 /**
  * mermaid 扁平主题 + 四种关系的线型：`docs/style/minimalist-flat.md` **第 8 节配方的唯一实现**。
  *
- * 复用入口（票 11 的结构冲突图示也用这里）：
+ * 复用入口（结构冲突图示也用这里）：
  * - `FLAT_THEME_INIT`：第 8 节的 `%%{init: ...}%%` 指令字符串；
  * - `RELATION_STYLES` / `relationStyle()`：四种关系的线型与颜色（黑与强调色的实线 / 虚线）；
  * - `buildFlowchartSource()`：从「节点 + 关系」数据自行生成 mermaid 源码（画布与图例同源）。
@@ -84,7 +84,7 @@ const FLAT_THEME = {
 /** 扁平主题指令：所有 mermaid 渲染都带它（`flatThemeSource()` 会补在最前面）。 */
 export const FLAT_THEME_INIT = `%%{init: ${JSON.stringify(FLAT_THEME)}}%%`
 
-/** 源码没自带 init 指令时补上扁平主题；自带则尊重调用方（票 11 想换方向时只改源码）。 */
+/** 源码没自带 init 指令时补上扁平主题；自带则尊重调用方（想换方向时只改源码）。 */
 export function flatThemeSource(source: string): string {
   return source.trimStart().startsWith('%%{init') ? source : `${FLAT_THEME_INIT}\n${source}`
 }

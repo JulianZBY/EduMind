@@ -30,7 +30,7 @@ export function AppShell() {
       <div className="flex min-h-0 flex-1">
         <AreaRail />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {/* 内容列的 Suspense 边界：区是懒加载的（M6），切区时外壳不动，这里先显示占位。 */}
+          {/* 内容列的 Suspense 边界：区是懒加载的，切区时外壳不动，这里先显示占位。 */}
           <Suspense fallback={<AreaLoading />}>
             <Outlet />
           </Suspense>

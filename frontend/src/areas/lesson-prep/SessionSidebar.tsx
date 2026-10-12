@@ -2,7 +2,7 @@
  * 二级侧栏 = 备课会话列表：新建 / inline 改名 / 删除 / 检索，全部与服务端状态同步。
  *
  * 浏览器里没有会话事实：列表来自 `GET /api/v1/sessions`（检索走后端的标题过滤 `q=`），
- * 增删改都打到服务端再让 Query 失效重取。新建是零表单直开（票 04）：点「新建备课会话」
+ * 增删改都打到服务端再让 Query 失效重取。新建是零表单直开：点「新建备课会话」
  * 直接 POST 后进会话，不再弹层；改名是行内 inline 编辑，同样不弹层。
  * 本区不得再引入任何浏览器侧的会话事实源。
  */
@@ -49,7 +49,7 @@ function SessionRow({
   search: string
   /** 这条是否是当前打开的会话：整行反色，而不是只反色左侧链接。 */
   active: boolean
-  /** 这条是否正在 inline 改名：行内容换成改名表单（票 04：改名不弹层）。 */
+  /** 这条是否正在 inline 改名：行内容换成改名表单（改名不弹层）。 */
   renaming: boolean
   onRenameRequest: (session: SessionSummary) => void
   onRenameDone: () => void

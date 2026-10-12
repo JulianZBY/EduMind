@@ -22,13 +22,13 @@
 ### 0.1 起服务（两条命令，端口固定 8000 / 5173）
 
 ```bash
-# 终端 1：后端（默认未配置：不配任何 Key 也能起服务，涉及云端能力的操作返回 503 引导）
-mise run setup:backend    # 首次：建 venv + 装依赖
-mise run dev:backend      # 起 uvicorn :8000
+# 终端 1：后端
+mise run setup:backend
+mise run dev:backend
 
 # 终端 2：前端
-mise run setup:frontend   # 首次：npm ci
-mise run dev:frontend     # 起 vite :5173
+mise run setup:frontend
+mise run dev:frontend
 ```
 
 浏览器打开 <http://localhost:5173>。
@@ -169,7 +169,7 @@ mise run dev:frontend     # 起 vite :5173
 | 在「供应商目录」选一家并粘贴 Key，保存 | 提示保存成功；供应商标为已就绪；**输入框立刻变成掩码**（`••••尾4位`） | 明文回显在任何位置 = 违反「Key 回读只见掩码」 |
 | 刷新页面 | 仍是刚配的供应商，Key 仍只显示掩码 | 设置没生效 = 没落库 |
 | 改「任务级模型」（意图分析 / 生成 / 冲突比对） | 每档都能看到「选择的值」与「**实际用的是什么**」 | 只有「选择的值」没有「实际生效值」= 少了解析回落后的可见值 |
-| 切「检索策略」为纯向量，保存，再去 `POST /api/v1/knowledge/retrieve`（或图谱/备课走一轮） | 当场生效，**不需要重启**；`strategy` 字段变成 `vector` | 需要重启才变 = 写穿失效（票 13 的核心验收点） |
+| 切「检索策略」为纯向量，保存，再去 `POST /api/v1/knowledge/retrieve`（或图谱/备课走一轮） | 当场生效，**不需要重启**；`strategy` 字段变成 `vector` | 需要重启才变 = 写穿失效（核心验收点） |
 | 切「PDF 解析策略」「语音转写」「网络搜索」并保存 | 各自就绪状态随之变化（缺 Key 时显示原因，不是崩溃） | 直接 500 崩页面 = 就绪探测没兜住 |
 | 把某项改回空字符串保存 | 该项回落「引导默认」（`.env` / 代码默认） | 清不掉 = 清空语义没实现 |
 | 用「自定义 OpenAI 兼容服务」填 base_url + 模型 ID + Key | 保存成功，且模型 ID 不受供应商目录限制 | 报「未知模型」= 自定义档没放行 |

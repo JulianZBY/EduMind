@@ -1,4 +1,4 @@
-"""五类生成物的「修改意见」路径（票 08）：提纲 / 试卷 / 互动内容的修改与版本留痕。
+"""五类生成物的「修改意见」路径：提纲 / 试卷 / 互动内容的修改与版本留痕。
 
 只经 HTTP 缝断言**响应与数据变迁**（不断言任何内部函数调用），全链路走无 Key 的替身兜底
 （`FakeLLM`），因此本文件在无 `.env` 的环境下同样全绿。落盘经 conftest 的
@@ -36,7 +36,7 @@ def _isolated_outputs(isolated_output_dir):
     return isolated_output_dir
 
 
-# ---- HTTP 助手 ----
+# HTTP 助手
 
 
 def _create() -> str:
@@ -105,7 +105,7 @@ def _revise(session_id: str, base_version_id: str, path: str, body: dict) -> dic
     return r.json()
 
 
-# ---- 提纲 ----
+# 提纲
 
 
 def test_revise_outline_from_a_historical_version_keeps_the_baseline_and_others():
@@ -149,7 +149,7 @@ def test_revise_outline_from_a_historical_version_keeps_the_baseline_and_others(
     assert _detail(body["version_id"])["content"]["text"] == body["text"]
 
 
-# ---- 试卷 ----
+# 试卷
 
 
 def test_revise_exam_records_a_version_and_the_revised_questions_enter_the_bank():
@@ -203,7 +203,7 @@ def test_revise_exam_records_a_version_and_the_revised_questions_enter_the_bank(
     assert _download(baseline["id"]) == baseline_bytes
 
 
-# ---- 互动内容 ----
+# 互动内容
 
 
 def test_revise_interactive_records_a_version_and_opens_inline():
@@ -241,7 +241,7 @@ def test_revise_interactive_records_a_version_and_opens_inline():
     assert baseline["filename"] != body["filename"]
 
 
-# ---- 边界：基线校验与「不带会话」的既有语义 ----
+# 边界：基线校验与「不带会话」的既有语义
 
 
 def test_revision_rejects_unknown_or_mismatched_baseline():

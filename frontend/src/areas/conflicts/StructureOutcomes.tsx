@@ -1,7 +1,7 @@
 /**
  * 结构冲突的「图谱现状 vs 三种裁决终态」（CONTEXT.md 第 6 节 / ADR-0004 的验收项）。
  *
- * 渲染**复用知识图谱区的扁平组件**（票 10 交付）：`buildFlowchartSource` 出 mermaid 源码 +
+ * 渲染**复用知识图谱区的扁平组件**（交付）：`buildFlowchartSource` 出 mermaid 源码 +
  * `FlatMermaid` 画白底黑框直角图 + `RelationLegend` 说明四种关系的线型——
  * 与本区之外的图谱画布是同一套主题、同一种线型，不另写渲染。
  *

@@ -137,7 +137,7 @@ def clear_instance_cache() -> None:
     _cached_resolve.cache_clear()
 
 
-# ---- 模型清单（添加/刷新时从服务商 `GET /v1/models` 拉取并缓存）----
+# 模型清单（添加/刷新时从服务商 `GET /v1/models` 拉取并缓存）
 
 FETCH_TIMEOUT_SECONDS = 10.0
 

@@ -1,4 +1,4 @@
-"""检索相关度阈值与诚实空命中（票 01，ADR-0007）：超阈值的命中一律丢弃，空命中分两口径。
+"""检索相关度阈值与诚实空命中（ADR-0007）：超阈值的命中一律丢弃，空命中分两口径。
 
 四态覆盖（替身向量 = 本地确定性 HashEmbedder，离线零成本）：
 - 命中：相关分块照常返回；
@@ -51,7 +51,7 @@ def _uninstall_retriever_cache() -> None:
     get_retriever.cache_clear()
 
 
-# ---- 态一 + 态二：命中 / 超阈值丢弃 ----
+# 态一 + 态二：命中 / 超阈值丢弃
 
 
 async def test_relevant_hit_kept_and_irrelevant_dropped_not_downweighted(tmp_path, monkeypatch):
@@ -99,7 +99,7 @@ async def test_retrieval_threshold_does_not_share_conflict_watermark(tmp_path, m
     assert [h.content for h in hits] == ["导数的定义与求导法则"]
 
 
-# ---- 态三 + 态四：空库 / 未命中（检索层区分口径）----
+# 态三 + 态四：空库 / 未命中（检索层区分口径）
 
 
 def test_library_is_empty_distinguishes_empty_store(tmp_path, monkeypatch):
@@ -149,11 +149,11 @@ async def test_no_match_reports_non_empty_library(tmp_path, monkeypatch):
     assert result.library_empty is False
 
 
-# ---- 污染场景回归 ----
+# 污染场景回归
 
 
 async def test_pollution_regression_qinshihuang_gets_no_tcp(tmp_path, monkeypatch):
-    """回归（票 01 根因）：query=秦始皇 + 库内只有 TCP 向量 → 命中为空，上下文不带 TCP。"""
+    """回归（根因）：query=秦始皇 + 库内只有 TCP 向量 → 命中为空，上下文不带 TCP。"""
     store = VectorStore(str(tmp_path / "v.db"))
     await _seed(store, "doc_tcp", ["TCP三次握手", "TCP四次挥手"])
     monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: HashEmbedder())
@@ -169,7 +169,7 @@ async def test_pollution_regression_qinshihuang_gets_no_tcp(tmp_path, monkeypatc
     assert (result.context, result.sources, result.hits, result.graph_nodes) == ("", [], [], [])
 
 
-# ---- 回复文案与 artifacts 口径 ----
+# 回复文案与 artifacts 口径
 
 
 def test_generate_reply_distinguishes_three_knowledge_outcomes():
@@ -256,7 +256,7 @@ def test_chat_reply_on_no_match_honest_miss_copy(monkeypatch, tmp_path):
     assert "已融合本地知识库" not in body["content"]
     assert body["artifacts"]["knowledge_hits"] is False
     assert body["artifacts"]["knowledge_empty"] is False
-    # 污染根子（票 01）：TCP 分块不再进入生成上下文
+    # 污染根子：TCP 分块不再进入生成上下文
     joined = "\n".join(llm.prompts)
     assert "TCP三次握手" not in joined and "TCP四次挥手" not in joined
 

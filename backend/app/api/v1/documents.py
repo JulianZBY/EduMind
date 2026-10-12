@@ -389,7 +389,7 @@ async def upload_document(
         bool, Form(description="是否标记为参考资料：影响备课检索加权与生成物溯源")
     ] = False,
 ):
-    # 上传大小上限：超出即 413，避免整份超大文件先吃内存再被拒（M4）。
+    # 上传大小上限：超出即 413，避免整份超大文件先吃内存再被拒。
     # `file.size` 由 multipart 解析填入；读后再断一次，兜底 size 缺失的情形。
     limit_mb = settings.max_upload_bytes // (1024 * 1024)
     if file.size is not None and file.size > settings.max_upload_bytes:
@@ -410,7 +410,7 @@ async def upload_document(
         )
     if not content:
         raise HTTPException(status_code=400, detail="文件是空的，请确认后重新选择")
-    # 同步落盘：放线程池，不阻塞事件循环（M1）
+    # 同步落盘：放线程池，不阻塞事件循环
     file_path = await asyncio.to_thread(save_upload, content, filename)
 
     # 录音资料唯一解析路径是百炼 paraformer：未配置时立刻给教师 503 引导，

@@ -73,7 +73,7 @@ def _max_font_size(shape) -> int:
     return max(sizes, default=0)
 
 
-# ---- 主接缝：prompt 约定 + 假网关下的生成结构 ----
+# 主接缝：prompt 约定 + 假网关下的生成结构
 
 
 async def test_prompt_declares_role_and_fake_structure_satisfies(monkeypatch):
@@ -104,7 +104,7 @@ def test_chat_artifacts_slides_carry_roles_and_keep_typography(monkeypatch, tmp_
         )
 
     fake = FakeLLM()
-    # 意图分析住 core 状态机（票 05 收编）：伪装意图分析；orchestrator 只消费累积意图
+    # 意图分析住 core 状态机（收编）：伪装意图分析；orchestrator 只消费累积意图
     monkeypatch.setattr(conversation_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())
     monkeypatch.setattr(ppt_module, "get_llm", lambda: fake)
@@ -128,7 +128,7 @@ def test_chat_artifacts_slides_carry_roles_and_keep_typography(monkeypatch, tmp_
     assert accent == ppt_module.PPT_THEMES["学术"]["accent"]
 
 
-# ---- 副接缝：渲染器纯函数回读断言 ----
+# 副接缝：渲染器纯函数回读断言
 
 
 def test_render_role_layouts_distinguishable(tmp_path):

@@ -6,7 +6,7 @@ from pathlib import Path
 from app.config import settings
 
 # 生成物落盘目录：唯一事实源是 settings.output_dir（默认 backend/data/output）。
-# 测试用 conftest 的 isolated_output_dir 重定向本模块属性；生产从配置读（M3）。
+# 测试用 conftest 的 isolated_output_dir 重定向本模块属性；生产从配置读。
 OUTPUT_DIR = Path(settings.output_dir)
 
 

@@ -1,7 +1,7 @@
 /**
  * 接口调用基础设施：唯一的事实源是后端 OpenAPI（见 src/api/generated，由 npm run gen:api 生成）。
  *
- * 纪律（ADR-0005 / 票 04）：仓库内**不手抄接口类型**——请求体与响应体的类型一律从
+ * 纪律（ADR-0005）：仓库内**不手抄接口类型**——请求体与响应体的类型一律从
  * `src/api/generated` 里取（下面给出取法），本文件只提供传输、错误包装与取消信号。
  */
 import type { ClientOptions } from './generated'

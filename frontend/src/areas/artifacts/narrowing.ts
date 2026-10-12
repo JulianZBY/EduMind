@@ -54,7 +54,7 @@ function asTextList(value: unknown): readonly string[] {
   return value.map(asText).filter((item) => item.trim().length > 0)
 }
 
-// ---- 内容快照的读法 ----
+// 内容快照的读法
 
 /** 课件的一页：role 是页面角色（封面 / 目录 / 内容 / 总结），points 是要点。 */
 export interface SlideView {
@@ -207,7 +207,7 @@ export function readArtifactPreview(artifactType: ArtifactType, content: unknown
   }
 }
 
-// ---- 版本组（时间线）的读法 ----
+// 版本组（时间线）的读法
 
 /** 某一类的版本组；列表里没有这一类时返回 null（界面就不显示这条时间线）。 */
 export function groupOfType(groups: readonly { artifact_type: ArtifactType }[], artifactType: ArtifactType) {
@@ -236,7 +236,7 @@ export function parentLabel(
   return parent ? `由${versionLabel(parent.version)}衍生` : '由更早的一版衍生'
 }
 
-// ---- 修改意见 → 请求（哪一类走哪个端点、请求体带什么）----
+// 修改意见 → 请求（哪一类走哪个端点、请求体带什么）
 /** 修改端点的地址：取自生成的 schema（不手抄路径）。 */
 const reviseUrl: ReviseApiV1RevisePostData['url'] = '/api/v1/revise'
 const reviseWordUrl: ReviseWordEndpointApiV1ReviseWordPostData['url'] = '/api/v1/revise/word'
@@ -364,7 +364,7 @@ export function revisionFailureMessage(error: unknown): string {
   return '没改上：后端暂时做不了这次修改，重试即可。'
 }
 
-// ---- 按需生成（试卷 / 互动内容）的纯函数 ----
+// 按需生成（试卷 / 互动内容）的纯函数
 
 /** 生成响应里的版本号可空：缺席时退回不带版本号的说法。 */
 export function producedVersionLabel(version: number | null | undefined): string {

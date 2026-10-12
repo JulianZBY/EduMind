@@ -1,4 +1,4 @@
-"""教学资料删除级联测试（票 07）：删除对话框交代的每一条后果都有离线断言背书。
+"""教学资料删除级联测试：删除对话框交代的每一条后果都有离线断言背书。
 
 级联规则（票面验收项，教师逐条确认过的口径）：
 - **必删**：该资料的分块与向量、文献笔记、引用该资料的待审冲突（撤下）；
@@ -48,7 +48,7 @@ def sealed_vectors(monkeypatch, tmp_path):
     return store
 
 
-# ---- 种子工具：直接落主库与向量库，不触上传/解析管道 ----
+# 种子工具：直接落主库与向量库，不触上传/解析管道
 
 
 def _seed_document(filename: str = "一次函数讲义.pdf", with_file: bool = True) -> Document:
@@ -196,7 +196,7 @@ def _delete(document_id: str, delete_single_source: bool = True):
     )
 
 
-# ---- 删除前预览：对话框列出的就是会发生的全部 ----
+# 删除前预览：对话框列出的就是会发生的全部
 
 
 def test_preview_lists_single_source_nodes_and_affected_questions(sealed_vectors):
@@ -231,7 +231,7 @@ def test_preview_404_for_unknown_document():
     assert "资料不存在" in r.json()["detail"]
 
 
-# ---- 删除级联：默认勾选（删单来源知识点）----
+# 删除级联：默认勾选（删单来源知识点）
 
 
 def test_delete_cascades_chunks_vectors_note_conflicts_and_single_source_nodes(sealed_vectors):
@@ -375,7 +375,7 @@ def test_delete_removes_only_target_document(sealed_vectors):
         db.close()
 
 
-# ---- 删除接口契约 ----
+# 删除接口契约
 
 
 def test_delete_unknown_document_returns_404(sealed_vectors):
@@ -402,7 +402,7 @@ def test_document_with_missing_note_and_file_still_deletes(sealed_vectors):
     assert _get_document(doc.id).status_code == 404
 
 
-# ---- 史实留痕：生成物历史版本不被删除牵连 ----
+# 史实留痕：生成物历史版本不被删除牵连
 
 
 def test_artifact_provenance_untouched(sealed_vectors):
@@ -450,7 +450,7 @@ def _seed_session_id() -> str:
         db.close()
 
 
-# ---- 路径规范化守卫：读写统一 POSIX 分隔符 + 幂等迁移 ----
+# 路径规范化守卫：读写统一 POSIX 分隔符 + 幂等迁移
 
 
 def test_normalize_stored_path_converts_windows_separators():
@@ -467,7 +467,7 @@ def test_save_upload_returns_posix_path(tmp_path, monkeypatch):
 
 
 def test_legacy_windows_file_paths_normalized_in_migration(tmp_path):
-    """存量 Windows 路径在引擎迁移链里统一为 POSIX 分隔符，且幂等（票 02 清理后的防御）。"""
+    """存量 Windows 路径在引擎迁移链里统一为 POSIX 分隔符，且幂等（清理后的防御）。"""
     db_path = tmp_path / "legacy.db"
     legacy = sqlite3.connect(db_path)
     legacy.execute(
@@ -502,7 +502,7 @@ def test_legacy_windows_file_paths_normalized_in_migration(tmp_path):
         legacy_engine.dispose()
 
 
-# ---- OpenAPI 契约：删除与预览挂「知识库」tag 且注解齐全 ----
+# OpenAPI 契约：删除与预览挂「知识库」tag 且注解齐全
 
 
 def test_delete_endpoints_declared_in_openapi():

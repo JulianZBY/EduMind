@@ -1,4 +1,4 @@
-"""上传大小上限（M4）：超过 max_upload_bytes 直接 413，不落盘、不建记录。"""
+"""上传大小上限：超过 max_upload_bytes 直接 413，不落盘、不建记录。"""
 
 from fastapi.testclient import TestClient
 

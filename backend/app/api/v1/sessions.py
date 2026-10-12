@@ -81,7 +81,7 @@ class SessionUpdateRequest(BaseModel):
 class SessionSummary(BaseModel):
     id: str
     title: str  # 会话名：新建先叫「未命名备课」，首条教师消息自动命名
-    # 教师是否手动改过名：True 后自动命名停用（票 04「未命名备课」）
+    # 教师是否手动改过名：True 后自动命名停用（「未命名备课」）
     title_edited: bool
     granularity: str  # 追问粒度：快速 / 标准 / 精细
     reference_doc_ids: list[str]  # 本次备课勾选的参考资料
@@ -147,7 +147,7 @@ def _message(item: SessionMessage) -> MessageItem:
     description=(
         "新建一个备课会话并立即落库：全部设置由服务端保存，"
         "供教师换设备、清浏览器数据后继续备课（后端是唯一事实源）。"
-        "前端新建是零表单直开（票 04）：点「新建备课会话」直接调本接口后进入会话。\n\n"
+        "前端新建是零表单直开：点「新建备课会话」直接调本接口后进入会话。\n\n"
         "* `title` 留空（推荐）时先叫「未命名备课」，首条教师消息自动以消息内容命名；"
         "教师手动改名（PATCH）后自动命名停用；\n"
         "* `granularity` 是追问粒度三档：快速 / 标准 / 精细，默认「标准」，会话内可改；\n"

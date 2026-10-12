@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""一次性清理脚本：data/output 历史孤儿文件清理（票 03，.scratch/knowledge-restructure/issues/03-orphan-output-cleanup.md）。
+"""一次性清理脚本：data/output 历史孤儿文件清理（.scratch/knowledge-restructure/issues/03-orphan-output-cleanup.md）。
 
 教师已批准（2026-10-08）。默认 **dry-run**：只打印保留清单与删除清单，不落任何写；
 真删必须显式加 `--execute`。
@@ -173,7 +173,7 @@ def dry_run(main: sqlite3.Connection, output_dir: Path, gate: Gate | None = None
     if problems:
         print("\n== 门禁不过（停在报告，不删）==")
         for p in problems:
-            print(f"  ✗ {p}")
+            print(f"  - {p}")
         return 2
     print("\n门禁通过：保留/删除与票面口径逐项相符。加 --execute 真删。")
     return 0
@@ -198,7 +198,7 @@ def execute_cleanup(
     plan = build_plan(main, output_dir)
     problems = find_gate_problems(plan, gate or Gate())
     if problems:
-        detail = "\n".join(f"  ✗ {p}" for p in problems)
+        detail = "\n".join(f"  - {p}" for p in problems)
         raise CleanupRefused(f"门禁不过，拒绝执行（零副作用）：\n{detail}")
     if not plan.delete:
         print("无孤儿可删：output 目录全部文件都在保留侧，无事可做。")
@@ -219,7 +219,7 @@ def execute_cleanup(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="票 03：data/output 孤儿文件清理（默认 dry-run）")
+    parser = argparse.ArgumentParser(description="data/output 孤儿文件清理（默认 dry-run）")
     parser.add_argument("--execute", action="store_true", help="真删（默认只 dry-run）")
     parser.add_argument(
         "--dry-run",

@@ -49,7 +49,7 @@ class PrepSession(Base):
     title: Mapped[str] = mapped_column(
         String(200)
     )  # 会话标题：新建先叫「未命名备课」，首条教师消息自动命名；教师手动改名后不再自动改
-    # 教师是否手动改过名：True 后自动命名停用，后续对话不再覆盖教师取的名字（票 04「未命名备课」）
+    # 教师是否手动改过名：True 后自动命名停用，后续对话不再覆盖教师取的名字（「未命名备课」）
     title_edited: Mapped[bool] = mapped_column(Boolean, default=False)
     granularity: Mapped[str] = mapped_column(String(20), default="标准")  # 追问粒度：快速/标准/精细
     # 累积意图：上一轮意图 + 本轮新增（避免每轮把全部对话重析一遍）
@@ -97,7 +97,7 @@ class Subject(Base):
 
 
 class SubjectProposal(Base):
-    """新学科提议（CONTEXT.md「学科清单」/ 票 09）：AI 归类时认为清单内学科都不合适，
+    """新学科提议（CONTEXT.md「学科清单」）：AI 归类时认为清单内学科都不合适，
     提议一个新学科，附理由与涉及的知识点标题。待批期间不进学科清单、不可被归类选用，
     也不进冲突审核（与冲突「待审」同哲学）；批准是教师显式动作——批准才入清单并触发
     相关「未分类」知识点重新归类；拒绝后提议消亡、知识点留在「未分类」。"""
@@ -265,7 +265,7 @@ class LiteratureNote(Base):
     doc_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("documents.id"), unique=True, index=True
     )
-    # 来源：教学资料（上传入库）/ 网页（「联网检索并入库」的结果页，票 10 接入本管道）
+    # 来源：教学资料（上传入库）/ 网页（「联网检索并入库」的结果页）
     source: Mapped[str] = mapped_column(String(20), default="教学资料")
     # 生成状态：已生成（概要与索引可用）/ 未配置（对话模型未配置，详情给引导）
     status: Mapped[str] = mapped_column(String(20), default="未生成")

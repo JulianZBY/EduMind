@@ -18,7 +18,7 @@ class VectorRetriever(Retriever):
         if hits is None:
             return RetrievalResult.empty()
         if not hits:
-            # 命中全空：区分「库为空」与「未命中相关内容」，供回复文案诚实二选一（票 01）
+            # 命中全空：区分「库为空」与「未命中相关内容」，供回复文案诚实二选一
             return RetrievalResult.empty(library_empty=library_is_empty())
         chunks = [h.content for h in hits if h.content]
         return RetrievalResult(

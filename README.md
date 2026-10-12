@@ -56,11 +56,9 @@ flowchart TB
 git clone https://github.com/JulianZBY/EduMind.git
 cd EduMind
 
-# 工具链 + 依赖（两条命令）
-mise install        # 装 Python 3.14 与 Node 26
-mise run setup      # 后端建 venv + pip install -r requirements.txt；前端 npm ci
+mise install
+mise run setup
 
-# 配置（先到设置页添加供应商（只选家 + 粘 Key，模型清单自动拉取）或配置 .env，再开始备课；未配置时相关操作返回 503 引导）
 cp backend/.env.example backend/.env    # Windows 用 copy
 ```
 
@@ -68,17 +66,17 @@ cp backend/.env.example backend/.env    # Windows 用 copy
 > 增删依赖时改它，再跑 `mise run setup:backend`（或 `pip install -r requirements.txt`）。
 > 国内镜像可设 `PIP_INDEX_URL`（如 `https://pypi.tuna.tsinghua.edu.cn/simple`）。
 
-**启动**：
+**启动**（一条命令起前后端：后端 :8000、前端 :5173；Ctrl+C 停）：
 
 ```bash
-mise run dev          # 一键起前后端：后端 :8000，前端 :5173（Ctrl+C 停）
+mise run dev
 ```
 
-需要分开跑（或不经 mise）时：
+分两条（或不经 mise）时：`dev:backend` 即 `cd backend && uvicorn app.main:app --host 127.0.0.1 --port 8000`，`dev:frontend` 即 `cd frontend && npm run dev`。
 
 ```bash
-mise run dev:backend    # 等价 cd backend && uvicorn app.main:app --host 127.0.0.1 --port 8000
-mise run dev:frontend   # 等价 cd frontend && npm run dev
+mise run dev:backend
+mise run dev:frontend
 ```
 
 浏览器访问 **http://127.0.0.1:5173**（或 http://localhost:5173）。
@@ -111,14 +109,14 @@ MiniMax、豆包（火山方舟）、硅基流动，或「自定义 OpenAI 兼�
 ## 运行测试与自检
 
 ```bash
-# 全部门禁：后端 pytest + ruff、前端 lint/风格扫描 + 构建 + 七路由
 mise run check
 
-# 按需单跑
-mise run test     # 后端 pytest + 前端 node --test
-mise run lint     # 后端 ruff + 前端 oxlint/风格扫描
-mise run build    # 前端 tsc + vite build
+mise run test
+mise run lint
+mise run build
 ```
+
+`check` 为全部门禁（后端 pytest + ruff、前端 lint/风格扫描 + 构建 + 七路由）；`test` / `lint` / `build` 分别单跑。
 
 未配置行为冒烟（健康检查 → 503 引导 → 上传解析入库）与全链路冒烟（备课对话 → 生成物 → 下载 → 冲突裁决）、
 **只有人能做的验收步骤**（真浏览器逐区点选、真实 Key 联通性、人眼视觉项）见

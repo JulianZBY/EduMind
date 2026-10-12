@@ -1,7 +1,7 @@
 /**
  * 知识库区的服务端状态（TanStack Query）。
  *
- * 纪律（ADR-0005 / 票 04）：
+ * 纪律（ADR-0005）：
  * - URL 常量取自生成的 schema，不手拼路径、不手抄接口类型；
  * - 解析状态跟进靠**轮询策略**：还有资料在「处理中」就保持轮询，全部落终态即停
  *   ——教师不需要点「刷新」（CONTEXT.md 第 4 节状态口径）；
@@ -77,7 +77,7 @@ export const knowledgeKeys = {
   detail: (documentId: string) => [...knowledgeKeys.all, 'detail', documentId] as const,
   /** 删除前预览：只在对话框打开时拉取，不算详情的一部分。 */
   deletePreview: (documentId: string) => [...knowledgeKeys.all, 'delete-preview', documentId] as const,
-  /** 新学科提议的待批队列（票 09）：解析在后台落提议，随本区缓存一同失效。 */
+  /** 新学科提议的待批队列：解析在后台落提议，随本区缓存一同失效。 */
   proposals: () => [...knowledgeKeys.all, 'proposals'] as const,
 }
 
@@ -304,7 +304,7 @@ export function proposalErrorMessage(error: unknown): string {
   return apiErrorMessage(error, '操作没有成功，请稍后重试。')
 }
 
-/** 删除前预览：按默认勾选口径列出这次删除会发生的每一件事（票 07，级联不静默）。 */
+/** 删除前预览：按默认勾选口径列出这次删除会发生的每一件事（级联不静默）。 */
 export function useDocumentDeletePreview(documentId: string | undefined) {
   return useQuery({
     queryKey: knowledgeKeys.deletePreview(documentId ?? ''),

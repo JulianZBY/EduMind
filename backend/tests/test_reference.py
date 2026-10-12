@@ -61,7 +61,7 @@ def _install(monkeypatch, provider: RecordingProvider, store: VectorStore | None
             topic="导数", duration_minutes=45, style="学术", objectives=["a"], key_points=["b"]
         )
 
-    # 意图分析住 core 状态机（票 05 收编）：伪装意图分析 + 全部 get_llm 引用 + 向量库。
+    # 意图分析住 core 状态机（收编）：伪装意图分析 + 全部 get_llm 引用 + 向量库。
     # orchestrator 只消费累积意图，不再自带一次分析。
     monkeypatch.setattr(conversation_module, "analyze_intent", fake_analyze)
     monkeypatch.setattr(embedding_factory_module, "get_embedder", lambda: FakeEmbedder())

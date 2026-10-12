@@ -75,7 +75,7 @@ async def parse_document(
         try:
             if text is None:
                 parser = get_parser(doc.file_type)
-                # 读侧路径规范化（票 07）：存量 Windows 分隔符的路径统一为 POSIX 再交给解析器
+                # 读侧路径规范化：存量 Windows 分隔符的路径统一为 POSIX 再交给解析器
                 result = await parser.parse(normalize_stored_path(doc.file_path))
             else:
                 result = text
@@ -118,12 +118,12 @@ async def index_chunks(doc_id: str, chunks: list[str]) -> None:
     from app.knowledge.vector_store import VectorStore
 
     embeddings = await get_embedder().embed(chunks)
-    # sqlite-vec 同步写：放线程池，解析后台任务不阻塞事件循环（M1）
+    # sqlite-vec 同步写：放线程池，解析后台任务不阻塞事件循环
     await asyncio.to_thread(VectorStore().add, doc_id, chunks, embeddings)
 
 
 def _record_subject_proposal(doc_id: str, saved_nodes: list[dict], proposal: dict | None) -> None:
-    """把「清单内学科都不合适」的提议落进待批队列（票 09，尽力而为）。
+    """把「清单内学科都不合适」的提议落进待批队列（尽力而为）。
 
     涉及的知识点 = 本次真正入库且归「未分类」的节点——它们是批准后重新归类的对象；
     被冲突检测扣住的节点还没入图谱，不在其列。去重口径见 proposals.record_proposal。

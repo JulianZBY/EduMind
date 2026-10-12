@@ -93,7 +93,7 @@ export function useUpdateSettings() {
   })
 }
 
-// ---- 供应商实例（多供应商并存：添加 / 改 / 删）----
+// 供应商实例（多供应商并存：添加 / 改 / 删）
 
 export type ProviderInstanceBody = ApiResponseBody<
   CreateProviderInstanceApiV1SettingsProvidersPostResponses,

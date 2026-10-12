@@ -28,7 +28,7 @@ function asText(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null
 }
 
-// ---- 知识库资料（参考资料勾选用）----
+// 知识库资料（参考资料勾选用）
 
 /** 一份教学资料里，勾选参考资料真正要用的字段。 */
 export interface KnowledgeDocument {
@@ -69,7 +69,7 @@ export function readKnowledgeDocuments(payload: unknown): KnowledgeDocument[] {
     .filter((document): document is KnowledgeDocument => document !== null)
 }
 
-// ---- 生成记录（生成回复里的最小结果入口）----
+// 生成记录（生成回复里的最小结果入口）
 
 /**
  * 一条生成物入口：能落盘下载的是「文件」，只有正文的是「文本」（提纲目前就是 Markdown 文本）。
@@ -107,7 +107,7 @@ function outlineEntry(value: unknown): GenerationEntry | null {
   if (text) return { form: 'text', label: '提纲', text }
   const record = asRecord(value)
   if (!record) return null
-  // 提纲的两种形态都在：正文（早期版本只有文本）与「正文 + 落盘文件」（票 07 起与课件/教案同形）。
+  // 提纲的两种形态都在：正文（早期版本只有文本）与「正文 + 落盘文件」（起与课件/教案同形）。
   // 有可下载文件就给下载入口，只有正文时退回可展开的文本。
   return fileEntry(record, '提纲', false) ?? textEntry(record.text, '提纲')
 }
@@ -144,11 +144,11 @@ export function readReferenceNames(artifacts: unknown): string[] {
   return names.map(asText).filter((name): name is string => name !== null)
 }
 
-/** 知识库命中口径（票 01 三态）：命中 / 未命中相关内容 / 库为空。 */
+/** 知识库命中口径（三态）：命中 / 未命中相关内容 / 库为空。 */
 export type KnowledgeOutcome = 'hit' | 'no_match' | 'empty'
 
 /**
- * 读知识库命中口径：按后端语义显示，不再在「命中了不相关内容」时谎报已融合（票 01）。
+ * 读知识库命中口径：按后端语义显示，不再在「命中了不相关内容」时谎报已融合。
  *
  * - `knowledge_hits: true` → hit（已融合本地知识库）
  * - `knowledge_hits: false` + `knowledge_empty: false` → no_match（知识库未命中相关内容，由 AI 直接生成）

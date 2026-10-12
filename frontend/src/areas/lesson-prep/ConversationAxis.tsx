@@ -3,7 +3,7 @@
  *
  * 三段结构是有意的：标题与设置固定在顶、对话可滚动、输入固定在底（长对话里输入框不该被滚走）。
  * 全部数据来自服务端（TanStack Query）：刷新、换设备进来都是同一条历史。
- * 生成物的版本中心不在这里（票 08）；这里只给本轮结果的最小入口，见 `GeneratedResult`。
+ * 生成物的版本中心不在这里；这里只给本轮结果的最小入口，见 `GeneratedResult`。
  */
 import { useState } from 'react'
 import type { ReactNode } from 'react'
@@ -189,7 +189,7 @@ export function ConversationAxis({ sessionId }: { sessionId: string }) {
   const attach = useAttachReference(sessionId)
   const [failedUtterance, setFailedUtterance] = useState<string | null>(null)
   const [referencesOpen, setReferencesOpen] = useState(false)
-  /** 会话头 inline 改名（票 04）：改名入口常驻，不弹层；保存走既有 PATCH。 */
+  /** 会话头 inline 改名：改名入口常驻，不弹层；保存走既有 PATCH。 */
   const [renaming, setRenaming] = useState(false)
   const missing = useProviderMissingState()
   const runTurn = (utterance: string) => {

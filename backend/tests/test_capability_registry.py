@@ -69,7 +69,7 @@ def _fresh_factories():
         cached.cache_clear()
 
 
-# ---- 对话 ----
+# 对话
 
 
 class _MarkedLLM(LLMProvider):
@@ -87,7 +87,7 @@ async def test_new_llm_impl_needs_no_caller_change(monkeypatch):
     assert await generate_outline({"topic": "TCP"}, "知识内容") == "新增对话实现生成的提纲"
 
 
-# ---- 向量化 ----
+# 向量化
 
 
 class _MarkedEmbedder(Embedder):
@@ -119,7 +119,7 @@ def test_new_embedder_impl_needs_no_caller_change(monkeypatch, tmp_path):
     assert r.json()["hits"][0]["content"] == "新增向量化实现命中的片段"
 
 
-# ---- 语音转写 ----
+# 语音转写
 
 
 class _MarkedTranscriber(Transcriber):
@@ -139,7 +139,7 @@ async def test_new_transcriber_impl_needs_no_caller_change(monkeypatch):
     assert await AudioParser().parse("讲座.wav") == "新增转写实现"
 
 
-# ---- PDF 解析 ----
+# PDF 解析
 
 
 class _MarkedPdfParser(PdfParser):
@@ -157,7 +157,7 @@ async def test_new_pdf_strategy_needs_no_caller_change(monkeypatch):
     assert await KnowledgePdfParser().parse("讲义.pdf") == "新增 PDF 策略解析结果"
 
 
-# ---- 网络搜索 ----
+# 网络搜索
 
 
 class _MarkedSearch(WebSearch):
@@ -180,7 +180,7 @@ def test_new_search_impl_needs_no_caller_change(monkeypatch):
     assert r.json()["results"][0]["title"] == "新增搜索实现"
 
 
-# ---- 注册表口径与不变式 ----
+# 注册表口径与不变式
 
 
 @pytest.mark.parametrize(

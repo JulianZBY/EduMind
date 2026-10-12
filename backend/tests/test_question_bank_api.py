@@ -1,6 +1,6 @@
 """题库查询与题目详情测试（HTTP API 主接缝：假网关 + 直接种子数据）。
 
-覆盖票 12 验收项与票 01 登记的遗留：
+覆盖相关验收项与遗留：
 - 按考查知识点筛选，经 HTTP 缝断言
 - 试卷生成入库的题目即时出现在列表（同一轮请求里生成后即查）
 - 题目详情呈现题型 / 答案 / 来源 / 考查知识点
@@ -195,7 +195,7 @@ def test_detail_returns_404_for_unknown_question():
 
 
 def test_question_bank_group_is_declared_and_used():
-    """票 01 遗留：OpenAPI「题库」分组此前缺席，现在既被声明也被端点使用且有描述。"""
+    """遗留：OpenAPI「题库」分组此前缺席，现在既被声明也被端点使用且有描述。"""
     schema = app.openapi()
     declared = {tag["name"]: tag for tag in schema.get("tags") or []}
 

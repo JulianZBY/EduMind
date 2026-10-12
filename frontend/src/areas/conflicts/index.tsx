@@ -1,7 +1,7 @@
 import { lazyAreaModule } from '../lazy'
 import type { AreaModule } from '../types'
 
-// 区实现按需加载（M6）：三个入口来自同一个 chunk，翻到本区才拉取。
+// 区实现按需加载：三个入口来自同一个 chunk，翻到本区才拉取。
 const ConflictsArea = lazyAreaModule(() => import('./ConflictsArea'), 'ConflictsArea')
 const ConflictsQueue = lazyAreaModule(() => import('./ConflictsArea'), 'ConflictsQueue')
 const ConflictsDetail = lazyAreaModule(() => import('./ConflictsArea'), 'ConflictsDetail')

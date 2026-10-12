@@ -87,7 +87,7 @@ class VectorStore:
             conn.close()
 
     def chunk_count(self) -> int:
-        """库内分块总数（0 = 库为空）：区分「知识库为空」与「未命中相关内容」（票 01）。"""
+        """库内分块总数（0 = 库为空）：区分「知识库为空」与「未命中相关内容」。"""
         conn = self._connect()
         try:
             exists = conn.execute(
@@ -113,7 +113,7 @@ class VectorStore:
         返回的 distance 仍为原始值。为避免加权后排序失真，候选多取 4 倍。
 
         with_embeddings：结果附带原始分块向量（`embedding` 键）。检索阈值过滤要
-        现算余弦距离（票 01）需要它；只读观测调用方默认不拖大向量。
+        现算余弦距离需要它；只读观测调用方默认不拖大向量。
         """
         boost = set(boost_doc_ids) if boost_doc_ids else None
         fetch_k = k * 4 if boost else k
@@ -157,7 +157,7 @@ class VectorStore:
             conn.close()
 
     def delete_doc(self, doc_id: str) -> int:
-        """按资料清理分块与向量（删除资料级联，票 07），返回清掉的分块数。
+        """按资料清理分块与向量（删除资料级联），返回清掉的分块数。
 
         chunk_embeddings 的 rowid 即 chunks.id，先查后删避免留下悬空的向量行；
         空库 / 该资料无分块时返回 0，不抛错。
@@ -217,7 +217,7 @@ class VectorStore:
         finally:
             conn.close()
 
-    # ---- 知识点标题索引（冲突检测近名预筛用，ADR-0006，余弦距离）----
+    # 知识点标题索引（冲突检测近名预筛用，ADR-0006，余弦距离）
 
     def add_node_title(
         self, node_id: str, title: str, embedding: list[float], space: str | None = None
