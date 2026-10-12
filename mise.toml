@@ -15,6 +15,9 @@ node = "26"
 [env]
 # 进目录时创建并激活后端 venv（python -m venv，自带 pip）
 _.python.venv = { path = "backend/.venv", create = true }
+# 后端任务一律写 .venv\Scripts\<tool>.exe 显式路径，不用裸命令：外部工具注入的 PATH
+# 可能盖住 venv（例如 pi-lens 的 pip-tools 里带了别的 ruff / python），显式路径不依赖 PATH 顺序。
+# （mise 的任务 shell 在 Windows 上是 cmd，故用反斜杠。）
 
 # ── 安装依赖 ──────────────────────────────────────────────
 [tasks.setup]
@@ -23,7 +26,7 @@ depends = ["setup:backend", "setup:frontend"]
 
 [tasks."setup:backend"]
 dir = "backend"
-run = "pip install -r requirements.txt"
+run = '.venv\Scripts\pip.exe install -r requirements.txt'
 
 [tasks."setup:frontend"]
 dir = "frontend"
@@ -33,7 +36,7 @@ run = "npm ci"
 [tasks."dev:backend"]
 dir = "backend"
 description = "后端 uvicorn @ 127.0.0.1:8000"
-run = "uvicorn app.main:app --host 127.0.0.1 --port 8000"
+run = '.venv\Scripts\uvicorn.exe app.main:app --host 127.0.0.1 --port 8000'
 
 [tasks."dev:frontend"]
 dir = "frontend"
@@ -47,7 +50,7 @@ depends = ["dev:backend", "dev:frontend"]
 # ── lint ─────────────────────────────────────────────────
 [tasks."lint:backend"]
 dir = "backend"
-run = "ruff check ."
+run = '.venv\Scripts\ruff.exe check .'
 
 [tasks."lint:frontend"]
 dir = "frontend"
@@ -60,7 +63,7 @@ depends = ["lint:backend", "lint:frontend"]
 # ── 测试 ─────────────────────────────────────────────────
 [tasks."test:backend"]
 dir = "backend"
-run = "pytest -q"
+run = '.venv\Scripts\pytest.exe -q'
 
 [tasks."test:frontend"]
 dir = "frontend"
