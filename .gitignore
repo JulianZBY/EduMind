@@ -38,3 +38,5 @@ EduMind-demo/
 .scratch/
 # .pi：pi 编码代理的本地会话目录
 .pi/
+# .enola：enola 的本地架构索引（可重建，不进仓库）
+.enola/
