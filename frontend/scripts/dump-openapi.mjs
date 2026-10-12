@@ -3,7 +3,7 @@
  *
  *   node scripts/dump-openapi.mjs        （等价于 npm run openapi:snapshot）
  *
- * 前置：`cd backend && uv sync`（首次，或后端依赖变更后重跑一次）。
+ * 前置：`mise run setup:backend`（首次，或后端依赖变更后重跑一次）。
  * 输出：openapi/openapi.json（入库）。前端 TS 类型由它生成（npm run openapi:types），
  * 因此后端改接口后只需重跑本脚本 + 类型生成，仓库内永远不需要手抄接口类型。
  */
@@ -44,19 +44,27 @@ function run(candidates, args, env = {}) {
   }
   return { error: lastError }
 }
-const uvBinaries = process.platform === 'win32' ? ['uv.exe', 'uv'] : ['uv']
+// 用后端 venv 的 python：绝对路径，避免 PATH 上其它 python 抢先（如 pi-lens 注入的）
+const venvPython =
+  process.platform === 'win32'
+    ? resolve(backendDir, '.venv/Scripts/python.exe')
+    : resolve(backendDir, '.venv/bin/python')
+const pythonBinaries = [
+  venvPython,
+  ...(process.platform === 'win32' ? ['python.exe', 'python'] : ['python3', 'python']),
+]
 // Windows 控制台默认 GBK：schema 里的中文与「•」掩码字符会炸 stdout，钉住 UTF-8
-const result = run(uvBinaries, ['run', 'python', '-c', PYTHON_SNIPPET], { PYTHONIOENCODING: 'utf-8' })
+const result = run(pythonBinaries, ['-c', PYTHON_SNIPPET], { PYTHONIOENCODING: 'utf-8' })
 if (result.error) {
-  console.error(`[openapi:snapshot] 无法执行 uv（${result.error.message}）。`)
-  console.error('[openapi:snapshot] 请先安装 uv，并执行：cd backend && uv sync')
+  console.error(`[openapi:snapshot] 无法执行后端 python（${result.error.message}）。`)
+  console.error('[openapi:snapshot] 请先运行：mise run setup:backend')
   process.exit(1)
 }
 
 if (result.status !== 0) {
   console.error('[openapi:snapshot] 后端 schema 导出失败：')
   console.error(result.stderr?.trim() || `退出码 ${result.status}`)
-  console.error('[openapi:snapshot] 前置步骤：cd backend && uv sync')
+  console.error('[openapi:snapshot] 前置步骤：mise run setup:backend')
   process.exit(1)
 }
 
