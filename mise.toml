@@ -1,6 +1,7 @@
 [tools]
 python = "3.14"
 node = "26"
+"npm:pyright" = "1.1.414"
 
 [env]
 _.python.venv = { path = "backend/.venv", create = true }
@@ -35,13 +36,17 @@ depends = ["dev:backend", "dev:frontend"]
 dir = "backend"
 run = '.venv\Scripts\ruff.exe check .'
 
+[tasks."lint:types"]
+dir = "backend"
+run = "pyright app"
+
 [tasks."lint:frontend"]
 dir = "frontend"
 run = "npm run lint"
 
 [tasks.lint]
-description = "后端 ruff + 前端 lint/风格扫描"
-depends = ["lint:backend", "lint:frontend"]
+description = "后端 ruff + 类型检查 + 前端 lint/风格扫描"
+depends = ["lint:backend", "lint:types", "lint:frontend"]
 
 [tasks."test:backend"]
 dir = "backend"

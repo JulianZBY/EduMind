@@ -116,7 +116,7 @@ mise run lint
 mise run build
 ```
 
-`check` 为全部门禁（后端 pytest + ruff、前端 lint/风格扫描 + 构建 + 七路由）；`test` / `lint` / `build` 分别单跑。
+`check` 为全部门禁（后端 pytest + ruff + pyright、前端 lint/风格扫描 + 构建 + 七路由）；`test` / `lint` / `build` 分别单跑。
 
 未配置行为冒烟（健康检查 → 503 引导 → 上传解析入库）与全链路冒烟（备课对话 → 生成物 → 下载 → 冲突裁决）、
 **只有人能做的验收步骤**（真浏览器逐区点选、真实 Key 联通性、人眼视觉项）见
