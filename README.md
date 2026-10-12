@@ -59,7 +59,7 @@ cd EduMind
 mise install
 mise run setup
 
-cp backend/.env.example backend/.env    # Windows 用 copy
+cp backend/.env.example backend/.env
 ```
 
 > **关于后端依赖**：`backend/requirements.txt` 是唯一的依赖来源（全钉版本，含传递依赖）。

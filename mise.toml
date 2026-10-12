@@ -1,25 +1,10 @@
-# EduMind 工具链与任务（mise；仅 Windows）。
-#
-# 首次：  mise install && mise run setup
-# 日常：  mise run dev      （前后端一起起，Ctrl+C 停）
-# 门禁：  mise run check    （lint + test + build + routes）
-# 单跑：  mise run dev:backend / dev:frontend / test:backend …
-#
-# Python：mise 管解释器 + venv（见 [env]），依赖由 pip 按 backend/requirements.txt 安装。
-
 [tools]
 python = "3.14"
-# node 由 mise 提供；npm 随 node 一起，同属 mise 管理
 node = "26"
 
 [env]
-# 进目录时创建并激活后端 venv（python -m venv，自带 pip）
 _.python.venv = { path = "backend/.venv", create = true }
-# 后端任务一律写 .venv\Scripts\<tool>.exe 显式路径，不用裸命令：外部工具注入的 PATH
-# 可能盖住 venv（例如 pi-lens 的 pip-tools 里带了别的 ruff / python），显式路径不依赖 PATH 顺序。
-# （mise 的任务 shell 在 Windows 上是 cmd，故用反斜杠。）
 
-# ── 安装依赖 ──────────────────────────────────────────────
 [tasks.setup]
 description = "安装前后端依赖（pip install -r requirements.txt + npm ci）"
 depends = ["setup:backend", "setup:frontend"]
@@ -32,7 +17,6 @@ run = '.venv\Scripts\pip.exe install -r requirements.txt'
 dir = "frontend"
 run = "npm ci"
 
-# ── 开发服务 ──────────────────────────────────────────────
 [tasks."dev:backend"]
 dir = "backend"
 description = "后端 uvicorn @ 127.0.0.1:8000"
@@ -47,7 +31,6 @@ run = "npm run dev"
 description = "一键启动前后端开发服务（并行，Ctrl+C 停止）"
 depends = ["dev:backend", "dev:frontend"]
 
-# ── lint ─────────────────────────────────────────────────
 [tasks."lint:backend"]
 dir = "backend"
 run = '.venv\Scripts\ruff.exe check .'
@@ -60,7 +43,6 @@ run = "npm run lint"
 description = "后端 ruff + 前端 lint/风格扫描"
 depends = ["lint:backend", "lint:frontend"]
 
-# ── 测试 ─────────────────────────────────────────────────
 [tasks."test:backend"]
 dir = "backend"
 run = '.venv\Scripts\pytest.exe -q'
@@ -73,7 +55,6 @@ run = "npm test"
 description = "后端 pytest + 前端 node --test"
 depends = ["test:backend", "test:frontend"]
 
-# ── build / routes ───────────────────────────────────────
 [tasks.build]
 dir = "frontend"
 description = "前端类型检查 + 构建"
@@ -83,7 +64,6 @@ run = "npm run build"
 dir = "frontend"
 run = "node scripts/check-routes.mjs"
 
-# ── 全部门禁 ──────────────────────────────────────────────
 [tasks.check]
 description = "全部门禁：lint + test + build + routes"
 depends = ["lint", "test", "build", "check:routes"]

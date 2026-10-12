@@ -11,7 +11,6 @@ build/
 .env
 .env.local
 .env.*.local
-# 本机的声明式供应商配置（可手改、含各家的服务地址与模型清单；模板见 backend/providers.example.json）
 backend/providers.json
 *.db
 *.db-wal
@@ -27,16 +26,9 @@ knowledge_base/
 Thumbs.db
 e2e-artifacts/
 
-# ---- 本地残留：不属于产品仓库（误入库过，勿再跟踪）----
-# .demo-backup：演示产物的日期备份（几百个 pptx/html，约 10 MB）
-# .playwright-cli：Playwright CLI 的页面转储
-# EduMind-demo：本地演示录屏与录制脚手架（含 mp4/webm 与素材 docx/png）
 .demo-backup/
 .playwright-cli/
 EduMind-demo/
-# .scratch：本地 issue 跟踪与一次性向导/验收脚本等工作痕迹
 .scratch/
-# .pi：pi 编码代理的本地会话目录
 .pi/
-# .enola：enola 的本地架构索引（可重建，不进仓库）
 .enola/

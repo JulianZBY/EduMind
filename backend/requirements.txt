@@ -1,126 +1,44 @@
-# EduMind 后端依赖（全钉版本，含传递依赖）。
-# 安装：python -m pip install -r requirements.txt
-#
-# 本文件由原 uv.lock 一次性导出，是后端唯一的依赖来源（本项目不再使用 uv）：
-#   uv export --format requirements-txt --no-hashes --no-emit-project
-#
-# 直接依赖：fastapi, uvicorn[standard], pydantic, pydantic-settings, httpx, sqlalchemy,
-#          pypdf, python-multipart, python-docx, python-pptx, opencv-python-headless, sqlite-vec
-# 开发依赖：pytest, pytest-asyncio, ruff
-#
-# 改依赖：改这里的版本号后重跑 python -m pip install -r requirements.txt。
 annotated-doc==0.0.5
-    # via fastapi
 annotated-types==0.8.0
-    # via pydantic
 anyio==4.15.0
-    # via
-    #   httpx
-    #   starlette
-    #   watchfiles
 certifi==2026.7.22
-    # via
-    #   httpcore
-    #   httpx
 click==8.5.0
-    # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
-    # via pytest
 fastapi==0.141.1
-    # via edumind-backend
 greenlet==3.5.5 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'
-    # via sqlalchemy
 h11==0.16.0
-    # via
-    #   httpcore
-    #   uvicorn
 httpcore==1.0.9
-    # via httpx
 httptools==0.8.0
-    # via uvicorn
 httpx==0.28.1
-    # via edumind-backend
 idna==3.19
-    # via
-    #   anyio
-    #   httpx
 iniconfig==2.3.0
-    # via pytest
 lxml==6.1.3
-    # via
-    #   python-docx
-    #   python-pptx
 numpy==2.4.6 ; python_full_version < '3.12'
-    # via opencv-python-headless
 numpy==2.5.2 ; python_full_version >= '3.12'
-    # via opencv-python-headless
 opencv-python-headless==5.0.0.93
-    # via edumind-backend
 packaging==26.3
-    # via pytest
 pillow==12.3.0
-    # via python-pptx
 pluggy==1.6.0
-    # via pytest
 pydantic==2.13.5
-    # via
-    #   edumind-backend
-    #   fastapi
-    #   pydantic-settings
 pydantic-core==2.46.5
-    # via pydantic
 pydantic-settings==2.15.0
-    # via edumind-backend
 pygments==2.21.0
-    # via pytest
 pypdf==6.16.2
-    # via edumind-backend
 pytest==9.1.1
-    # via pytest-asyncio
 pytest-asyncio==1.4.0
 python-docx==1.2.0
-    # via edumind-backend
 python-dotenv==1.2.3
-    # via
-    #   pydantic-settings
-    #   uvicorn
 python-multipart==0.0.32
-    # via edumind-backend
 python-pptx==1.0.2
-    # via edumind-backend
 pyyaml==6.0.3
-    # via uvicorn
 ruff==0.16.5
 sqlalchemy==2.0.52
-    # via edumind-backend
 sqlite-vec==0.1.9
-    # via edumind-backend
 starlette==1.6.0
-    # via fastapi
 typing-extensions==4.16.0
-    # via
-    #   anyio
-    #   fastapi
-    #   pydantic
-    #   pydantic-core
-    #   pytest-asyncio
-    #   python-docx
-    #   python-pptx
-    #   sqlalchemy
-    #   starlette
-    #   typing-inspection
 typing-inspection==0.4.4
-    # via
-    #   fastapi
-    #   pydantic
-    #   pydantic-settings
 uvicorn==0.52.4
-    # via edumind-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
-    # via uvicorn
 watchfiles==1.2.0
-    # via uvicorn
 websockets==17.1
-    # via uvicorn
 xlsxwriter==3.2.9
-    # via python-pptx
