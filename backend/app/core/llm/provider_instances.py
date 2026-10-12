@@ -46,7 +46,10 @@ def effective_base_url(instance: LLMProviderInstance) -> str:
     """实例的生效地址：覆盖优先，其次方言预设（自定义服务没有预设，必须填覆盖）。"""
     if instance.base_url:
         return instance.base_url
-    return DIALECTS.get(instance.provider).base_url if instance.provider in DIALECTS else ""
+    dialect = DIALECTS.get(instance.provider)
+    if dialect is None:
+        return ""
+    return dialect.base_url
 
 
 def effective_model(instance: LLMProviderInstance) -> str:
@@ -54,7 +57,9 @@ def effective_model(instance: LLMProviderInstance) -> str:
     if instance.model:
         return instance.model
     dialect = DIALECTS.get(instance.provider)
-    return dialect.chat_model if dialect else ""
+    if dialect is None:
+        return ""
+    return dialect.chat_model
 
 
 def _resolve(instance: LLMProviderInstance, model_override: str = "") -> object:
@@ -161,13 +166,13 @@ def fetch_model_ids(instance: LLMProviderInstance) -> list[str]:
     rows = payload.get("data") if isinstance(payload, dict) else None
     if not isinstance(rows, list):
         raise TypeError("服务商返回的模型清单读不懂（没有 data 列表）")
-    models = sorted(
-        {
-            row.get("id")
-            for row in rows
-            if isinstance(row, dict) and isinstance(row.get("id"), str)
-        }
-    )
+    model_ids: set[str] = set()
+    for row in rows:
+        if isinstance(row, dict):
+            row_id = row.get("id")
+            if isinstance(row_id, str):
+                model_ids.add(row_id)
+    models = sorted(model_ids)
     if not models:
         raise ValueError("服务商返回的模型清单是空的")
     return models
@@ -220,8 +225,9 @@ def refresh_models(instance_id: str, db: Session | None = None) -> tuple[bool, s
         else:
             with SessionLocal() as session:
                 row = session.get(LLMProviderInstance, instance_id)
-                row.models_error = str(error)
-                session.commit()
+                if row is not None:
+                    row.models_error = str(error)
+                    session.commit()
         return False, str(error), 0
     if db is not None:
         instance.models_error = ""
@@ -230,7 +236,8 @@ def refresh_models(instance_id: str, db: Session | None = None) -> tuple[bool, s
     else:
         with SessionLocal() as session:
             row = session.get(LLMProviderInstance, instance_id)
-            row.models_error = ""
-            session.commit()
+            if row is not None:
+                row.models_error = ""
+                session.commit()
             store_models(session, instance_id, model_ids)
     return True, "", len(model_ids)
