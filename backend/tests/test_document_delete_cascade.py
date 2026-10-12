@@ -279,10 +279,7 @@ def test_delete_cascades_chunks_vectors_note_conflicts_and_single_source_nodes(s
     # 关系边随节点走：连着被删节点的边全消；保留节点之间的边不受牵连
     db = SessionLocal()
     try:
-        edge_pairs = {
-            (e.from_node, e.to_node)
-            for e in db.scalars(select(KnowledgeEdge)).all()
-        }
+        edge_pairs = {(e.from_node, e.to_node) for e in db.scalars(select(KnowledgeEdge)).all()}
     finally:
         db.close()
     assert (single.id, multi.id) not in edge_pairs
@@ -313,6 +310,7 @@ def test_delete_cascades_chunks_vectors_note_conflicts_and_single_source_nodes(s
         db.close()
     assert _question_knowledge_nodes(question_id) == set()
 
+
 def test_delete_single_source_knowledge_kept_clears_source_reference(sealed_vectors):
     """对话框不勾选删除：单来源知识点保留、来源引用清空、边与考查关系都保住。"""
     doc = _seed_document()
@@ -336,11 +334,14 @@ def test_delete_single_source_knowledge_kept_clears_source_reference(sealed_vect
     assert sealed_vectors.search_node_titles([3.0] * 8, k=5) != []
     assert _question_knowledge_nodes(question_id) == {single.id}
     with SessionLocal() as db:
-        assert db.scalar(
-            select(KnowledgeEdge).where(
-                KnowledgeEdge.from_node == single.id, KnowledgeEdge.to_node == neighbor.id
+        assert (
+            db.scalar(
+                select(KnowledgeEdge).where(
+                    KnowledgeEdge.from_node == single.id, KnowledgeEdge.to_node == neighbor.id
+                )
             )
-        ) is not None
+            is not None
+        )
 
 
 def test_delete_removes_only_target_document(sealed_vectors):
@@ -360,14 +361,16 @@ def test_delete_removes_only_target_document(sealed_vectors):
     db = SessionLocal()
     try:
         assert (
-            db.scalar(select(LiteratureNote).where(LiteratureNote.doc_id == other.id))
-            is not None
+            db.scalar(select(LiteratureNote).where(LiteratureNote.doc_id == other.id)) is not None
         )
-        assert len(
-            db.scalars(
-                select(Conflict).where(Conflict.doc_id == other.id, Conflict.status == "待审")
-            ).all()
-        ) == 1
+        assert (
+            len(
+                db.scalars(
+                    select(Conflict).where(Conflict.doc_id == other.id, Conflict.status == "待审")
+                ).all()
+            )
+            == 1
+        )
     finally:
         db.close()
 
@@ -487,9 +490,9 @@ def test_legacy_windows_file_paths_normalized_in_migration(tmp_path):
         _ensure_sqlite_columns(legacy_engine)
         _ensure_sqlite_columns(legacy_engine)  # 幂等：再跑一次不报错、结果不变
         with legacy_engine.connect() as conn:
-            win = conn.exec_driver_sql(
-                "SELECT file_path FROM documents WHERE id = 'd-win'"
-            ).one()[0]
+            win = conn.exec_driver_sql("SELECT file_path FROM documents WHERE id = 'd-win'").one()[
+                0
+            ]
             posix = conn.exec_driver_sql(
                 "SELECT file_path FROM documents WHERE id = 'd-posix'"
             ).one()[0]
@@ -533,19 +536,26 @@ def test_withdraws_cross_document_conflicts_referencing_sources(
             {"doc_id": doc.id},
         ):
             conflict = Conflict(
-                user_id="default", doc_id=other.id, status="待审",
-                new_knowledge={"title": "新知识"}, existing_knowledge=snapshot,
+                user_id="default",
+                doc_id=other.id,
+                status="待审",
+                new_knowledge={"title": "新知识"},
+                existing_knowledge=snapshot,
             )
             db.add(conflict)
             conflicts.append(conflict)
         resolved = Conflict(
-            user_id="default", doc_id=other.id, status="已接受",
+            user_id="default",
+            doc_id=other.id,
+            status="已接受",
             new_knowledge={"title": "已裁决知识", "source_docs": [doc.id]},
             existing_knowledge={"id": single.id},
         )
         # 新知识快照的明确资料引用也须撤下。
         new_snapshot = Conflict(
-            user_id="default", doc_id=other.id, status="待审",
+            user_id="default",
+            doc_id=other.id,
+            status="待审",
             new_knowledge={"title": "新知识", "source_docs": [doc.id]},
             existing_knowledge={},
         )
@@ -675,9 +685,7 @@ def test_delete_without_configured_llm(sealed_vectors, monkeypatch):
 
 @pytest.mark.parametrize("status", ["有冲突", "处理中", "失败", "已完成"])
 @pytest.mark.parametrize("remaining_count", [0, 1])
-def test_cross_document_withdrawal_refreshes_source_detail(
-    sealed_vectors, status, remaining_count
-):
+def test_cross_document_withdrawal_refreshes_source_detail(sealed_vectors, status, remaining_count):
     deleted = _seed_document()
     retained = _seed_document(filename="保留的冲突来源.pdf")
     old = _seed_node("被引用的旧知识", [deleted.id])
@@ -686,10 +694,15 @@ def test_cross_document_withdrawal_refreshes_source_detail(
         assert source is not None
         source.status = status
         source.conflict_count = 1 + remaining_count
-        db.add(Conflict(
-            user_id="default", doc_id=retained.id, status="待审",
-            new_knowledge={"title": "待撤下新知识"}, existing_knowledge={"id": old.id},
-        ))
+        db.add(
+            Conflict(
+                user_id="default",
+                doc_id=retained.id,
+                status="待审",
+                new_knowledge={"title": "待撤下新知识"},
+                existing_knowledge={"id": old.id},
+            )
+        )
         db.commit()
     # 同资料其余待审不引用被删资料，必须留下；已裁决记录不计入待审数。
     for _ in range(remaining_count):
