@@ -50,38 +50,38 @@ flowchart TB
 
 ## 快速开始
 
-**前置依赖**：Python ≥ 3.11、Node.js ≥ 18，推荐安装 [uv](https://docs.astral.sh/uv/)（Python 包管理）。
+**前置依赖**：本项目用 [mise](https://mise.jdx.dev/) 固定工具链——`mise install` 会装好 `Python 3.14` 与 `Node 26`；后端 venv（`backend/.venv`）由 mise 自动创建/激活，依赖用 pip 按 `backend/requirements.txt` 安装。不使用 mise 时，请自行安装 Python ≥ 3.11 与 Node ≥ 18，并手建 venv 后 `pip install -r backend/requirements.txt`。
 
 ```bash
 git clone https://github.com/JulianZBY/EduMind.git
 cd EduMind
 
-# 后端依赖（生成 backend/.venv）。--frozen：严格按 uv.lock 安装，不改写锁文件
-cd backend && uv sync --frozen && cd ..
-
-# 前端依赖
-cd frontend && npm install && cd ..
+# 工具链 + 依赖（两条命令）
+mise install        # 装 Python 3.14 与 Node 26
+mise run setup      # 后端建 venv + pip install -r requirements.txt；前端 npm ci
 
 # 配置（先到设置页添加供应商（只选家 + 粘 Key，模型清单自动拉取）或配置 .env，再开始备课；未配置时相关操作返回 503 引导）
 cp backend/.env.example backend/.env    # Windows 用 copy
 ```
 
-> **关于 `--frozen` 与镜像**：不带 `--frozen` 时，较新版本的 uv 会升级锁文件格式，使用 PyPI 镜像
-> （如 `UV_DEFAULT_INDEX` 指向国内镜像）还会把锁文件里的下载地址整体换成镜像地址——`uv.lock`
-> 会出现上千行与你的改动无关的差异。只是安装依赖时请带上 `--frozen`；如果已经改写了，
-> `git checkout -- backend/uv.lock` 还原即可，不要提交。确实要增删依赖时再去掉它。
+> **关于后端依赖**：`backend/requirements.txt` 是唯一的依赖来源（全钉版本，含传递依赖）。
+> 增删依赖时改它，再跑 `mise run setup:backend`（或 `pip install -r requirements.txt`）。
+> 国内镜像可设 `PIP_INDEX_URL`（如 `https://pypi.tuna.tsinghua.edu.cn/simple`）。
 
-**启动**（开两个终端，Windows / macOS / Linux 命令一致）：
+**启动**：
 
 ```bash
-# 终端 1：后端（:8000）
-cd backend && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
-
-# 终端 2：前端（:5173）
-cd frontend && npm run dev
+mise run dev          # 一键起前后端：后端 :8000，前端 :5173（Ctrl+C 停）
 ```
 
-浏览器访问 **http://localhost:5173**。
+需要分开跑（或不经 mise）时：
+
+```bash
+mise run dev:backend    # 等价 cd backend && uvicorn app.main:app --host 127.0.0.1 --port 8000
+mise run dev:frontend   # 等价 cd frontend && npm run dev
+```
+
+浏览器访问 **http://127.0.0.1:5173**（或 http://localhost:5173）。
 
 ## 接入真实模型（可选）
 
@@ -111,11 +111,13 @@ MiniMax、豆包（火山方舟）、硅基流动，或「自定义 OpenAI 兼�
 ## 运行测试与自检
 
 ```bash
-# 后端：全量测试（无 Key 也能跑；测试用 tests/support 里的替身，离线确定性零成本，不依赖本机 .env）
-cd backend && uv run pytest -q && uv run ruff check .
+# 全部门禁：后端 pytest + ruff、前端 lint/风格扫描 + 构建 + 七路由
+mise run check
 
-# 前端：禁用 class 扫描 + lint + 构建
-cd frontend && npm run lint && npm run build
+# 按需单跑
+mise run test     # 后端 pytest + 前端 node --test
+mise run lint     # 后端 ruff + 前端 oxlint/风格扫描
+mise run build    # 前端 tsc + vite build
 ```
 
 未配置行为冒烟（健康检查 → 503 引导 → 上传解析入库）与全链路冒烟（备课对话 → 生成物 → 下载 → 冲突裁决）、

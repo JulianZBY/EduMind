@@ -1,14 +1,14 @@
 # EduMind 后端规范
 
-FastAPI + pydantic v2 + SQLAlchemy 2(同步)+ SQLite/sqlite-vec,Python ≥ 3.11,uv 管依赖。
+FastAPI + pydantic v2 + SQLAlchemy 2(同步)+ SQLite/sqlite-vec,Python ≥ 3.11;工具链与 venv 由 mise 管,依赖用 pip 按 requirements.txt 装。
 
 ## 命令
 
 ```bash
-uv sync                                              # 装依赖
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
-uv run pytest                                        # 测试
-uv run ruff check .                                  # lint
+mise run setup:backend                               # 装依赖(建 venv + pip install -r requirements.txt)
+mise run dev:backend                                 # uvicorn :8000
+mise run test:backend                                # pytest
+mise run lint:backend                                # ruff
 ```
 
 ## 分层铁律

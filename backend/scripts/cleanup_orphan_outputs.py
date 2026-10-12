@@ -18,8 +18,8 @@
 
 真删前把删除清单打包为 tar（默认 `/tmp/edumind-output-orphans-<时间戳>.tar`，在 data/ 之外），
 打包后校验成员数与删除清单一致才开删。运行（backend 目录下）：
-`uv run python scripts/cleanup_orphan_outputs.py`          # dry-run
-`uv run python scripts/cleanup_orphan_outputs.py --execute`  # 真删
+`mise exec -- python scripts/cleanup_orphan_outputs.py`          # dry-run
+`mise exec -- python scripts/cleanup_orphan_outputs.py --execute`  # 真删
 """
 
 from __future__ import annotations

@@ -15,8 +15,8 @@
 
 真删前先用 SQLite backup API（WAL 下对在线服务安全）把两个库备份到
 `data/cleanup-backup-<时间戳>/`。运行（backend 目录下）：
-`uv run python scripts/cleanup_demo_data.py`          # dry-run
-`uv run python scripts/cleanup_demo_data.py --execute`  # 真删
+`mise exec -- python scripts/cleanup_demo_data.py`          # dry-run
+`mise exec -- python scripts/cleanup_demo_data.py --execute`  # 真删
 """
 
 from __future__ import annotations

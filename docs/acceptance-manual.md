@@ -2,7 +2,7 @@
 
 **这份手册只写「只有人能做的事」**：真浏览器逐区点选、真实云端 Key 下的联通性、人眼判断的视觉项。
 
-- 机器能覆盖的部分**不在这里重复**：后端契约与行为测试（`uv run pytest -q`）、
+- 机器能覆盖的部分**不在这里重复**：后端契约与行为测试（`mise run test:backend`）、
   前端 lint / 构建 / 禁用 class 扫描（`npm run lint` / `npm run build` / `npm run check:classes`）、
   未配置行为冒烟（附录 A，需要用你本机的端口跑一遍，但没有「点选判断」）。
 - 依据：`CONTEXT.md`（术语，判断文案对不对的唯一依据）、`docs/architecture.md`（应有的形态）、
@@ -23,12 +23,12 @@
 
 ```bash
 # 终端 1：后端（默认未配置：不配任何 Key 也能起服务，涉及云端能力的操作返回 503 引导）
-cd backend && uv sync --frozen
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+mise run setup:backend    # 首次：建 venv + 装依赖
+mise run dev:backend      # 起 uvicorn :8000
 
 # 终端 2：前端
-cd frontend && npm install
-npm run dev
+mise run setup:frontend   # 首次：npm ci
+mise run dev:frontend     # 起 vite :5173
 ```
 
 浏览器打开 <http://localhost:5173>。
@@ -202,7 +202,7 @@ npm run dev
 
 ```bash
 cd backend
-uv run python scripts/verify_services.py
+mise exec -- python scripts/verify_services.py
 ```
 
 **预期现象**：打印四段，每段都写清用的是哪个实现：
@@ -291,7 +291,7 @@ cd backend
 $env:DATABASE_URL = "sqlite:///$env:TEMP/smoke/smoke.db"
 $env:VECTORS_DB_PATH = "$env:TEMP/smoke/vectors.db"
 $env:UPLOAD_DIR = "$env:TEMP/smoke/uploads"
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+mise exec -- uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ```powershell
@@ -387,12 +387,12 @@ db.commit()
 print("seeded:", [row.category for row in db.query(Conflict).all()])
 db.close()
 '@ | Set-Content -Path "$env:TEMP\seed-conflicts.py" -Encoding utf8
-uv run python "$env:TEMP\seed-conflicts.py"
+mise exec -- python "$env:TEMP\seed-conflicts.py"
 Remove-Item Env:PYTHONPATH
 ```
 
 **预期现象**：打印 `seeded: ['定义冲突', '结构冲突', '常识存疑']`；刷新 `/conflicts` 后三个类别分区
 各有一条待审（结构冲突带「图谱现状 vs 三种裁决终态」小图）。之后按 1.5 节的表格逐项裁决并观察图谱变化。
 
-> 只想验证**动作契约**而不看界面时，`uv run pytest tests/test_conflict_categories.py -q` 已经把
+> 只想验证**动作契约**而不看界面时，`mise exec -- pytest tests/test_conflict_categories.py -q` 已经把
 > 三类别、差异化动作、终态与图谱变迁都钉住了（包括 `409` 幂等边界与 `422` 类别不符）。

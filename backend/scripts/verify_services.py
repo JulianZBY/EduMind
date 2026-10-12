@@ -1,4 +1,4 @@
-"""真实验证云端服务（需 .env 配置真实 key）。用法：uv run python scripts/verify_services.py
+"""真实验证云端服务（需 .env 配置真实 key）。用法：mise exec -- python scripts/verify_services.py
 
 按配置装配各能力（LLM / 向量化 / 网络搜索 / PDF 解析），因此同时验证配置口径是否正确。
 """

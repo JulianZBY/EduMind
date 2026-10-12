@@ -10,7 +10,7 @@ npm run dev          # 开发
 npm run lint         # 禁用 class 扫描(风格文档第 6 节)+ oxlint
 npm run build        # 禁用 class 扫描 + tsc -b + vite build
 npm run check:routes # 七条路由可达 + 默认路由 = 备课会话(无浏览器)
-npm run gen:api      # 从后端 OpenAPI 刷新快照并生成 TS 类型(前置:cd backend && uv sync)
+npm run gen:api      # 从后端 OpenAPI 刷新快照并生成 TS 类型(前置:mise run setup:backend)
 ```
 
 ## 验收硬标准
